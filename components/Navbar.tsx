@@ -89,7 +89,7 @@ export default function Navbar() {
             ) : (
               // ปรับปุ่มเข้าสู่ระบบให้แสดงผลขนาดกะทัดรัดพอดีจอในสมาร์ทโฟน
               <Link
-                href="/login"
+                href={`/login?redirect=${encodeURIComponent(pathname)}`}
                 className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white transition-colors"
               >
                 <User size={14} />

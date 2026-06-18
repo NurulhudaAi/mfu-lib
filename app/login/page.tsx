@@ -9,10 +9,17 @@ export default function LoginPage() {
   const { t } = useApp()
 
   async function signInWithGoogle() {
+    const params = new URLSearchParams(window.location.search)
+    const redirect = params.get('redirect')
+    let redirectTo = `${window.location.origin}/auth/callback`
+    if (redirect) {
+      redirectTo += `?next=${encodeURIComponent(redirect)}`
+    }
+
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo,
       },
     })
   }

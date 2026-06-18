@@ -51,6 +51,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'ไม่พบรายการยืม หรือคืนไปแล้ว' }, { status: 404 })
   }
 
+  const borrowBook = Array.isArray(borrow.books) ? borrow.books[0] : borrow.books
+  if (!borrowBook) {
+    return NextResponse.json({ error: 'ไม่พบข้อมูลหนังสือ' }, { status: 400 })
+  }
+
   // ── Upload รูปหลักฐาน ──
   const ext = photo.type === 'image/png' ? 'png' : 'jpg'
   const fileName = `${user.id}/${borrowId}-${Date.now()}.${ext}`
@@ -85,41 +90,47 @@ export async function POST(request: Request) {
   // ── เพิ่ม available_copies กลับ ──
   await supabase
     .from('books')
-    .update({ available_copies: (borrow.books.available_copies ?? 0) + 1 })
-    .eq('id', borrow.books.id)
+    .update({ available_copies: (borrowBook.available_copies ?? 0) + 1 })
+    .eq('id', borrowBook.id)
 
   // ── ส่ง email ยืนยันการคืน ──
-  sendReturnConfirmEmail({
-    to: borrow.profiles.email,
-    name: borrow.profiles.full_name ?? 'สมาชิก',
-    bookTitle: borrow.books.title,
-    returnedAt: actualReturnDate,
-  }).catch(err => console.error('[Email] sendReturnConfirmEmail failed:', err))
+  const borrowProfile = Array.isArray(borrow.profiles) ? borrow.profiles[0] : borrow.profiles
+  if (borrowProfile) {
+    sendReturnConfirmEmail({
+      to: borrowProfile.email,
+      name: borrowProfile.full_name ?? 'สมาชิก',
+      bookTitle: borrowBook.title,
+      returnedAt: actualReturnDate,
+    }).catch(err => console.error('[Email] sendReturnConfirmEmail failed:', err))
+  }
 
   // ── แจ้งเตือนคนที่ 1 ในคิว ──
   const { data: firstInQueue } = await supabase
     .from('queue')
     .select('id, profiles(email, full_name)')
-    .eq('book_id', borrow.books.id)
+    .eq('book_id', borrowBook.id)
     .eq('notified', false)           // ยังไม่เคยแจ้ง
     .order('position', { ascending: true })
     .limit(1)
     .maybeSingle()
 
   if (firstInQueue) {
-    // mark ว่าแจ้งแล้ว (ก่อนส่ง email เพื่อป้องกัน double-notify)
-    await supabase
-      .from('queue')
-      .update({ notified: true, notified_at: new Date().toISOString() })
-      .eq('id', firstInQueue.id)
+    const queueProfile = Array.isArray(firstInQueue.profiles) ? firstInQueue.profiles[0] : firstInQueue.profiles
+    if (queueProfile) {
+      // mark ว่าแจ้งแล้ว (ก่อนส่ง email เพื่อป้องกัน double-notify)
+      await supabase
+        .from('queue')
+        .update({ notified: true, notified_at: new Date().toISOString() })
+        .eq('id', firstInQueue.id)
 
-    sendQueueNotifyEmail({
-      to: firstInQueue.profiles.email,
-      name: firstInQueue.profiles.full_name ?? 'สมาชิก',
-      bookTitle: borrow.books.title,
-      bookAuthor: borrow.books.author ?? undefined,
-      bookId: borrow.books.id,
-    }).catch(err => console.error('[Email] sendQueueNotifyEmail failed:', err))
+      sendQueueNotifyEmail({
+        to: queueProfile.email,
+        name: queueProfile.full_name ?? 'สมาชิก',
+        bookTitle: borrowBook.title,
+        bookAuthor: borrowBook.author ?? undefined,
+        bookId: borrowBook.id,
+      }).catch(err => console.error('[Email] sendQueueNotifyEmail failed:', err))
+    }
   }
 
   return NextResponse.json({ success: true })

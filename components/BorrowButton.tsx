@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { BookOpen, RotateCcw, Bell, BellOff, ShieldCheck } from 'lucide-react'
 import { useApp } from '@/lib/app-context'
 
@@ -22,6 +22,7 @@ export default function BorrowButton({
   const [loading, setLoading] = useState(false)
   const { t, profile } = useApp()
   const router = useRouter()
+  const pathname = usePathname()
 
   async function handleBorrow() {
     if (!userId) return
@@ -61,7 +62,7 @@ export default function BorrowButton({
 
   if (!userId) {
     return (
-      <a href="/login" className="block w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold text-center transition-colors">
+      <a href={`/login?redirect=${encodeURIComponent(pathname)}`} className="block w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold text-center transition-colors">
         เข้าสู่ระบบเพื่อยืมหนังสือ
       </a>
     )
