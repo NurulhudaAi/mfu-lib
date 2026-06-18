@@ -36,6 +36,7 @@ create table if not exists books (
   total_copies int not null default 1,
   available_copies int not null default 1,
   is_featured boolean not null default false,
+  is_active boolean not null default true,
   added_by uuid references profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -58,7 +59,9 @@ create table if not exists borrows (
   due_date timestamptz not null,
   returned_at timestamptz,
   return_proof_url text,
-  notes text
+  notes text,
+  reminder_sent boolean not null default false,
+  overdue_notified boolean not null default false
 );
 
 alter table borrows enable row level security;

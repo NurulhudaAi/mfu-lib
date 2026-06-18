@@ -86,7 +86,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-12 text-gray-400">
+                <td colSpan={5} className="text-center py-12 text-gray-400">
                   <Users size={36} className="mx-auto mb-2 opacity-20" />
                   ไม่พบผู้ใช้
                 </td>

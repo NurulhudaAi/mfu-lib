@@ -51,6 +51,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'ไม่พบรายการยืม หรือคืนไปแล้ว' }, { status: 404 })
   }
 
+  const borrowProfile = borrow.profiles as unknown as { email: string; full_name: string | null }
+  const borrowBook = borrow.books as unknown as { id: string; title: string; author: string | null; available_copies: number | null }
+
   // ── Upload รูปหลักฐาน ──
   const ext = photo.type === 'image/png' ? 'png' : 'jpg'
   const fileName = `${user.id}/${borrowId}-${Date.now()}.${ext}`
@@ -82,17 +85,13 @@ export async function POST(request: Request) {
     })
     .eq('id', borrowId)
 
-  // ── เพิ่ม available_copies กลับ ──
-  await supabase
-    .from('books')
-    .update({ available_copies: (borrow.books.available_copies ?? 0) + 1 })
-    .eq('id', borrow.books.id)
+  // DB trigger `update_book_availability()` จัดการเพิ่ม available_copies อัตโนมัติเมื่อ status เปลี่ยนจาก active ไป returned/overdue
 
   // ── ส่ง email ยืนยันการคืน ──
   sendReturnConfirmEmail({
-    to: borrow.profiles.email,
-    name: borrow.profiles.full_name ?? 'สมาชิก',
-    bookTitle: borrow.books.title,
+    to: borrowProfile.email,
+    name: borrowProfile.full_name ?? 'สมาชิก',
+    bookTitle: borrowBook.title,
     returnedAt: actualReturnDate,
   }).catch(err => console.error('[Email] sendReturnConfirmEmail failed:', err))
 
@@ -100,13 +99,14 @@ export async function POST(request: Request) {
   const { data: firstInQueue } = await supabase
     .from('queue')
     .select('id, profiles(email, full_name)')
-    .eq('book_id', borrow.books.id)
+    .eq('book_id', borrowBook.id)
     .eq('notified', false)           // ยังไม่เคยแจ้ง
     .order('position', { ascending: true })
     .limit(1)
     .maybeSingle()
 
   if (firstInQueue) {
+    const queueProfile = firstInQueue.profiles as unknown as { email: string; full_name: string | null }
     // mark ว่าแจ้งแล้ว (ก่อนส่ง email เพื่อป้องกัน double-notify)
     await supabase
       .from('queue')
@@ -114,11 +114,11 @@ export async function POST(request: Request) {
       .eq('id', firstInQueue.id)
 
     sendQueueNotifyEmail({
-      to: firstInQueue.profiles.email,
-      name: firstInQueue.profiles.full_name ?? 'สมาชิก',
-      bookTitle: borrow.books.title,
-      bookAuthor: borrow.books.author ?? undefined,
-      bookId: borrow.books.id,
+      to: queueProfile.email,
+      name: queueProfile.full_name ?? 'สมาชิก',
+      bookTitle: borrowBook.title,
+      bookAuthor: borrowBook.author ?? undefined,
+      bookId: borrowBook.id,
     }).catch(err => console.error('[Email] sendQueueNotifyEmail failed:', err))
   }
 

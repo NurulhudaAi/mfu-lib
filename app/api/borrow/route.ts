@@ -95,11 +95,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: borrowError.message }, { status: 500 })
   }
 
-  // ── ลด available_copies ──
-  await supabase
-    .from('books')
-    .update({ available_copies: book.available_copies - 1 })
-    .eq('id', bookId)
+  // DB trigger `update_book_availability()` จัดการลด available_copies อัตโนมัติแล้ว
 
   // ── ส่ง email ยืนยัน (fire-and-forget — ไม่ block response) ──
   sendBorrowConfirmEmail({

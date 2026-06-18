@@ -1,7 +1,11 @@
 import { createServiceClient } from '@/lib/supabase-server'
+import { requireAdmin } from '@/lib/admin-guard'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth.response
+
   const supabase = createServiceClient()
   const formData = await request.formData()
 

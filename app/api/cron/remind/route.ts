@@ -32,12 +32,14 @@ export async function GET(request: Request) {
 
   let reminderSent = 0
   for (const borrow of dueTomorrow ?? []) {
+    const profile = borrow.profiles as unknown as { email: string; full_name: string | null }
+    const book = borrow.books as unknown as { title: string; author: string | null }
     try {
       await sendReminderEmail({
-        to: borrow.profiles.email,
-        name: borrow.profiles.full_name ?? 'สมาชิก',
-        bookTitle: borrow.books.title,
-        bookAuthor: borrow.books.author ?? undefined,
+        to: profile.email,
+        name: profile.full_name ?? 'สมาชิก',
+        bookTitle: book.title,
+        bookAuthor: book.author ?? undefined,
         dueDate: new Date(borrow.due_date),
       })
       await supabase
@@ -62,13 +64,15 @@ export async function GET(request: Request) {
 
   let overdueSent = 0
   for (const borrow of overdueRows ?? []) {
+    const profile = borrow.profiles as unknown as { email: string; full_name: string | null }
+    const book = borrow.books as unknown as { title: string; author: string | null }
     const daysOverdue = differenceInDays(now, new Date(borrow.due_date))
     try {
       await sendOverdueEmail({
-        to: borrow.profiles.email,
-        name: borrow.profiles.full_name ?? 'สมาชิก',
-        bookTitle: borrow.books.title,
-        bookAuthor: borrow.books.author ?? undefined,
+        to: profile.email,
+        name: profile.full_name ?? 'สมาชิก',
+        bookTitle: book.title,
+        bookAuthor: book.author ?? undefined,
         dueDate: new Date(borrow.due_date),
         daysOverdue,
       })

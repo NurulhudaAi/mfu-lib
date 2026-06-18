@@ -1,7 +1,11 @@
 import { createServiceClient } from '@/lib/supabase-server'
+import { requireAdmin } from '@/lib/admin-guard'
 import { NextResponse } from 'next/server'
 
 export async function PUT(request: Request, { params }: { params: Promise<{ bookId: string }> }) {
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth.response
+
   const supabase = createServiceClient()
   const { bookId } = await params
 
@@ -63,6 +67,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ book
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ bookId: string }> }) {
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth.response
+
   const supabase = createServiceClient()
   const body = await request.json()
   const { bookId } = await params
@@ -77,6 +84,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ bookId: string }> }) {
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth.response
+
   const supabase = createServiceClient()
   const { bookId } = await params
 
