@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function HomeContent({ newBooks, announcements, userId }: Props) {
-  const { t } = useApp()
+  const { t, profile } = useApp()
 
   return (
     <main>
@@ -37,7 +37,7 @@ export default function HomeContent({ newBooks, announcements, userId }: Props) 
             <p className="text-lg text-gray-400 mb-8 leading-relaxed">
               {t('heroDesc')}
             </p>
-            {!userId && (
+            {!profile && (
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/books"

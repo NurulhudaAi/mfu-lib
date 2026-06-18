@@ -81,7 +81,6 @@ export async function POST(request: Request) {
       status: isOverdue ? 'overdue' : 'returned',
       returned_at: actualReturnDate.toISOString(),
       return_proof_url: fileName,
-      proof_signed_url: signedUrlData?.signedUrl ?? null,
     })
     .eq('id', borrowId)
 

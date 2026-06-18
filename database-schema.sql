@@ -17,10 +17,23 @@ create table if not exists profiles (
 
 alter table profiles enable row level security;
 
+-- Helper function เพื่อตรวจ admin โดยไม่ trigger RLS recursion
+create or replace function is_admin()
+returns boolean
+language sql
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
+
 create policy "Users can view own profile" on profiles for select using (auth.uid() = id);
-create policy "Admins can view all profiles" on profiles for select using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+create policy "Admins can view all profiles" on profiles for select using (is_admin());
 create policy "Users can update own profile" on profiles for update using (auth.uid() = id);
-create policy "Admins can update any profile" on profiles for update using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+create policy "Admins can update any profile" on profiles for update using (is_admin());
 
 -- 2. BOOKS TABLE
 create table if not exists books (

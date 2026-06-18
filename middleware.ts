@@ -1,5 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
+
+// Service role client สำหรับ query profiles (bypass RLS ที่มี recursion)
+function getServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -36,44 +45,32 @@ export async function middleware(request: NextRequest) {
   const requiresAuth = pathname.startsWith('/my-borrows') || pathname.startsWith('/return/')
   if (requiresAuth && !user) {
     const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('redirect', pathname)   // จำ path ไว้ redirect กลับหลัง login
+    loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
   // ── Guard: หน้า admin ──
   if (pathname.startsWith('/admin')) {
-    // ยังไม่ login → ไปหน้า login
     if (!user) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(loginUrl)
     }
 
-    // Login แล้วแต่ต้องตรวจ role จาก DB
-    const { data: profile } = await supabase
+    // ใช้ service role เพื่อ bypass RLS (แก้ปัญหา infinite recursion ใน profiles policy)
+    const serviceClient = getServiceClient()
+    const { data: profile } = await serviceClient
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    // ไม่ใช่ admin → เด้งกลับหน้าแรก
     if (profile?.role !== 'admin') {
       return NextResponse.redirect(new URL('/', request.url))
     }
   }
 
-  // ── Guard: ถ้า login แล้วพยายามเข้าหน้า /login → redirect ไปหน้าหลัก ──
-  if (pathname === '/login' && user) {
-    // ดึง role เพื่อ redirect ไปหน้าที่ถูกต้อง
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    const destination = profile?.role === 'admin' ? '/admin/dashboard' : '/'
-    return NextResponse.redirect(new URL(destination, request.url))
-  }
+  // Removed guard for /login to prevent trapping users if their client-side session is out of sync with the server-side cookie.
 
   return response
 }
@@ -87,7 +84,8 @@ export const config = {
      * - favicon.ico
      * - public files (png, jpg, svg, ฯลฯ)
      * - api/cron      (Vercel Cron — ใช้ CRON_SECRET แทน session)
+     * - auth/callback (OAuth callback)
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api/cron).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api/cron|auth/callback).*)',
   ],
 }

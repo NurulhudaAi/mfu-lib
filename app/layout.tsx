@@ -4,8 +4,8 @@ import { AppProvider } from '@/lib/app-context'
 import { Sarabun, Playfair_Display } from 'next/font/google'
 
 // นำเข้า Navbar และ BottomNav
-// import Navbar from '@/components/Navbar' // ⚠️ ปรับตำแหน่ง Path ให้ตรงกับโฟลเดอร์จริงของคุณ
-import BottomNav from '@/components/BottomNav' // ⚠️ ปรับตำแหน่ง Path ให้ตรงกับโฟลเดอร์จริงของคุณ
+import Navbar from '@/components/Navbar'
+import BottomNav from '@/components/BottomNav'
 
 // ตั้งค่าคอนฟิกฟอนต์ Sarabun
 const sarabun = Sarabun({

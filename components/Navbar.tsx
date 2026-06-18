@@ -17,7 +17,8 @@ export default function Navbar() {
   if (pathname === '/login') return null
 
   async function signOut() {
-    await supabase.auth.signOut()
+    await fetch('/auth/signout', { method: 'POST' })
+    await supabase.auth.signOut() // Clear client-side state too
     window.location.href = '/login'
   }
 
@@ -93,7 +94,7 @@ export default function Navbar() {
                 className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white transition-colors"
               >
                 <User size={14} />
-                <span className="hidden xs:inline">{t('login') as string}</span>
+                <span>{t('login') as string}</span>
               </Link>
             )}
 
