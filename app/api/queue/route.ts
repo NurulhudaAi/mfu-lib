@@ -54,6 +54,16 @@ export async function POST(req: Request) {
   }
 
   if (action === 'leave') {
+    // 1. หาตำแหน่งปัจจุบันก่อน
+    const { data: existing } = await supabase
+      .from('queue')
+      .select('position')
+      .eq('user_id', userId)
+      .eq('book_id', bookId)
+      .maybeSingle()
+
+    if (!existing) return NextResponse.json({ success: true })
+
     const { error } = await supabase
       .from('queue')
       .delete()
@@ -61,6 +71,23 @@ export async function POST(req: Request) {
       .eq('book_id', bookId)
 
     if (error) return NextResponse.json({ error: 'ยกเลิกคิวไม่สำเร็จ' }, { status: 500 })
+
+    // 2. อัปเดตตำแหน่งคนที่อยู่หลังให้ขยับขึ้นมา
+    const { data: remaining } = await supabase
+      .from('queue')
+      .select('id, position')
+      .eq('book_id', bookId)
+      .gt('position', existing.position)
+
+    if (remaining && remaining.length > 0) {
+      for (const item of remaining) {
+        await supabase
+          .from('queue')
+          .update({ position: item.position - 1 })
+          .eq('id', item.id)
+      }
+    }
+
     return NextResponse.json({ success: true })
   }
 

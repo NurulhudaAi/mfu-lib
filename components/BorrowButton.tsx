@@ -76,6 +76,15 @@ export default function BorrowButton({
     )
   }
 
+  if (profile?.is_blacklisted) {
+    return (
+      <div className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-medium text-sm px-2 text-center">
+        <ShieldCheck size={18} />
+        <span>คุณถูกระงับสิทธิ์การยืมหนังสือชั่วคราว</span>
+      </div>
+    )
+  }
+
   if (currentBorrow) {
     return (
       <a href={`/return/${currentBorrow.id}`} className="flex items-center justify-center gap-2 w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors">

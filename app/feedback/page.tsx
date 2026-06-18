@@ -16,7 +16,7 @@ export default function FeedbackPage() {
 
   async function handleSubmit() {
     if (!message.trim() || rating === 0) {
-      alert('กรุณาให้คะแนนและเขียนความคิดเห็น')
+      alert(t('feedbackAlert'))
       return
     }
     setLoading(true)
@@ -43,10 +43,10 @@ export default function FeedbackPage() {
   }
 
   const categories = [
-    { value: 'general', label: 'ทั่วไป' },
-    { value: 'book_request', label: 'ขอเพิ่มหนังสือ' },
-    { value: 'system', label: 'ระบบ' },
-    { value: 'service', label: 'บริการ' },
+    { value: 'general', label: t('feedbackGeneral') },
+    { value: 'book_request', label: t('feedbackBookRequest') },
+    { value: 'system', label: t('feedbackSystem') },
+    { value: 'service', label: t('feedbackService') },
   ]
 
   if (success) {
@@ -59,12 +59,12 @@ export default function FeedbackPage() {
               <CheckCircle size={40} className="text-green-600 dark:text-green-400" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('thankYou')}</h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">ความคิดเห็นของคุณมีคุณค่ามากสำหรับเรา</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">{t('feedbackValue')}</p>
             <button
               onClick={() => { setSuccess(false); setRating(0); setMessage(''); setCategory('general') }}
               className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors"
             >
-              ส่งอีกครั้ง
+              {t('feedbackResubmit')}
             </button>
           </div>
         </div>
@@ -88,7 +88,7 @@ export default function FeedbackPage() {
 
           {/* Category */}
           <div className="mb-5">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ประเภท</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('feedbackCategory')}</label>
             <div className="flex flex-wrap gap-2">
               {categories.map(cat => (
                 <button
@@ -131,7 +131,7 @@ export default function FeedbackPage() {
             </div>
             {rating > 0 && (
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {['', 'แย่มาก', 'แย่', 'ปานกลาง', 'ดี', 'ดีมาก'][rating]}
+                {['', t('rating1'), t('rating2'), t('rating3'), t('rating4'), t('rating5')][rating]}
               </p>
             )}
           </div>
@@ -144,6 +144,7 @@ export default function FeedbackPage() {
               onChange={e => setMessage(e.target.value)}
               placeholder={t('feedbackPlaceholder')}
               rows={5}
+              maxLength={500}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:border-green-500 outline-none transition-colors resize-none"
             />
             <p className="text-xs text-gray-400 dark:text-gray-600 mt-1 text-right">{message.length}/500</p>

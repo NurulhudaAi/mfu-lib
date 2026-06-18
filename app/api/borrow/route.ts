@@ -51,18 +51,20 @@ export async function POST(request: Request) {
     .select('id')
     .eq('user_id', user.id)
     .eq('status', 'active')
-    .maybeSingle()
+    .limit(1)
 
-  if (activeBorrow) {
+  if (activeBorrow && activeBorrow.length > 0) {
     return NextResponse.json({ error: 'คุณมีหนังสือที่ยืมอยู่แล้ว กรุณาคืนก่อน' }, { status: 400 })
   }
 
   // ── ตรวจสอบหนังสือว่าง ──
+  // ── ลด available_copies (ตอนนี้ใช้ DB Trigger update_book_availability จัดการแทนแล้ว) ──
   const { data: book } = await supabase
     .from('books')
     .select('id, title, author, available_copies, total_copies, is_active')
     .eq('id', bookId)
-    .single()
+    .limit(1)
+    .maybeSingle()
 
   if (!book) {
     return NextResponse.json({ error: 'ไม่พบหนังสือ' }, { status: 404 })

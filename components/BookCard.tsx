@@ -50,7 +50,7 @@ export default function BookCard({ book, animDelay = 0 }: Props) {
         {/* Availability badge */}
         <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold ${
           isAvailable
-            ? 'bg-primary-300 text-white'
+            ? 'bg-green-500 text-white'
             : 'bg-red-500 text-white'
         }`}>
           {isAvailable ? t('available') : t('unavailable')}

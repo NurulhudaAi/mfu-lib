@@ -3,7 +3,7 @@ import { Resend } from 'resend'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_123456789')
 
 // ถ้ายังไม่มี custom domain → ใช้ onboarding@resend.dev (ส่งได้เฉพาะ email ที่ verify แล้ว)
 // เมื่อมี domain แล้วเปลี่ยนเป็น: 'ห้องสมุดชมรมมุสลิม <library@yourdomain.com>'

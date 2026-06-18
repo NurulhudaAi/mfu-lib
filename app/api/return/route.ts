@@ -96,6 +96,7 @@ export async function POST(request: Request) {
   }).catch(err => console.error('[Email] sendReturnConfirmEmail failed:', err))
 
   // ── แจ้งเตือนคนที่ 1 ในคิว ──
+  // ── เพิ่ม available_copies กลับ (ตอนนี้ใช้ DB Trigger update_book_availability จัดการแทนแล้ว) ──
   const { data: firstInQueue } = await supabase
     .from('queue')
     .select('id, profiles(email, full_name)')
@@ -106,7 +107,6 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (firstInQueue) {
-    const queueProfile = firstInQueue.profiles as unknown as { email: string; full_name: string | null }
     // mark ว่าแจ้งแล้ว (ก่อนส่ง email เพื่อป้องกัน double-notify)
     await supabase
       .from('queue')
@@ -114,8 +114,8 @@ export async function POST(request: Request) {
       .eq('id', firstInQueue.id)
 
     sendQueueNotifyEmail({
-      to: queueProfile.email,
-      name: queueProfile.full_name ?? 'สมาชิก',
+      to: (firstInQueue.profiles as any).email,
+      name: (firstInQueue.profiles as any).full_name ?? 'สมาชิก',
       bookTitle: borrowBook.title,
       bookAuthor: borrowBook.author ?? undefined,
       bookId: borrowBook.id,

@@ -219,3 +219,13 @@ values (
   'Our online book borrowing system is now live. Borrow up to 14 days.',
   'success'
 );
+
+-- =============================================
+-- ADD MISSING COLUMNS
+-- =============================================
+ALTER TABLE borrows ADD COLUMN IF NOT EXISTS reminder_sent boolean NOT NULL DEFAULT false;
+ALTER TABLE borrows ADD COLUMN IF NOT EXISTS overdue_notified boolean NOT NULL DEFAULT false;
+ALTER TABLE borrows ADD COLUMN IF NOT EXISTS proof_signed_url text;
+ALTER TABLE borrows ADD COLUMN IF NOT EXISTS notes text;
+ALTER TABLE queue ADD COLUMN IF NOT EXISTS notified_at timestamptz;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;

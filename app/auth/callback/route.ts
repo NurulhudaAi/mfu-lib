@@ -5,7 +5,9 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const response = NextResponse.redirect(`${origin}/`)
+  const redirectParam = searchParams.get('redirect') || '/'
+  const targetUrl = redirectParam.startsWith('/') ? `${origin}${redirectParam}` : `${origin}/`
+  const response = NextResponse.redirect(targetUrl)
 
   if (code) {
     const cookieStore = await cookies()
