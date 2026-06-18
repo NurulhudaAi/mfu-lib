@@ -1,0 +1,17 @@
+node_modules
+.DS_Store# Next.js build and cache (ตัวการสำคัญ)
+.next/
+out/
+
+# Dependencies (ห้ามเอาขึ้นเด็ดขาด)
+node_modules/
+
+# Production environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Operating system files
+.DS_Store
+Thumbs.db
