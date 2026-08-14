@@ -1,9 +1,9 @@
 node_modules
-.DS_Store# Next.js build and cache (ตัวการสำคัญ)
+.DS_Store# Next.js build and cache 
 .next/
 out/
 
-# Dependencies (ห้ามเอาขึ้นเด็ดขาด)
+# Dependencies
 node_modules/
 
 # Production environment variables
