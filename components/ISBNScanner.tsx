@@ -77,14 +77,14 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
       <div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden w-full max-w-sm shadow-2xl">
 
         {/* Header */}
-        <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-          <div className="flex items-center gap-2">
-            <Camera size={18} className="text-green-600" />
-            <h3 className="font-bold text-gray-900 dark:text-white">สแกน Barcode ISBN</h3>
+        <div className="flex justify-between items-center px-5 py-3.5 border-b border-neutral-100 dark:border-neutral-800">
+          <div className="flex items-center gap-2.5">
+            <Camera size={18} className="text-neutral-900 dark:text-white" />
+            <h3 className="font-bold text-neutral-900 dark:text-white text-sm">สแกน Barcode ISBN</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400"
+            className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
           >
             <X size={18} />
           </button>
@@ -96,7 +96,7 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
             <p className="text-red-500 text-sm">{error}</p>
             <button
               onClick={onClose}
-              className="mt-4 px-4 py-2 bg-gray-100 rounded-xl text-sm"
+              className="mt-4 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-xl text-sm font-medium"
             >
               ปิด
             </button>
@@ -111,21 +111,23 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
               {/* Scan guide overlay */}
               {ready && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-64 h-20 border-2 border-green-400 rounded-lg opacity-70">
-                    <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-green-400 rounded-tl" />
-                    <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-green-400 rounded-tr" />
-                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-green-400 rounded-bl" />
-                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-green-400 rounded-br" />
+                  <div className="relative w-64 h-24 border-2 border-white/80 rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.8)] flex items-center justify-center">
+                    <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-white rounded-tl" />
+                    <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-white rounded-tr" />
+                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-white rounded-bl" />
+                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-white rounded-br" />
+                    {/* Laser line */}
+                    <div className="w-full h-[1.5px] bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] opacity-90 animate-pulse" />
                   </div>
                 </div>
               )}
               {!ready && !error && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <p className="text-white text-sm animate-pulse">กำลังเปิดกล้อง...</p>
+                  <p className="text-white text-xs font-medium tracking-wide animate-pulse">กำลังเปิดกล้อง...</p>
                 </div>
               )}
             </div>
-            <p className="text-center text-xs text-gray-400 py-3 px-4">
+            <p className="text-center text-xs text-neutral-400 py-3.5 px-4">
               ส่องกล้องไปที่ barcode หลังปกหนังสือ
             </p>
           </>

@@ -36,10 +36,10 @@ export async function GET(request: Request) {
     const book = borrow.books as unknown as { title: string; author: string | null }
     try {
       await sendReminderEmail({
-        to: profile.email,
-        name: profile.full_name ?? 'สมาชิก',
-        bookTitle: book.title,
-        bookAuthor: book.author ?? undefined,
+        to: (borrow.profiles as any).email,
+        name: (borrow.profiles as any).full_name ?? 'สมาชิก',
+        bookTitle: (borrow.books as any).title,
+        bookAuthor: (borrow.books as any).author ?? undefined,
         dueDate: new Date(borrow.due_date),
       })
       await supabase
@@ -69,10 +69,10 @@ export async function GET(request: Request) {
     const daysOverdue = differenceInDays(now, new Date(borrow.due_date))
     try {
       await sendOverdueEmail({
-        to: profile.email,
-        name: profile.full_name ?? 'สมาชิก',
-        bookTitle: book.title,
-        bookAuthor: book.author ?? undefined,
+        to: (borrow.profiles as any).email,
+        name: (borrow.profiles as any).full_name ?? 'สมาชิก',
+        bookTitle: (borrow.books as any).title,
+        bookAuthor: (borrow.books as any).author ?? undefined,
         dueDate: new Date(borrow.due_date),
         daysOverdue,
       })

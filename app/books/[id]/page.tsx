@@ -3,7 +3,6 @@ import { createServiceClient } from '@/lib/supabase-server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
-import Navbar from '@/components/Navbar'
 import BookDetailContent from '@/components/BookDetailContent'
 
 interface Props {
@@ -89,16 +88,13 @@ export default async function BookDetailPage({ params }: Props) {
   const { book, userId, activeBorrow, queueEntry, queueCount, totalBorrows } = await getData(id)
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
-      <BookDetailContent
-        book={book}
-        userId={userId}
-        activeBorrow={activeBorrow}
-        queueEntry={queueEntry}
-        queueCount={queueCount}
-        totalBorrows={totalBorrows}    // ✅ pass prop ไปที่ component
-      />
-    </div>
+    <BookDetailContent
+      book={book}
+      userId={userId}
+      activeBorrow={activeBorrow}
+      queueEntry={queueEntry}
+      queueCount={queueCount}
+      totalBorrows={totalBorrows}
+    />
   )
 }

@@ -1,5 +1,4 @@
 import { createServiceClient } from '@/lib/supabase-server'
-import Navbar from '@/components/Navbar'
 import AdminBooksContent from '@/components/AdminBooksContent'
 
 async function getData() {
@@ -32,9 +31,6 @@ export default async function AdminBooksPage() {
   const { books, categories } = await getData()
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
-      <AdminBooksContent books={books} categories={categories} />
-    </div>
+    <AdminBooksContent books={books} categories={categories} />
   )
 }

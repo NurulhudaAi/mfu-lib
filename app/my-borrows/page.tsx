@@ -2,7 +2,6 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase-server'
-import Navbar from '@/components/Navbar'
 import MyBorrowsContent from '@/components/MyBorrowsContent'
 
 async function getData() {
@@ -24,7 +23,7 @@ async function getData() {
   const { data: borrows } = await supabase
     .from('borrows')
     .select(`
-      id, status, borrowed_at, due_date, returned_at, return_proof_url,
+      id, status, borrowed_at, due_date, returned_at, return_proof_url, notes,
       books (id, title, author, cover_url, category)
     `)
     .eq('user_id', user.id)
@@ -34,7 +33,7 @@ async function getData() {
     .from('queue')
     .select(`
       id, position, created_at,
-      books (id, title, author, cover_url)
+      books (id, title, author, cover_url, category)
     `)
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
@@ -59,9 +58,6 @@ export default async function MyBorrowsPage() {
   const { borrows, queues, userId } = await getData()
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
-      <MyBorrowsContent borrows={borrows} queues={queues} userId={userId} />
-    </div>
+    <MyBorrowsContent borrows={borrows} queues={queues} userId={userId} />
   )
 }

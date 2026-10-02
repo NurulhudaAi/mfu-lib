@@ -6,8 +6,8 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  // default redirect ไปหน้าแรก
-  let redirectTo = `${origin}/`
+  const redirectParam = searchParams.get('redirect') || '/'
+  const targetUrl = redirectParam.startsWith('/') ? `${origin}${redirectParam}` : `${origin}/`
 
   if (code) {
     const cookieStore = await cookies()
@@ -33,12 +33,12 @@ export async function GET(request: Request) {
       const { error, data } = await supabase.auth.exchangeCodeForSession(code)
       if (error) throw error
 
-      // Removed forced redirect to admin dashboard to allow admins to stay on the main site.
+      return NextResponse.redirect(targetUrl)
     } catch (error) {
       console.error('Auth callback error:', error)
       return NextResponse.redirect(`${origin}/login?error=auth_failed`)
     }
   }
 
-  return NextResponse.redirect(redirectTo)
+  return NextResponse.redirect(targetUrl)
 }

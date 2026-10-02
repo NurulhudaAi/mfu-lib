@@ -53,58 +53,56 @@ export default function AdminAnnouncementsContent({ announcements }: { announcem
     setDeleting(null)
   }
 
-  const typeColors = {
-    info: 'bg-blue-100 text-blue-700',
-    warning: 'bg-amber-100 text-amber-700',
-    success: 'bg-green-100 text-green-700',
-  }
-
   return (
-    <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/admin/dashboard" className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500">
-          <ArrowLeft size={18} />
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">ประกาศ</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{announcements.length} รายการ</p>
+    <div className="w-full p-6 sm:p-8 lg:p-10 space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link href="/admin/dashboard" className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500">
+            <ArrowLeft size={18} />
+          </Link>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">ประกาศระบบ</h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">{announcements.length} รายการทั้งหมด</p>
+          </div>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm active:scale-95"
         >
-          <Plus size={16} /> เพิ่มประกาศ
+          <Plus size={16} />
+          <span>เพิ่มประกาศ</span>
         </button>
       </div>
 
       <div className="space-y-3">
         {announcements.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            <Megaphone size={48} className="mx-auto mb-3 opacity-20" />
-            <p>ยังไม่มีประกาศ</p>
+          <div className="text-center py-20 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-2xl border border-dashed border-neutral-200 dark:border-neutral-800 text-neutral-400">
+            <Megaphone size={40} className="mx-auto mb-3 opacity-20" />
+            <p className="text-sm font-medium">ยังไม่มีประกาศ</p>
           </div>
         ) : announcements.map(ann => (
-          <div key={ann.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${typeColors[ann.type]}`}>
+          <div key={ann.id} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-5 shadow-xs">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 space-y-1.5">
+                <div className="flex items-center gap-2.5">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700">
                     {ann.type}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-neutral-400">
                     {format(new Date(ann.created_at), 'dd MMM yyyy', { locale: th })}
                   </span>
                 </div>
-                <p className="font-semibold text-gray-900 dark:text-white">{ann.title}</p>
-                {ann.title_en && <p className="text-sm text-gray-500">{ann.title_en}</p>}
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{ann.body}</p>
+                <h3 className="font-bold text-neutral-900 dark:text-white text-base">{ann.title}</h3>
+                {ann.title_en && <p className="text-xs text-neutral-500 font-medium">{ann.title_en}</p>}
+                <p className="text-sm text-neutral-600 dark:text-neutral-400 pt-1 leading-relaxed">{ann.body}</p>
               </div>
               <button
                 onClick={() => handleDelete(ann.id)}
                 disabled={deleting === ann.id}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-black dark:hover:bg-white dark:hover:text-black transition-colors"
+                title="ลบประกาศ"
               >
-                <Trash2 size={15} />
+                <Trash2 size={16} />
               </button>
             </div>
           </div>
@@ -113,51 +111,51 @@ export default function AdminAnnouncementsContent({ announcements }: { announcem
 
       {/* Add Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-lg shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="font-bold text-gray-900 dark:text-white">เพิ่มประกาศใหม่</h2>
-              <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-scale-in">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 dark:border-neutral-800">
+              <h2 className="font-bold text-neutral-900 dark:text-white text-base">เพิ่มประกาศใหม่</h2>
+              <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500">
                 <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleAdd} className="px-6 py-5 space-y-4">
+            <form onSubmit={handleAdd} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">ประเภท</label>
+                <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5">ประเภท</label>
                 <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value as any })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm">
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-sm outline-none focus:border-black dark:focus:border-white">
                   <option value="info">Info</option>
                   <option value="warning">Warning</option>
                   <option value="success">Success</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">หัวข้อ (ไทย) *</label>
+                <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5">หัวข้อ (ไทย) *</label>
                 <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm" />
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-sm outline-none focus:border-black dark:focus:border-white" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">หัวข้อ (EN)</label>
+                <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5">หัวข้อ (EN)</label>
                 <input value={form.title_en} onChange={e => setForm({ ...form, title_en: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm" />
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-sm outline-none focus:border-black dark:focus:border-white" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">เนื้อหา (ไทย) *</label>
+                <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5">เนื้อหา (ไทย) *</label>
                 <textarea required rows={3} value={form.body} onChange={e => setForm({ ...form, body: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm resize-none" />
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-sm outline-none focus:border-black dark:focus:border-white resize-none" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">เนื้อหา (EN)</label>
+                <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5">เนื้อหา (EN)</label>
                 <textarea rows={3} value={form.body_en} onChange={e => setForm({ ...form, body_en: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm resize-none" />
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-sm outline-none focus:border-black dark:focus:border-white resize-none" />
               </div>
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2.5 pt-2">
                 <button type="button" onClick={() => setShowForm(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+                  className="flex-1 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
                   ยกเลิก
                 </button>
                 <button type="submit" disabled={saving}
-                  className="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-50">
+                  className="flex-1 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black text-sm font-semibold transition-all disabled:opacity-50">
                   {saving ? 'กำลังบันทึก...' : 'เพิ่มประกาศ'}
                 </button>
               </div>
@@ -165,6 +163,6 @@ export default function AdminAnnouncementsContent({ announcements }: { announcem
           </div>
         </div>
       )}
-    </main>
+    </div>
   )
 }

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@100;200;300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,6 +12,10 @@ html {
   scroll-behavior: smooth;
 }
 
+body {
+  font-family: 'IBM Plex Sans Thai', var(--font-sarabun), Sarabun, system-ui, -apple-system, sans-serif;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
@@ -20,15 +26,22 @@ html {
   background: transparent;
 }
 
-/* 🎨 Updated to your custom primary color (#5C766D) */
+/* Scrollbar styling */
 ::-webkit-scrollbar-thumb {
-  background: #5C766D;
+  background: #a1a1aa;
   border-radius: 3px;
 }
 
-/* 🎨 Updated to your custom hover shade (#2F6B3F) */
 ::-webkit-scrollbar-thumb:hover {
-  background: #2F6B3F;
+  background: #71717a;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
 }
 
 /* Announcement swiper */
@@ -51,17 +64,16 @@ html {
 }
 
 /* Status badge */
-/* 🎨 Updated to use your Tailwind config primary tokens */
 .badge-available {
-  @apply bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-400;
+  @apply bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 font-medium;
 }
 
 .badge-borrowed {
-  @apply bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400;
+  @apply bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700;
 }
 
 .badge-overdue {
-  @apply bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400;
+  @apply bg-neutral-800 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-900 font-semibold;
 }
 
 /* Loading spinner */
@@ -87,7 +99,22 @@ html {
 .animate-fade-in-delay-2 { animation-delay: 0.2s; }
 .animate-fade-in-delay-3 { animation-delay: 0.3s; }
 
-/* Modal overlay */
+/* Modal overlay & animations */
 .modal-overlay {
   backdrop-filter: blur(4px);
+}
+
+@keyframes modalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: modalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
