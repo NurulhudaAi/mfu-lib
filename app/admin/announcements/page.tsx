@@ -1,5 +1,4 @@
 import { createServiceClient } from '@/lib/supabase-server'
-import Navbar from '@/components/Navbar'
 import AdminAnnouncementsContent from '@/components/AdminAnnouncementsContent'
 
 export default async function AdminAnnouncementsPage() {
@@ -10,9 +9,6 @@ export default async function AdminAnnouncementsPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
-      <AdminAnnouncementsContent announcements={announcements || []} />
-    </div>
+    <AdminAnnouncementsContent announcements={announcements || []} />
   )
 }

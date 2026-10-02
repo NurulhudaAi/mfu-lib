@@ -1,5 +1,4 @@
 import { createServiceClient } from '@/lib/supabase-server'
-import Navbar from '@/components/Navbar'
 import AdminDashboardContent from '@/components/AdminDashboardContent'
 
 async function getData() {
@@ -46,9 +45,6 @@ export default async function AdminDashboardPage() {
   const { stats, recentBorrows, recentFeedback } = await getData()
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
-      <AdminDashboardContent stats={stats} recentBorrows={recentBorrows} recentFeedback={recentFeedback} />
-    </div>
+    <AdminDashboardContent stats={stats} recentBorrows={recentBorrows} recentFeedback={recentFeedback} />
   )
 }

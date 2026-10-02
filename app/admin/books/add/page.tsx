@@ -2,7 +2,6 @@
 'use client'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
 import { ArrowLeft, Upload, BookOpen, Search, Camera, Scan } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -126,8 +125,7 @@ export default function AddBookPage() {
   const categories = ['อิสลาม', 'วิทยาศาสตร์', 'ประวัติศาสตร์', 'วรรณกรรม', 'ปรัชญา', 'ภาษา', 'อื่นๆ']
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
+    <div className="w-full max-w-5xl mx-auto px-6 py-8 animate-fade-in">
 
       {/* hidden inputs */}
       <input
@@ -211,47 +209,47 @@ export default function AddBookPage() {
             </div>
 
             {/* Scan Barcode */}
-            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 shadow-lg shadow-gray-200/50 dark:shadow-black/20 space-y-3">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">หรือสแกน ISBN</p>
+            <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 p-5 shadow-xs space-y-3">
+              <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">หรือสแกน ISBN</p>
 
               <button
                 type="button"
                 onClick={() => setShowScanner(true)}
-                className="w-full flex items-center gap-2.5 p-3 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-xl transition-colors text-left"
+                className="w-full flex items-center gap-3 p-3.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-colors text-left"
               >
-                <Scan size={18} className="text-green-600 shrink-0" />
+                <Scan size={18} className="text-neutral-900 dark:text-white shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-green-800 dark:text-green-300">สแกน Barcode</p>
-                  <p className="text-xs text-green-600 dark:text-green-500">ISBN จาก barcode หนังสือ</p>
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">สแกน Barcode</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">อ่าน ISBN จาก barcode หลังปก</p>
                 </div>
               </button>
 
               {isbnSearching && (
-                <p className="text-xs text-center text-gray-400 animate-pulse">⏳ กำลังค้นหาข้อมูล...</p>
+                <p className="text-xs text-center text-neutral-400 animate-pulse">⏳ กำลังค้นหาข้อมูล...</p>
               )}
             </div>
           </div>
 
           {/* คอลัมน์ขวา */}
-          <div className="flex-1 bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 space-y-4 shadow-lg shadow-gray-200/50 dark:shadow-black/20">
+          <div className="flex-1 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 space-y-5 shadow-xs">
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ISBN</label>
+              <label className="block text-sm font-semibold text-neutral-800 dark:text-neutral-200 mb-1.5">ISBN</label>
               <div className="flex gap-2">
                 <input value={form.isbn} onChange={e => set('isbn', e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && lookupISBN()}
                   placeholder="9789740000000 แล้วกด Enter" className="flex-1 input-field" />
                 <button type="button" onClick={() => lookupISBN()} disabled={isbnSearching || !form.isbn}
-                  className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors">
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-neutral-900 hover:bg-black dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black disabled:opacity-50 rounded-xl text-sm font-semibold transition-colors shadow-xs">
                   <Search size={15} />ค้น
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              <label className="block text-sm font-semibold text-neutral-800 dark:text-neutral-200 mb-1.5">
                 ชื่อหนังสือ *
-                {ocrLoading && <span className="ml-2 text-xs text-purple-500 animate-pulse">AI กำลังอ่าน...</span>}
+                {ocrLoading && <span className="ml-2 text-xs text-neutral-500 animate-pulse">AI กำลังอ่าน...</span>}
               </label>
               <div className="flex gap-2">
                 <input value={form.title} onChange={e => set('title', e.target.value)}
@@ -259,45 +257,45 @@ export default function AddBookPage() {
                   className="flex-1 input-field"
                   onKeyDown={e => e.key === 'Enter' && form.title && lookupTitle(form.title)} />
                 <button type="button" onClick={() => lookupTitle(form.title)} disabled={isbnSearching || !form.title}
-                  className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 disabled:opacity-50 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium transition-colors">
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-50 text-neutral-800 dark:text-neutral-200 rounded-xl text-sm font-semibold transition-colors">
                   <Search size={15} />ค้น
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mt-1">AI จะอ่านชื่อจากปกอัตโนมัติ หรือกรอกเองแล้วกด "ค้น"</p>
+              <p className="text-xs text-neutral-400 mt-1">AI จะอ่านชื่อจากปกอัตโนมัติ หรือกรอกเองแล้วกด "ค้น"</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ผู้แต่ง</label>
+              <label className="block text-sm font-semibold text-neutral-800 dark:text-neutral-200 mb-1.5">ผู้แต่ง</label>
               <input value={form.author} onChange={e => set('author', e.target.value)}
                 placeholder="ชื่อผู้แต่ง" className="input-field w-full" />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">คำอธิบาย</label>
+              <label className="block text-sm font-semibold text-neutral-800 dark:text-neutral-200 mb-1.5">คำอธิบาย</label>
               <textarea value={form.description} onChange={e => set('description', e.target.value)}
                 rows={3} placeholder="คำอธิบายสั้นๆ" className="input-field w-full resize-none" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">หมวดหมู่</label>
+                <label className="block text-sm font-semibold text-neutral-800 dark:text-neutral-200 mb-1.5">หมวดหมู่</label>
                 <select value={form.category} onChange={e => set('category', e.target.value)} className="input-field w-full">
                   <option value="">เลือกหมวดหมู่</option>
                   {categories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">จำนวนเล่ม</label>
+                <label className="block text-sm font-semibold text-neutral-800 dark:text-neutral-200 mb-1.5">จำนวนเล่ม</label>
                 <input type="number" min="1" value={form.total_copies}
                   onChange={e => set('total_copies', e.target.value)} className="input-field w-full" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">สำนักพิมพ์</label>
+                <label className="block text-sm font-semibold text-neutral-800 dark:text-neutral-200 mb-1.5">สำนักพิมพ์</label>
                 <input value={form.publisher} onChange={e => set('publisher', e.target.value)}
                   placeholder="สำนักพิมพ์" className="input-field w-full" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ปีที่พิมพ์</label>
+                <label className="block text-sm font-semibold text-neutral-800 dark:text-neutral-200 mb-1.5">ปีที่พิมพ์</label>
                 <input type="number" value={form.published_year}
                   onChange={e => set('published_year', e.target.value)}
                   placeholder="2024" className="input-field w-full" />
@@ -307,12 +305,12 @@ export default function AddBookPage() {
             <label className="flex items-center gap-2.5 cursor-pointer">
               <input type="checkbox" checked={form.is_featured as boolean}
                 onChange={e => set('is_featured', e.target.checked)}
-                className="w-4 h-4 rounded accent-green-600" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">⭐ แนะนำหนังสือ (แสดงใน "หนังสือแนะนำ")</span>
+                className="w-4 h-4 rounded accent-black dark:accent-white" />
+              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">⭐ แนะนำหนังสือ (แสดงใน "หนังสือแนะนำ")</span>
             </label>
 
             <button type="button" onClick={handleSubmit} disabled={loading || ocrLoading}
-              className="w-full py-3.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold rounded-xl transition-colors">
+              className="w-full py-3.5 bg-neutral-900 hover:bg-black dark:bg-white dark:hover:bg-neutral-200 disabled:opacity-50 text-white dark:text-black font-bold rounded-xl transition-all shadow-xs">
               {loading ? 'กำลังบันทึก...' : ocrLoading ? 'รอ AI อ่านปกก่อน...' : '+ เพิ่มหนังสือ'}
             </button>
           </div>

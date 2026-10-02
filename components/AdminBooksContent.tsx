@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { BookOpen, Plus, Trash2, Star, ArrowLeft, Search, Pencil, X, Upload, ToggleLeft, ToggleRight, Tag } from 'lucide-react'
 
+import { useApp } from '@/lib/app-context'
+
 interface Props {
   books: any[]
   categories: string[]  // ✅ รับ categories จาก DB ผ่าน props
@@ -36,14 +38,20 @@ export default function AdminBooksContent({ books, categories: initialCategories
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [showCatManager, setShowCatManager] = useState(false)
   const [newCatName, setNewCatName] = useState('')
-  const { categories, addCategory, deleteCategory } = useCategories(initialCategories)  // ✅ ส่ง initialCategories เข้าไป
+  const { categories, addCategory, deleteCategory } = useCategories(initialCategories)
+  const { searchQuery, selectedCategory } = useApp()
   const router = useRouter()
 
-  const filtered = books.filter(b =>
-    !search ||
-    b.title?.toLowerCase().includes(search.toLowerCase()) ||
-    b.author?.toLowerCase().includes(search.toLowerCase())
-  )
+  const effectiveSearch = search || searchQuery
+  const filtered = books.filter(b => {
+    const matchSearch =
+      !effectiveSearch ||
+      b.title?.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+      b.author?.toLowerCase().includes(effectiveSearch.toLowerCase())
+    const matchCat =
+      selectedCategory === 'all' || b.category === selectedCategory
+    return matchSearch && matchCat
+  })
 
   function openEdit(book: any) {
     setEditing({ ...book })
@@ -125,26 +133,26 @@ export default function AdminBooksContent({ books, categories: initialCategories
   }
 
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+    <div className="w-full p-6 sm:p-8 lg:p-10 space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/admin/dashboard" className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500">
+      <div className="flex flex-wrap items-center gap-3">
+        <Link href="/admin/dashboard" className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500">
           <ArrowLeft size={18} />
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">จัดการหนังสือ</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{books.length} เล่มทั้งหมด</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">จัดการหนังสือ</h1>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">{books.length} เล่มทั้งหมด</p>
         </div>
         <button
           onClick={() => setShowCatManager(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-xl text-xs sm:text-sm font-semibold transition-colors border border-neutral-200 dark:border-neutral-800"
         >
           <Tag size={16} />
           หมวดหมู่
         </button>
         <Link
           href="/admin/books/add"
-          className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm"
         >
           <Plus size={16} />
           เพิ่มหนังสือ
@@ -209,18 +217,27 @@ export default function AdminBooksContent({ books, categories: initialCategories
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden md:table-cell">
+                <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400 hidden md:table-cell">
                   {book.category || '—'}
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <span className={`text-sm font-medium ${book.available_copies > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${
+                    book.available_copies > 0
+                      ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 border-transparent'
+                      : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-700'
+                  }`}>
                     {book.available_copies}/{book.total_copies}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-center">
                   <button
                     onClick={() => toggleFeatured(book.id, book.is_featured)}
-                    className={`p-1.5 rounded-lg transition-colors ${book.is_featured ? 'text-amber-500 bg-amber-50 dark:bg-amber-950/30' : 'text-gray-300 dark:text-gray-600 hover:text-amber-400'}`}
+                    className={`p-1.5 rounded-xl transition-all ${
+                      book.is_featured
+                        ? 'text-neutral-950 bg-neutral-200 dark:text-white dark:bg-neutral-800 shadow-xs'
+                        : 'text-neutral-300 dark:text-neutral-600 hover:text-neutral-800 dark:hover:text-neutral-200'
+                    }`}
+                    title="แนะนำเล่มนี้"
                   >
                     <Star size={16} fill={book.is_featured ? 'currentColor' : 'none'} />
                   </button>
@@ -228,10 +245,10 @@ export default function AdminBooksContent({ books, categories: initialCategories
                 <td className="px-4 py-3 text-center">
                   <button
                     onClick={() => toggleActive(book.id, book.is_active !== false)}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold transition-all border ${
                       book.is_active === false
-                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-red-50 hover:text-red-500'
-                        : 'bg-green-50 dark:bg-green-950/30 text-green-600 hover:bg-gray-100 hover:text-gray-500'
+                        ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-700'
+                        : 'bg-neutral-900 text-white dark:bg-white dark:text-black border-transparent shadow-xs'
                     }`}
                   >
                     {book.is_active === false
@@ -241,17 +258,19 @@ export default function AdminBooksContent({ books, categories: initialCategories
                   </button>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-center gap-1">
+                  <div className="flex items-center justify-center gap-1.5">
                     <button
                       onClick={() => openEdit(book)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
+                      className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                      title="แก้ไข"
                     >
                       <Pencil size={15} />
                     </button>
                     <button
                       onClick={() => handleDelete(book.id)}
                       disabled={deleting === book.id}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50"
+                      className="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 dark:hover:bg-white dark:hover:text-neutral-950 transition-colors disabled:opacity-50"
+                      title="ลบ"
                     >
                       <Trash2 size={15} />
                     </button>
@@ -294,7 +313,7 @@ export default function AdminBooksContent({ books, categories: initialCategories
                     if (addCategory(newCatName)) setNewCatName('')
                     else alert('หมวดหมู่นี้มีอยู่แล้ว')
                   }}
-                  className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition-colors"
+                  className="px-3.5 py-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-xl text-sm font-semibold transition-colors shadow-xs"
                 >
                   <Plus size={16} />
                 </button>
@@ -404,7 +423,7 @@ export default function AdminBooksContent({ books, categories: initialCategories
                 <button type="button" onClick={closeEdit} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                   ยกเลิก
                 </button>
-                <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-50 transition-colors">
+                <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black text-sm font-semibold disabled:opacity-50 transition-colors shadow-xs">
                   {saving ? 'กำลังบันทึก...' : 'บันทึก'}
                 </button>
               </div>
@@ -417,22 +436,22 @@ export default function AdminBooksContent({ books, categories: initialCategories
         .input-field {
           padding: 0.5rem 0.75rem;
           border-radius: 0.75rem;
-          border: 1px solid rgb(229 231 235);
-          background-color: rgb(249 250 251);
-          color: rgb(17 24 39);
+          border: 1px solid rgb(228 228 231);
+          background-color: rgb(250 250 250);
+          color: rgb(9 9 11);
           font-size: 0.875rem;
           outline: none;
           transition: border-color 0.15s;
         }
-        .input-field:focus { border-color: rgb(34 197 94); }
+        .input-field:focus { border-color: rgb(0 0 0); }
         .dark .input-field {
-          border-color: rgb(55 65 81);
-          background-color: rgb(31 41 55);
-          color: rgb(243 244 246);
+          border-color: rgb(39 39 42);
+          background-color: rgb(18 18 20);
+          color: rgb(250 250 250);
         }
-        .dark .input-field:focus { border-color: rgb(34 197 94); }
+        .dark .input-field:focus { border-color: rgb(255 255 255); }
       `}</style>
-    </main>
+    </div>
   )
 }
 

@@ -9,22 +9,23 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-      primary: {
-        50: '#f0fdf4',
-        100: '#dcfce7',
-        200: '#bbf7d0',
-        300: '#84994F',
-        400: '#4ade80',
-        500: '#B5E18B',
-        600: '#7FB77E', // 👈 Update your custom color here
-        700: '#2F6B3F', // 👈 Recommended matching darker hover shade
-        800: '#88C273',
-        900: '#14532d',
+        primary: {
+          50: '#fafafa',
+          100: '#f4f4f5',
+          200: '#e4e4e7',
+          300: '#d4d4d8',
+          400: '#a1a1aa',
+          500: '#71717a',
+          600: '#27272a',
+          700: '#18181b',
+          800: '#09090b',
+          900: '#000000',
+        },
       },
-    },
       fontFamily: {
-        sans: ['var(--font-sarabun)', 'Sarabun', 'system-ui', 'sans-serif'],
-        display: ['var(--font-display)', 'Playfair Display', 'Georgia', 'serif'],
+        sans: ['IBM Plex Sans Thai', 'var(--font-sarabun)', 'Sarabun', 'system-ui', 'sans-serif'],
+        display: ['IBM Plex Sans Thai', 'Playfair Display', 'Georgia', 'serif'],
+        ibm: ['IBM Plex Sans Thai', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

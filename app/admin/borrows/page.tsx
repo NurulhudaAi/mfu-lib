@@ -1,5 +1,4 @@
 import { createServiceClient } from '@/lib/supabase-server'
-import Navbar from '@/components/Navbar'
 import AdminBorrowsContent from '@/components/AdminBorrowsContent'
 
 async function getData() {
@@ -46,9 +45,6 @@ async function getData() {
 export default async function AdminBorrowsPage() {
   const { borrows, queues } = await getData()
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
-      <AdminBorrowsContent borrows={borrows} queues={queues} />
-    </div>
+    <AdminBorrowsContent borrows={borrows} queues={queues} />
   )
 }
