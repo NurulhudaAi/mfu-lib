@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useApp } from '@/lib/app-context'
 import {
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import BookCard from './BookCard'
 import AnnouncementCarousel, { AnnouncementItem } from './AnnouncementCarousel'
+import AnnouncementPopupModal from './AnnouncementPopupModal'
 
 interface Book {
   id: string
@@ -47,6 +48,24 @@ export default function HomeContent({
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [hideInactive, setHideInactive] = useState<boolean>(false)
   const [onlyAvailable, setOnlyAvailable] = useState<boolean>(false)
+  const [isRulesPopupOpen, setIsRulesPopupOpen] = useState<boolean>(false)
+
+  // Auto show announcement & library rules popup on entrance if not dismissed today
+  useEffect(() => {
+    try {
+      const dismissedDate = localStorage.getItem('mfu_lib_announcement_popup_dismissed_date')
+      const today = new Date().toISOString().split('T')[0]
+      if (dismissedDate !== today) {
+        // Short subtle delay so the initial home entrance renders smoothly first
+        const timer = setTimeout(() => {
+          setIsRulesPopupOpen(true)
+        }, 400)
+        return () => clearTimeout(timer)
+      }
+    } catch (e) {
+      // Ignore localStorage errors (e.g. private mode or SSR)
+    }
+  }, [])
 
   // Featured / Recommended list (strictly is_featured books only)
   const recommendedBooks = useMemo(() => {
@@ -70,7 +89,19 @@ export default function HomeContent({
       {/* ======================================================== */}
       {/* 1. TOP HERO / ANNOUNCEMENT SLIDER (Above Recommended)    */}
       {/* ======================================================== */}
-      <AnnouncementCarousel announcements={announcements} />
+      <AnnouncementCarousel
+        announcements={announcements}
+        onOpenRules={() => setIsRulesPopupOpen(true)}
+      />
+
+      {/* ======================================================== */}
+      {/* ANNOUNCEMENT & LIBRARY RULES INTERACTIVE POPUP MODAL     */}
+      {/* ======================================================== */}
+      <AnnouncementPopupModal
+        announcements={announcements}
+        isOpen={isRulesPopupOpen}
+        onClose={() => setIsRulesPopupOpen(false)}
+      />
 
       {/* ======================================================== */}
       {/* 2. RECOMMENDED BOOKS SHELF                               */}

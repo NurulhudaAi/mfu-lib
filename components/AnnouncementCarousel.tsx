@@ -45,6 +45,7 @@ export interface AnnouncementItem {
 interface Props {
   announcements: AnnouncementItem[]
   autoPlayInterval?: number
+  onOpenRules?: () => void
 }
 
 // Fallback high-aesthetic library & book photography for sample slides
@@ -93,6 +94,7 @@ export function cleanAnnouncementBody(text: string): string {
 export default function AnnouncementCarousel({
   announcements,
   autoPlayInterval = 6000,
+  onOpenRules,
 }: Props) {
   const { locale, t, profile, showAlert, showConfirm } = useApp()
   const router = useRouter()
@@ -446,6 +448,21 @@ export default function AnnouncementCarousel({
                   <span>ถึง {format(new Date(extractAnnouncementExpiry(current)!), 'dd MMM yy HH:mm', { locale: locale === 'th' ? th : enUS })}</span>
                 </span>
               )}
+
+              {onOpenRules && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onOpenRules()
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium tracking-tight backdrop-blur-md bg-white/15 hover:bg-white/25 active:scale-95 text-white border border-white/20 shadow-xs transition-all cursor-pointer"
+                  title={locale === 'th' ? 'ดูกฎการยืม-คืน & ประกาศ' : 'View Borrowing Rules & Announcements'}
+                >
+                  <Sparkles size={11} className="text-amber-300" />
+                  <span>{locale === 'th' ? 'กฎการยืม-คืน & ประกาศ' : 'Rules & Announcements'}</span>
+                </button>
+              )}
             </div>
 
             {/* Admin In-Place Actions & Pause Micro-Indicator */}
@@ -458,7 +475,7 @@ export default function AnnouncementCarousel({
                       e.stopPropagation()
                       openCreateModal()
                     }}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white text-neutral-900 hover:bg-neutral-100 text-[11px] font-bold shadow-xs transition-all active:scale-95"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white text-neutral-900 hover:bg-neutral-100 text-[11px] font-bold shadow-xs transition-all active:scale-95"
                     title="สร้างประกาศใหม่"
                   >
                     <Plus size={12} className="stroke-[3]" />
@@ -513,17 +530,32 @@ export default function AnnouncementCarousel({
               {displayBody}
             </p>
 
-            {/* Read full body trigger if text is longer */}
-            {displayBody.length > 90 && (
-              <button
-                type="button"
-                onClick={() => setModalItem(current)}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-white/90 hover:text-white underline underline-offset-4 decoration-white/40 hover:decoration-white transition-all pt-1"
-              >
-                <span>{locale === 'th' ? 'อ่านรายละเอียดทั้งหมด' : 'Read full announcement'}</span>
-                <ChevronRight size={13} />
-              </button>
-            )}
+            {/* Read full body trigger or rules trigger */}
+            <div className="flex items-center gap-3 pt-1 flex-wrap">
+              {displayBody.length > 90 && (
+                <button
+                  type="button"
+                  onClick={() => setModalItem(current)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-white/90 hover:text-white underline underline-offset-4 decoration-white/40 hover:decoration-white transition-all"
+                >
+                  <span>{locale === 'th' ? 'อ่านรายละเอียดทั้งหมด' : 'Read full announcement'}</span>
+                  <ChevronRight size={13} />
+                </button>
+              )}
+
+              {onOpenRules && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onOpenRules()
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-white/95 bg-white/15 hover:bg-white/25 border border-white/20 backdrop-blur-md transition-all active:scale-95 cursor-pointer shadow-xs"
+                >
+                  <span>📋 {locale === 'th' ? 'กฎระเบียบการยืม-คืน' : 'Library Rules'}</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Bottom Bar: Interactive Controls & Progress Indicators */}
