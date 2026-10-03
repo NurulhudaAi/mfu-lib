@@ -11,7 +11,7 @@ import { NextResponse } from 'next/server'
  * @returns { ok: false, response: NextResponse } ถ้าไม่ใช่ admin (ส่ง response กลับได้เลย)
  */
 export async function requireAdmin(): Promise<
-  | { ok: true }
+  | { ok: true; admin: any }
   | { ok: false; response: NextResponse }
 > {
   const cookieStore = await cookies()
@@ -56,5 +56,5 @@ export async function requireAdmin(): Promise<
     }
   }
 
-  return { ok: true }
+  return { ok: true, admin: user }
 }

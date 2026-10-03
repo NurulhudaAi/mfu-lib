@@ -163,24 +163,24 @@ export default function AdminBorrowsContent({ borrows, queues }: Props) {
           <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-x-auto shadow-xs">
             <table className="w-full text-sm min-w-[700px]">
               <thead>
-                <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">ผู้ใช้</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">หนังสือ</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">วันยืม</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">ครบกำหนด</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">วันที่คืน</th>
-                  <th className="text-center px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">สถานะ</th>
-                  <th className="text-center px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">หลักฐาน</th>
+                <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40">
+                  <th className="text-left px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">ผู้ใช้</th>
+                  <th className="text-left px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">หนังสือ</th>
+                  <th className="text-left px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">วันยืม</th>
+                  <th className="text-left px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">ครบกำหนด</th>
+                  <th className="text-left px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">วันที่คืน</th>
+                  <th className="text-center px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">สถานะ</th>
+                  <th className="text-center px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">หลักฐาน</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-12 text-gray-400">ไม่พบรายการ</td></tr>
+                  <tr><td colSpan={7} className="text-center py-12 text-neutral-400">ไม่พบรายการ</td></tr>
                 ) : filtered.map(borrow => {
                   const sc = statusConfig[borrow.status as keyof typeof statusConfig] || statusConfig.returned
                   const isOverdue = borrow.status === 'active' && new Date(borrow.due_date) < new Date()
                   return (
-                    <tr key={borrow.id} className={`border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${isOverdue ? 'bg-red-50/30 dark:bg-red-950/10' : ''}`}>
+                    <tr key={borrow.id} className={`transition-colors ${isOverdue ? 'bg-neutral-100/60 dark:bg-neutral-800/60 font-medium' : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/30'}`}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0">
@@ -249,21 +249,21 @@ export default function AdminBorrowsContent({ borrows, queues }: Props) {
           <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-x-auto shadow-xs">
             <table className="w-full text-sm min-w-[600px]">
               <thead>
-                <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                  <th className="text-center px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 w-16">ลำดับ</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">ผู้จอง</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">หนังสือ</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">วันที่จอง</th>
+                <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40">
+                  <th className="text-center px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300 w-16">ลำดับ</th>
+                  <th className="text-left px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">ผู้จอง</th>
+                  <th className="text-left px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">หนังสือ</th>
+                  <th className="text-left px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">วันที่จอง</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
                 {filteredQueues.length === 0 ? (
-                  <tr><td colSpan={4} className="text-center py-12 text-gray-400">ไม่มีการจองคิว</td></tr>
+                  <tr><td colSpan={4} className="text-center py-12 text-neutral-400">ไม่มีการจองคิว</td></tr>
                 ) : filteredQueues.map(q => (
-                  <tr key={q.id} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                  <tr key={q.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
                     <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 text-xs font-bold">
-                        {q.position}
+                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-black text-xs font-bold shadow-xs">
+                        #{q.position}
                       </span>
                     </td>
                     <td className="px-4 py-3">

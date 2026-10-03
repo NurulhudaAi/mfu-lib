@@ -1,177 +1,495 @@
 'use client'
-import { useState } from 'react'
+import { useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '@/lib/app-context'
 import { format } from 'date-fns'
 import { th, enUS } from 'date-fns/locale'
 import {
-  BookOpen, Users, Clock, TrendingUp, Star,
-  MessageSquare, AlertCircle, CheckCircle, LayoutDashboard,
-  Plus, List, Settings, BookMarked
+  LayoutDashboard, Users, BookOpen, Clock, TrendingUp, AlertTriangle,
+  CheckCircle2, ArrowUpRight, Plus, BookMarked, Award, ArrowRight,
+  ShieldCheck, ListOrdered, Calendar
 } from 'lucide-react'
 
 interface Props {
-  stats: { totalBooks: number; totalBorrows: number; activeBorrows: number; totalUsers: number; totalQueues: number }
+  stats: {
+    totalBooks: number
+    totalBorrows: number
+    activeBorrows: number
+    overdueBorrows: number
+    returnedBorrows: number
+    totalUsers: number
+    totalQueues: number
+  }
+  mostBorrowedBooks: any[]
+  topBorrowers: any[]
   recentBorrows: any[]
-  recentFeedback: any[]
+  allBorrows: any[]
+  allUsers: any[]
+  queues: any[]
 }
 
-const statusConfig = {
-  active: { label: 'กำลังยืม', color: 'text-neutral-900 bg-neutral-100 dark:text-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700' },
-  returned: { label: 'คืนแล้ว', color: 'text-neutral-600 bg-neutral-100 dark:text-neutral-400 dark:bg-neutral-800' },
-  overdue: { label: 'เกินกำหนด', color: 'text-white bg-black dark:bg-white dark:text-black font-bold' },
+const statusConfig: Record<string, { label: string; color: string; dotColor: string }> = {
+  active: {
+    label: 'กำลังยืม',
+    color: 'text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700',
+    dotColor: 'bg-emerald-500'
+  },
+  returned: {
+    label: 'คืนแล้ว',
+    color: 'text-neutral-600 dark:text-neutral-400 bg-neutral-100/70 dark:bg-neutral-800/50',
+    dotColor: 'bg-neutral-400'
+  },
+  overdue: {
+    label: 'เกินกำหนด',
+    color: 'text-white bg-black dark:bg-white dark:text-black font-bold shadow-xs',
+    dotColor: 'bg-rose-500'
+  },
 }
 
-export default function AdminDashboardContent({ stats, recentBorrows, recentFeedback }: Props) {
+export default function AdminDashboardContent({
+  stats,
+  mostBorrowedBooks,
+  topBorrowers,
+  recentBorrows,
+  allBorrows,
+  allUsers,
+  queues,
+}: Props) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
   const { locale } = useApp()
   const dateLocale = locale === 'th' ? th : enUS
 
-  function fmt(date: string) {
-    return format(new Date(date), 'dd MMM yy', { locale: dateLocale })
+  function fmtDate(d: string | null) {
+    if (!d) return '—'
+    return format(new Date(d), 'dd MMM yyyy', { locale: dateLocale })
   }
 
-  const statCards = [
-    { label: 'หนังสือทั้งหมด', value: stats.totalBooks, icon: BookOpen, color: 'text-neutral-900 bg-neutral-100 dark:text-white dark:bg-neutral-800' },
-    { label: 'ผู้ใช้งาน', value: stats.totalUsers, icon: Users, color: 'text-neutral-900 bg-neutral-100 dark:text-white dark:bg-neutral-800' },
-    { label: 'กำลังยืมอยู่', value: stats.activeBorrows, icon: Clock, color: 'text-neutral-900 bg-neutral-100 dark:text-white dark:bg-neutral-800' },
-    { label: 'ยืมทั้งหมด', value: stats.totalBorrows, icon: TrendingUp, color: 'text-neutral-900 bg-neutral-100 dark:text-white dark:bg-neutral-800' },
-    { label: 'จองคิวทั้งหมด', value: stats.totalQueues, icon: BookMarked, color: 'text-neutral-900 bg-neutral-100 dark:text-white dark:bg-neutral-800' },
-  ]
+  // Max counts for progress bar calculations
+  const maxBookBorrows = mostBorrowedBooks[0]?.borrowCount || 1
+  const maxUserBorrows = topBorrowers[0]?.borrowCount || 1
 
   return (
-    <div className="w-full p-6 sm:p-8 lg:p-10 space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="w-full p-5 sm:p-8 lg:p-10 space-y-8 animate-fade-in max-w-7xl mx-auto">
+      {/* ── Top Header ── */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white flex items-center gap-2.5">
-            <LayoutDashboard size={24} />
-            Admin Dashboard
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            Admin Operations Center
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white flex items-center gap-3">
+            <LayoutDashboard size={26} className="text-neutral-900 dark:text-white" />
+            แผงควบคุมผู้ดูแล (Admin Dashboard)
           </h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">จัดการระบบยืม-คืนหนังสือ ชมรมมุสลิม มฟล.</p>
+          <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+            ศูนย์รวมสถิติภาพรวม การหมุนเวียนหนังสือ และความถี่สมาชิก ชมรมมุสลิม มฟล.
+          </p>
         </div>
-        <div className="flex gap-2">
+
+        {/* Quick Action Navigation Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
           <Link
-            href="/admin/books/add"
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm"
+            href="/admin/borrows"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black text-xs sm:text-sm font-semibold transition-all shadow-sm active:scale-95"
           >
-            <Plus size={16} />
-            เพิ่มหนังสือ
-          </Link>
-          <Link
-            href="/admin/books"
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-xl text-xs sm:text-sm font-semibold hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
-          >
-            <List size={16} />
-            หนังสือ
+            <Clock size={16} />
+            จัดการการยืมคืน
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-700 dark:bg-neutral-200 text-white dark:text-neutral-900">
+              {stats.activeBorrows}
+            </span>
           </Link>
           <Link
             href="/admin/users"
-            className="flex items-center gap-1.5 px-4 py-2 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-xl text-xs sm:text-sm font-semibold hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs sm:text-sm font-semibold transition-colors"
           >
             <Users size={16} />
-            ผู้ใช้
+            จัดการผู้ใช้งาน
+          </Link>
+          <Link
+            href="/books"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs sm:text-sm font-semibold transition-colors"
+          >
+            <BookOpen size={16} />
+            คลังหนังสือทั้งหมด
           </Link>
         </div>
       </div>
 
-      {/* Stats — 5 cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-        {statCards.map(card => {
-          const Icon = card.icon
-          return (
-            <div key={card.label} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-5 shadow-xs animate-fade-in">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">{card.label}</p>
-                  <p className="text-3xl font-bold text-neutral-900 dark:text-white mt-1">{card.value}</p>
-                </div>
-                <div className={`p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 ${card.color}`}>
-                  <Icon size={18} />
-                </div>
-              </div>
-            </div>
-          )
-        })}
+      {/* ── Key Stat Counters ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <Link
+          href="/books"
+          className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all"
+        >
+          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider">หนังสือทั้งหมด</span>
+            <BookOpen size={17} className="group-hover:scale-110 transition-transform" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.totalBooks}</p>
+          <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
+            <span>พร้อมให้ยืมในระบบ</span>
+            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/users"
+          className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all"
+        >
+          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider">ผู้ใช้ทั้งหมด</span>
+            <Users size={17} className="group-hover:scale-110 transition-transform" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.totalUsers}</p>
+          <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
+            <span>สมาชิก & แอดมิน</span>
+            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/borrows"
+          className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all"
+        >
+          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider">ยืมทั้งหมด</span>
+            <TrendingUp size={17} className="group-hover:scale-110 transition-transform" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.totalBorrows}</p>
+          <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
+            <span>ประวัติรายการสะสม</span>
+            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/borrows"
+          className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-emerald-500 transition-all"
+        >
+          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider">กำลังยืมอยู่</span>
+            <Clock size={17} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.activeBorrows}</p>
+          <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
+            <span>อยู่ระหว่างการอ่าน</span>
+            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/borrows"
+          className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-rose-500 transition-all"
+        >
+          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider">เกินกำหนด</span>
+            <AlertTriangle size={17} className="text-rose-500 group-hover:scale-110 transition-transform" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400">{stats.overdueBorrows}</p>
+          <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
+            <span>ต้องติดตามการคืน</span>
+            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/borrows"
+          className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all"
+        >
+          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider">คืนเรียบร้อย</span>
+            <CheckCircle2 size={17} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.returnedBorrows}</p>
+          <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
+            <span>ส่งคืนสำเร็จ</span>
+            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+          </p>
+        </Link>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Recent borrows */}
-        <div className="lg:col-span-2 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-neutral-900 dark:text-white">การยืมล่าสุด</h2>
-            <Link href="/admin/borrows" className="text-xs font-semibold text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors">
-              ดูทั้งหมด →
-            </Link>
+      {/* ── Operational Shortcut Cards (Go to Outside Tabs) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Manage Borrows Card */}
+        <Link
+          href="/admin/borrows"
+          className="group p-5 rounded-2xl bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-900/60 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-900 dark:hover:border-white transition-all shadow-xs flex items-center justify-between"
+        >
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-12 h-12 rounded-2xl bg-neutral-900 text-white dark:bg-white dark:text-black flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+              <Clock size={22} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-neutral-900 dark:text-white text-base">จัดการการยืมคืน</h3>
+                {stats.overdueBorrows > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">
+                    เกินกำหนด {stats.overdueBorrows}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                ตรวจสอบรายการยืม {stats.activeBorrows} เล่ม, ตรวจหลักฐานการคืน และคิวจอง
+              </p>
+            </div>
           </div>
-          <div className="space-y-3">
-            {recentBorrows.length === 0 ? (
-              <p className="text-sm text-neutral-400 text-center py-6">ยังไม่มีการยืม</p>
-            ) : recentBorrows.map(borrow => {
-              const sc = statusConfig[borrow.status as keyof typeof statusConfig] || statusConfig.returned
+          <ArrowRight size={18} className="text-neutral-400 group-hover:text-black dark:group-hover:text-white group-hover:translate-x-1 transition-all shrink-0 ml-2" />
+        </Link>
+
+        {/* Manage Users Card */}
+        <Link
+          href="/admin/users"
+          className="group p-5 rounded-2xl bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-900/60 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-900 dark:hover:border-white transition-all shadow-xs flex items-center justify-between"
+        >
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-12 h-12 rounded-2xl bg-neutral-900 text-white dark:bg-white dark:text-black flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+              <Users size={22} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-neutral-900 dark:text-white text-base">จัดการผู้ใช้งาน</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                  {stats.totalUsers} คน
+                </span>
+              </div>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                รายชื่อสมาชิก, เชิญผู้ดูแลด้วยอีเมล และจัดการระงับสิทธิ์ (Blacklist)
+              </p>
+            </div>
+          </div>
+          <ArrowRight size={18} className="text-neutral-400 group-hover:text-black dark:group-hover:text-white group-hover:translate-x-1 transition-all shrink-0 ml-2" />
+        </Link>
+      </div>
+
+      {/* ── Two-Column Ranking Grid (Most Borrowed & Top Borrowers) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Most Borrowed Books */}
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-900 dark:text-white font-bold">
+                  <Award size={18} />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-neutral-900 dark:text-white">หนังสือที่ถูกยืมบ่อย</h2>
+                  <p className="text-xs text-neutral-400">จัดอันดับตามจำนวนครั้งที่มีการยืม</p>
+                </div>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+                Top 6
+              </span>
+            </div>
+
+            {mostBorrowedBooks.length === 0 ? (
+              <div className="py-12 text-center text-neutral-400 text-sm">
+                <BookOpen size={36} className="mx-auto mb-2 opacity-20" />
+                ยังไม่มีข้อมูลการยืมหนังสือ
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {mostBorrowedBooks.map((book, idx) => {
+                  const percentage = Math.round((book.borrowCount / maxBookBorrows) * 100)
+                  return (
+                    <div key={book.id || idx} className="space-y-1.5">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                          idx === 0 ? 'bg-neutral-900 text-white dark:bg-white dark:text-black' :
+                          idx === 1 ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200' :
+                          idx === 2 ? 'bg-neutral-100 dark:bg-neutral-800/60 text-neutral-600 dark:text-neutral-400' :
+                          'text-neutral-400 text-xs'
+                        }`}>
+                          {idx + 1}
+                        </div>
+
+                        {/* Cover Image thumbnail */}
+                        <div className="w-8 h-11 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0">
+                          {book.cover_url ? (
+                            <img src={book.cover_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-neutral-300 dark:text-neutral-600">
+                              <BookOpen size={14} />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Title & Author */}
+                        <div className="flex-1 min-w-0">
+                          <Link
+                            href={`/books/${book.id}`}
+                            className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white hover:underline truncate block"
+                          >
+                            {book.title}
+                          </Link>
+                          <p className="text-[11px] text-neutral-400 truncate">
+                            {book.author || 'ไม่ระบุผู้แต่ง'}
+                          </p>
+                        </div>
+
+                        {/* Borrow count pill */}
+                        <div className="text-right shrink-0">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-700">
+                            {book.borrowCount} ครั้ง
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="w-full bg-neutral-100 dark:bg-neutral-800/80 rounded-full h-1.5 overflow-hidden ml-9">
+                        <div
+                          className="bg-neutral-900 dark:bg-white h-full rounded-full transition-all duration-500"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Top Active Borrowers */}
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-900 dark:text-white font-bold">
+                  <Users size={18} />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-neutral-900 dark:text-white">ใครยืมบ่อย (Top Borrowers)</h2>
+                  <p className="text-xs text-neutral-400">สมาชิกที่มีความถี่ในการอ่านและยืมสูงสุด</p>
+                </div>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+                Top 6
+              </span>
+            </div>
+
+            {topBorrowers.length === 0 ? (
+              <div className="py-12 text-center text-neutral-400 text-sm">
+                <Users size={36} className="mx-auto mb-2 opacity-20" />
+                ยังไม่มีข้อมูลผู้ยืมในระบบ
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {topBorrowers.map((user, idx) => {
+                  const percentage = Math.round((user.borrowCount / maxUserBorrows) * 100)
+                  return (
+                    <div key={user.id || idx} className="space-y-1.5">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                          idx === 0 ? 'bg-neutral-900 text-white dark:bg-white dark:text-black' :
+                          idx === 1 ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200' :
+                          idx === 2 ? 'bg-neutral-100 dark:bg-neutral-800/60 text-neutral-600 dark:text-neutral-400' :
+                          'text-neutral-400 text-xs'
+                        }`}>
+                          {idx + 1}
+                        </div>
+
+                        {/* User Avatar */}
+                        <div className="w-9 h-9 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0">
+                          {user.avatar_url ? (
+                            <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-neutral-400 text-xs font-bold">
+                              {user.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* User Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white truncate">
+                            {user.full_name || 'ไม่ระบุชื่อ'}
+                          </p>
+                          <p className="text-[11px] text-neutral-400 truncate">
+                            {user.email || '—'}
+                          </p>
+                        </div>
+
+                        {/* Count pill */}
+                        <div className="text-right shrink-0">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-700">
+                            {user.borrowCount} เล่ม
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="w-full bg-neutral-100 dark:bg-neutral-800/80 rounded-full h-1.5 overflow-hidden ml-9">
+                        <div
+                          className="bg-neutral-900 dark:bg-white h-full rounded-full transition-all duration-500"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Recent Borrows Activity Feed ── */}
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6 shadow-xs">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-bold text-neutral-900 dark:text-white text-base">รายการยืมล่าสุด</h2>
+            <p className="text-xs text-neutral-400">อัปเดตแบบเรียลไทม์ตามลำดับเวลา</p>
+          </div>
+          <Link
+            href="/admin/borrows"
+            className="text-xs font-semibold text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-1"
+          >
+            ดูทั้งหมด ({allBorrows.length}) →
+          </Link>
+        </div>
+
+        <div className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
+          {recentBorrows.length === 0 ? (
+            <p className="text-sm text-neutral-400 text-center py-8">ยังไม่มีประวัติการยืม</p>
+          ) : (
+            recentBorrows.slice(0, 8).map((borrow) => {
+              const sc = statusConfig[borrow.status] || statusConfig.returned
               return (
-                <div key={borrow.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
-                  <div className="w-9 h-9 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0">
+                <div key={borrow.id} className="py-3 flex items-center gap-3.5 hover:bg-neutral-50/60 dark:hover:bg-neutral-800/30 px-2 rounded-xl transition-colors">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0">
                     {borrow.profiles?.avatar_url ? (
                       <img src={borrow.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-neutral-400">
+                      <div className="w-full h-full flex items-center justify-center text-neutral-400 text-xs">
                         <Users size={14} />
                       </div>
                     )}
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
                       {borrow.profiles?.full_name || borrow.profiles?.email}
                     </p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">{borrow.books?.title}</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                      ยืม: <span className="font-medium text-neutral-700 dark:text-neutral-300">{borrow.books?.title}</span>
+                    </p>
                   </div>
+
                   <div className="text-right shrink-0">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${sc.color}`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${sc.color}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${sc.dotColor}`} />
                       {sc.label}
                     </span>
-                    <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">{fmt(borrow.borrowed_at)}</p>
+                    <p className="text-[11px] text-neutral-400 mt-0.5">{fmtDate(borrow.borrowed_at)}</p>
                   </div>
                 </div>
               )
-            })}
-          </div>
-        </div>
-
-        {/* Recent feedback */}
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
-              <MessageSquare size={16} className="text-neutral-900 dark:text-white" />
-              Feedback ล่าสุด
-            </h2>
-          </div>
-          <div className="space-y-4">
-            {recentFeedback.length === 0 ? (
-              <p className="text-sm text-neutral-400 text-center py-6">ยังไม่มี feedback</p>
-            ) : recentFeedback.map(fb => (
-              <div key={fb.id} className="border-b border-neutral-100 dark:border-neutral-800 pb-3 last:border-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="flex gap-0.5">
-                    {[1, 2, 3, 4, 5].map(s => (
-                      <Star
-                        key={s}
-                        size={11}
-                        className={s <= fb.rating ? 'fill-neutral-900 text-neutral-900 dark:fill-white dark:text-white' : 'text-neutral-200 dark:text-neutral-700'}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-[10px] text-neutral-400 dark:text-neutral-500 ml-auto">{fmt(fb.created_at)}</span>
-                </div>
-                <p className="text-xs text-neutral-700 dark:text-neutral-300 line-clamp-2 leading-relaxed">{fb.message}</p>
-                <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700">
-                  {fb.profiles?.full_name || fb.profiles?.email || 'สมาชิก'}
-                </span>
-              </div>
-            ))}
-          </div>
+            })
+          )}
         </div>
       </div>
-
     </div>
   )
 }
