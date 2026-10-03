@@ -1,6 +1,7 @@
 // components/ISBNScanner.tsx
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Camera } from 'lucide-react'
 
 interface Props {
@@ -12,6 +13,11 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
   const videoRef = useRef<HTMLDivElement>(null)
   const [error, setError] = useState('')
   const [ready, setReady] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     let stopped = false
@@ -72,9 +78,11 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
     }
   }, [])
 
-  return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden w-full max-w-sm shadow-2xl">
+  if (!mounted || typeof document === 'undefined') return null
+
+  return createPortal(
+    <div className="fixed inset-0 w-screen h-[100dvh] bg-black/80 flex items-center justify-center z-[10000] p-4 animate-fade-in">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden w-full max-w-sm shadow-2xl animate-scale-in">
 
         {/* Header */}
         <div className="flex justify-between items-center px-5 py-3.5 border-b border-neutral-100 dark:border-neutral-800">
@@ -83,6 +91,7 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
             <h3 className="font-bold text-neutral-900 dark:text-white text-sm">สแกน Barcode ISBN</h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
           >
@@ -95,6 +104,7 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
           <div className="p-8 text-center">
             <p className="text-red-500 text-sm">{error}</p>
             <button
+              type="button"
               onClick={onClose}
               className="mt-4 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-xl text-sm font-medium"
             >
@@ -133,6 +143,7 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

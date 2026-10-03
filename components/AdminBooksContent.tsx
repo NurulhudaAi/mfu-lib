@@ -171,22 +171,22 @@ export default function AdminBooksContent({ books, categories: initialCategories
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-xs">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-              <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">หนังสือ</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 hidden md:table-cell">หมวดหมู่</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">จำนวน</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">แนะนำ</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">สถานะ</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">จัดการ</th>
+            <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40">
+              <th className="text-left px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">หนังสือ</th>
+              <th className="text-left px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300 hidden md:table-cell">หมวดหมู่</th>
+              <th className="text-center px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">จำนวน</th>
+              <th className="text-center px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">แนะนำ</th>
+              <th className="text-center px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">สถานะ</th>
+              <th className="text-center px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">จัดการ</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-12 text-gray-400">
+                <td colSpan={6} className="text-center py-12 text-neutral-400">
                   <BookOpen size={36} className="mx-auto mb-2 opacity-20" />
                   ไม่พบหนังสือ
                 </td>
@@ -194,15 +194,15 @@ export default function AdminBooksContent({ books, categories: initialCategories
             ) : filtered.map(book => (
               <tr
                 key={book.id}
-                className={`border-b border-gray-50 dark:border-gray-800 transition-colors ${
+                className={`transition-colors ${
                   book.is_active === false
-                    ? 'opacity-50 bg-gray-50/50 dark:bg-gray-800/20'
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                    ? 'opacity-50 bg-neutral-50/50 dark:bg-neutral-800/20'
+                    : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/30'
                 }`}
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-14 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0">
+                    <div className="w-10 h-14 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0">
                       {book.cover_url ? (
                         <img src={book.cover_url} alt="" className="w-full h-full object-cover" />
                       ) : (
