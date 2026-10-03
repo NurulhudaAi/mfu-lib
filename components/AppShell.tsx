@@ -193,12 +193,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // Navigation Links
   const navLinks = [
     {
+      key: 'home',
       href: '/',
       label: locale === 'th' ? 'หน้าแรก' : 'Discover',
       icon: Compass,
       isActive: pathname === '/',
     },
     {
+      key: 'books',
       href: '/books',
       label: locale === 'th' ? 'หนังสือทั้งหมด' : 'All Books',
       icon: Layers,
@@ -208,12 +210,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
     ...(!isAdmin
       ? [
           {
+            key: 'my-borrows',
             href: profile ? '/my-borrows' : '/login',
             label: locale === 'th' ? 'การยืมของฉัน' : 'My Library',
             icon: ClipboardList,
             isActive: pathname.startsWith('/my-borrows'),
           },
           {
+            key: 'feedback',
             href: profile ? '/feedback' : '/login',
             label: locale === 'th' ? 'ข้อเสนอแนะ' : 'Feedback',
             icon: MessageSquare,
@@ -226,18 +230,21 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // Admin Outer Navigation Links
   const adminLinks = [
     {
+      key: 'admin-dashboard',
       href: '/admin/dashboard',
       label: locale === 'th' ? 'แดชบอร์ด' : 'Dashboard',
       icon: LayoutDashboard,
       isActive: pathname === '/admin/dashboard' || pathname === '/admin',
     },
     {
+      key: 'admin-borrows',
       href: '/admin/borrows',
       label: locale === 'th' ? 'จัดการการยืมคืน' : 'Borrow & Return',
       icon: ClipboardList,
       isActive: pathname.startsWith('/admin/borrows'),
     },
     {
+      key: 'admin-users',
       href: '/admin/users',
       label: locale === 'th' ? 'ผู้ใช้งาน' : 'Users',
       icon: Users,
@@ -274,7 +281,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               const Icon = link.icon
               return (
                 <Link
-                  key={link.href}
+                  key={link.key}
                   href={link.href}
                   className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-semibold text-sm transition-all ${
                     link.isActive
@@ -298,7 +305,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   const Icon = link.icon
                   return (
                     <Link
-                      key={link.href}
+                      key={link.key}
                       href={link.href}
                       className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-semibold text-sm transition-all ${
                         link.isActive
@@ -562,7 +569,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           const Icon = link.icon
           return (
             <Link
-              key={link.href}
+              key={link.key}
               href={link.href}
               className={`flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-xl transition-all ${
                 link.isActive
@@ -579,7 +586,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           const Icon = link.icon
           return (
             <Link
-              key={link.href}
+              key={link.key}
               href={link.href}
               className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-xl transition-all ${
                 link.isActive
@@ -639,7 +646,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   const Icon = link.icon
                   return (
                     <Link
-                      key={link.href}
+                      key={link.key}
                       href={link.href}
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm ${
@@ -663,7 +670,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                       const Icon = link.icon
                       return (
                         <Link
-                          key={link.href}
+                          key={link.key}
                           href={link.href}
                           onClick={() => setIsMobileMenuOpen(false)}
                           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
