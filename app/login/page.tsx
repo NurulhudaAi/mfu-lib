@@ -34,7 +34,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-100 dark:bg-[#0a0a0c] px-4 transition-colors duration-300">
+    <div className="min-h-screen flex items-center justify-center bg-neutral-100 dark:bg-[#0a0a0c] px-4">
       <div className="w-full max-w-sm animate-fade-in">
         {/* Card */}
         <div className="bg-white dark:bg-[#121214] rounded-3xl shadow-xl border border-neutral-200 dark:border-neutral-800 p-8 sm:p-9 text-center">

@@ -36,6 +36,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       data-scroll-behavior="smooth"
     >
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var saved = localStorage.getItem('theme');
+                  if (saved === 'light') {
+                    document.documentElement.classList.remove('dark');
+                  } else {
+                    document.documentElement.classList.add('dark');
+                  }
+                } catch (e) {
+                  document.documentElement.classList.add('dark');
+                }
+              })();
+            `,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link 
@@ -43,7 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet" 
         />
       </head>
-      <body className="font-sans antialiased bg-white dark:bg-[#0a0a0c] text-neutral-900 dark:text-neutral-100 transition-colors duration-300 min-h-screen">
+      <body className="font-sans antialiased bg-white dark:bg-[#0a0a0c] text-neutral-900 dark:text-neutral-100 min-h-screen">
         <AppProvider>
           <AppShell>
             {children}

@@ -291,7 +291,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   ]
 
   return (
-    <div className="min-h-screen w-full bg-white dark:bg-[#0a0a0c] flex transition-colors duration-300 antialiased font-sans text-neutral-900 dark:text-neutral-100">
+    <div className="min-h-screen w-full bg-white dark:bg-[#0a0a0c] flex antialiased font-sans text-neutral-900 dark:text-neutral-100">
       
       {/* ======================================================== */}
       {/* 1. LEFT DOCKED SIDEBAR (Desktop)                         */}

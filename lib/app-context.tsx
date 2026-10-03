@@ -65,7 +65,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setTheme(savedTheme)
       document.documentElement.classList.toggle('dark', savedTheme === 'dark')
     } else {
-      document.documentElement.classList.add('dark')
+      const isDark = document.documentElement.classList.contains('dark')
+      setTheme(isDark ? 'dark' : 'light')
+      if (!isDark) {
+        document.documentElement.classList.remove('dark')
+      }
     }
   }, [])
 
