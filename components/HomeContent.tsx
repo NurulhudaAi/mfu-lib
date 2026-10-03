@@ -46,6 +46,7 @@ export default function HomeContent({
   const { locale } = useApp()
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [hideInactive, setHideInactive] = useState<boolean>(false)
+  const [onlyAvailable, setOnlyAvailable] = useState<boolean>(false)
 
   // Featured / Recommended list (strictly is_featured books only)
   const recommendedBooks = useMemo(() => {
@@ -58,9 +59,10 @@ export default function HomeContent({
       const matchCat =
         selectedCategory === 'all' || b.category === selectedCategory
       const matchActive = !hideInactive || b.is_active !== false
-      return matchCat && matchActive
+      const matchAvailable = !onlyAvailable || b.available_copies > 0
+      return matchCat && matchActive && matchAvailable
     })
-  }, [books, selectedCategory, hideInactive])
+  }, [books, selectedCategory, hideInactive, onlyAvailable])
 
   return (
     <div className="w-full max-w-7xl mx-auto p-6 sm:p-8 lg:p-10 space-y-12 animate-fade-in">
@@ -137,6 +139,19 @@ export default function HomeContent({
                 <span>{locale === 'th' ? 'ซ่อนที่ปิดใช้งาน' : 'Hide Inactive'}</span>
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => setOnlyAvailable(!onlyAvailable)}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                onlyAvailable
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${onlyAvailable ? 'bg-white' : 'bg-emerald-500'}`} />
+              <span>{locale === 'th' ? 'พร้อมให้ยืม' : 'Available'}</span>
+            </button>
 
             <button
               type="button"

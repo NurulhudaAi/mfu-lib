@@ -51,16 +51,14 @@ export default function BooksContent({
     setSearchQuery,
     selectedCategory,
     setSelectedCategory,
+    statusFilter,
+    setStatusFilter,
     profile,
     showAlert,
     showConfirm,
   } = useApp()
   const router = useRouter()
   const isAdmin = profile?.role === 'admin'
-
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
-    initialStatus === 'available' || initialStatus === 'active' ? initialStatus : 'all'
-  )
 
   // Admin Book In-Place CRUD Modal State
   const [isBookModalOpen, setIsBookModalOpen] = useState(false)
@@ -117,14 +115,20 @@ export default function BooksContent({
 
   // Sync with initial props whenever URL query params change
   useEffect(() => {
-    if (initialSearch) setSearchQuery(initialSearch)
+    setSearchQuery(initialSearch || '')
   }, [initialSearch])
 
   useEffect(() => {
-    if (initialCategory && initialCategory !== 'all') {
-      setSelectedCategory(initialCategory)
-    }
+    setSelectedCategory(initialCategory || 'all')
   }, [initialCategory])
+
+  useEffect(() => {
+    if (initialStatus === 'available' || initialStatus === 'active') {
+      setStatusFilter(initialStatus)
+    } else {
+      setStatusFilter('all')
+    }
+  }, [initialStatus])
 
   const stats = useMemo(() => {
     const total = books.length
@@ -447,6 +451,9 @@ export default function BooksContent({
     if (selectedCategory && selectedCategory !== 'all') {
       params.set('category', selectedCategory)
     }
+    if (statusFilter && statusFilter !== 'all') {
+      params.set('status', statusFilter)
+    }
     const qs = params.toString()
     router.push(`/books${qs ? `?${qs}` : ''}`)
   }
@@ -456,6 +463,25 @@ export default function BooksContent({
     const params = new URLSearchParams()
     if (searchQuery.trim()) {
       params.set('q', searchQuery.trim())
+    }
+    if (statusFilter && statusFilter !== 'all') {
+      params.set('status', statusFilter)
+    }
+    const qs = params.toString()
+    router.push(`/books${qs ? `?${qs}` : ''}`)
+  }
+
+  function handleSetStatusFilter(status: StatusFilter) {
+    setStatusFilter(status)
+    const params = new URLSearchParams()
+    if (searchQuery.trim()) {
+      params.set('q', searchQuery.trim())
+    }
+    if (selectedCategory && selectedCategory !== 'all') {
+      params.set('category', selectedCategory)
+    }
+    if (status !== 'all') {
+      params.set('status', status)
     }
     const qs = params.toString()
     router.push(`/books${qs ? `?${qs}` : ''}`)
@@ -520,7 +546,7 @@ export default function BooksContent({
         <div className="inline-flex p-1 bg-neutral-100 dark:bg-[#161619] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xs">
           <button
             type="button"
-            onClick={() => setStatusFilter('all')}
+            onClick={() => handleSetStatusFilter('all')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               statusFilter === 'all'
                 ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
@@ -532,7 +558,7 @@ export default function BooksContent({
 
           <button
             type="button"
-            onClick={() => setStatusFilter('available')}
+            onClick={() => handleSetStatusFilter('available')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               statusFilter === 'available'
                 ? 'bg-emerald-600 text-white shadow-xs'
@@ -547,7 +573,7 @@ export default function BooksContent({
           {stats.inactive > 0 && (
             <button
               type="button"
-              onClick={() => setStatusFilter('active')}
+              onClick={() => handleSetStatusFilter('active')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                 statusFilter === 'active'
                   ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900 shadow-xs'
@@ -619,7 +645,7 @@ export default function BooksContent({
               </span>
               <button
                 type="button"
-                onClick={() => setStatusFilter('all')}
+                onClick={() => handleSetStatusFilter('all')}
                 className="p-0.5 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
                 title="ล้างสถานะ"
               >

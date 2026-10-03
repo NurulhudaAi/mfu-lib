@@ -54,6 +54,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setSearchQuery,
     selectedCategory,
     setSelectedCategory,
+    statusFilter,
+    setStatusFilter,
     alertModal,
     closeAlert,
     toasts,
@@ -132,13 +134,19 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Close mobile drawer on route change & sync search query from URL
+  // Close mobile drawer on route change & sync search query & filters from URL
   useEffect(() => {
     setIsMobileMenuOpen(false)
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       setSearchQuery(params.get('q') || '')
       setSelectedCategory(params.get('category') || 'all')
+      const s = params.get('status')
+      if (s === 'available' || s === 'active') {
+        setStatusFilter(s)
+      } else {
+        setStatusFilter('all')
+      }
     }
   }, [pathname])
 
@@ -152,13 +160,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
     window.location.href = '/login'
   }
 
-  function applyFilters(newQuery: string, newCat: string) {
+  function applyFilters(newQuery: string, newCat: string, newStatus?: string) {
     const params = new URLSearchParams()
     if (newQuery.trim()) {
       params.set('q', newQuery.trim())
     }
     if (newCat && newCat !== 'all') {
       params.set('category', newCat)
+    }
+    const currentStatus = newStatus !== undefined ? newStatus : statusFilter
+    if (currentStatus && currentStatus !== 'all') {
+      params.set('status', currentStatus)
     }
     const queryString = params.toString()
 
@@ -176,19 +188,32 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault()
-    applyFilters(searchQuery, selectedCategory)
+    applyFilters(searchQuery, selectedCategory, statusFilter)
   }
 
   function handleSelectCategory(cat: string) {
     setSelectedCategory(cat)
-    setIsFilterOpen(false)
-    applyFilters(searchQuery, cat)
+    applyFilters(searchQuery, cat, statusFilter)
+  }
+
+  function handleToggleAvailable() {
+    const nextStatus = statusFilter === 'available' ? 'all' : 'available'
+    setStatusFilter(nextStatus)
+    applyFilters(searchQuery, selectedCategory, nextStatus)
+  }
+
+  function handleResetFilters() {
+    setSelectedCategory('all')
+    setStatusFilter('all')
+    applyFilters(searchQuery, 'all', 'all')
   }
 
   function handleClearSearch() {
     setSearchQuery('')
-    applyFilters('', selectedCategory)
+    applyFilters('', selectedCategory, statusFilter)
   }
+
+  const hasActiveFilter = selectedCategory !== 'all' || statusFilter !== 'all'
 
   // Navigation Links
   const navLinks = [
@@ -420,83 +445,117 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   </button>
                 )}
 
-                {/* Category Filter Icon Button */}
+                {/* Search Filter Icon Button (Category & Book Status) */}
                 <div className="relative" ref={filterDropdownRef}>
                   <button
                     type="button"
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className={`p-1.5 rounded-xl transition-all flex items-center justify-center ${
-                      selectedCategory !== 'all'
+                    className={`p-1.5 rounded-xl transition-all flex items-center justify-center relative ${
+                      hasActiveFilter
                         ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
                         : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800'
                     }`}
-                    title={locale === 'th' ? 'เลือกหมวดหมู่' : 'Filter category'}
-                    aria-label="Filter category"
+                    title={
+                      hasActiveFilter
+                        ? locale === 'th' ? 'ตัวกรอง (กำลังใช้งาน)' : 'Filters (Active)'
+                        : locale === 'th' ? 'ตัวกรองการค้นหา' : 'Filter search'
+                    }
+                    aria-label="Filter search"
                   >
                     <SlidersHorizontal size={14} />
+                    {hasActiveFilter && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#111113]" />
+                    )}
                   </button>
 
                   {/* Dropdown Menu */}
                   {isFilterOpen && (
-                    <div className="absolute right-0 mt-3 w-60 p-2.5 bg-white dark:bg-[#161619] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl z-50 animate-fade-in text-neutral-900 dark:text-white">
-                      <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-neutral-100 dark:border-neutral-800 px-1">
+                    <div className="absolute right-0 mt-3 w-64 sm:w-72 p-3 bg-white dark:bg-[#161619] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl z-50 animate-fade-in text-neutral-900 dark:text-white">
+                      {/* Dropdown Header */}
+                      <div className="flex items-center justify-between pb-2 mb-2 border-b border-neutral-100 dark:border-neutral-800 px-1">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-                          {locale === 'th' ? 'หมวดหมู่หนังสือ' : 'Categories'}
+                          {locale === 'th' ? 'ตัวกรองการค้นหา' : 'Search Filters'}
                         </span>
-                        {selectedCategory !== 'all' && (
+                        {hasActiveFilter && (
                           <button
                             type="button"
-                            onClick={() => handleSelectCategory('all')}
-                            className="text-[11px] font-medium text-neutral-500 hover:text-black dark:hover:text-white underline"
+                            onClick={handleResetFilters}
+                            className="text-[11px] font-medium text-neutral-500 hover:text-black dark:hover:text-white underline transition-colors"
                           >
-                            {locale === 'th' ? 'รีเซ็ต' : 'Reset'}
+                            {locale === 'th' ? 'รีเซ็ตทั้งหมด' : 'Reset all'}
                           </button>
                         )}
                       </div>
 
-                      <div className="max-h-60 overflow-y-auto space-y-0.5">
+                      {/* 1. Quick Book Availability Toggle (หนังสือพร้อมยืม) */}
+                      <div className="mb-2.5">
+                        <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-1 mb-1.5">
+                          {locale === 'th' ? 'สถานะหนังสือ' : 'Availability'}
+                        </div>
                         <button
                           type="button"
-                          onClick={() => handleSelectCategory('all')}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
-                            selectedCategory === 'all'
-                              ? 'bg-black text-white dark:bg-white dark:text-black font-semibold'
-                              : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                          onClick={handleToggleAvailable}
+                          className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
+                            statusFilter === 'available'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 shadow-xs'
+                              : 'bg-neutral-50 dark:bg-neutral-900/40 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-700'
                           }`}
                         >
-                          <span>{locale === 'th' ? 'หมวดหมู่ทั้งหมด' : 'All Categories'}</span>
-                          {selectedCategory === 'all' && <Check size={13} />}
+                          <span className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${
+                              statusFilter === 'available' ? 'bg-emerald-500 ring-2 ring-emerald-300 dark:ring-emerald-800 animate-pulse' : 'bg-neutral-400'
+                            }`} />
+                            <span className="font-semibold">
+                              {locale === 'th' ? 'เฉพาะหนังสือพร้อมยืม' : 'Available books only'}
+                            </span>
+                          </span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-colors ${
+                            statusFilter === 'available'
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400'
+                          }`}>
+                            {statusFilter === 'available'
+                              ? (locale === 'th' ? 'เปิดอยู่' : 'Active')
+                              : (locale === 'th' ? 'ทั้งหมด' : 'Off')}
+                          </span>
                         </button>
-
-                        {categories.map((cat) => (
-                          <button
-                            key={cat}
-                            type="button"
-                            onClick={() => handleSelectCategory(cat)}
-                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
-                              selectedCategory === cat
-                                ? 'bg-black text-white dark:bg-white dark:text-black font-semibold'
-                              : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
-                            }`}
-                          >
-                            <span className="truncate">{cat}</span>
-                            {selectedCategory === cat && <Check size={13} />}
-                          </button>
-                        ))}
                       </div>
 
-                      {/* Quick Status Filter Link */}
-                      <div className="pt-2 mt-2 border-t border-neutral-100 dark:border-neutral-800">
-                        <Link
-                          href="/books?status=available"
-                          onClick={() => setIsFilterOpen(false)}
-                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors font-medium"
-                        >
-                          <span className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            <span>{locale === 'th' ? 'ดูเฉพาะที่พร้อมให้ยืม' : 'Available books only'}</span>
-                          </span>
-                        </Link>
+                      {/* 2. Categories Filter */}
+                      <div>
+                        <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-1 mb-1.5">
+                          {locale === 'th' ? 'หมวดหมู่หนังสือ' : 'Categories'}
+                        </div>
+                        <div className="max-h-48 overflow-y-auto space-y-0.5 pr-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleSelectCategory('all')}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                              selectedCategory === 'all'
+                                ? 'bg-black text-white dark:bg-white dark:text-black font-semibold shadow-xs'
+                                : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                            }`}
+                          >
+                            <span>{locale === 'th' ? 'ทุกหมวดหมู่' : 'All Categories'}</span>
+                            {selectedCategory === 'all' && <Check size={13} />}
+                          </button>
+
+                          {categories.map((cat) => (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => handleSelectCategory(cat)}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                                selectedCategory === cat
+                                  ? 'bg-black text-white dark:bg-white dark:text-black font-semibold shadow-xs'
+                                  : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                              }`}
+                            >
+                              <span className="truncate">{cat}</span>
+                              {selectedCategory === cat && <Check size={13} />}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
