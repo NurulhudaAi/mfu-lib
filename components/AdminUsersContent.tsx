@@ -181,14 +181,9 @@ export default function AdminUsersContent({ users = [] }: Props) {
     <div className="w-full p-6 sm:p-8 lg:p-10 space-y-6 animate-fade-in max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/admin/dashboard" className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors">
-            <ArrowLeft size={18} />
-          </Link>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">จัดการผู้ใช้</h1>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">{users.length} คนทั้งหมดในระบบ</p>
-          </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">จัดการผู้ใช้</h1>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">{users.length} คนทั้งหมดในระบบ</p>
         </div>
 
         <button

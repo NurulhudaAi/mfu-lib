@@ -505,12 +505,17 @@ export default function BooksContent({
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-5">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white mb-1">
-            {t('allBooks')}
+            {isAdmin ? (locale === 'th' ? 'จัดการหนังสือ' : 'Manage Books') : t('allBooks')}
           </h1>
           <p className="text-neutral-500 dark:text-neutral-400 text-xs sm:text-sm">
             {filtered.length} {locale === 'th' ? 'เล่มที่แสดง' : 'books shown'}
             {filtered.length !== books.length && (
               <span className="opacity-75"> ({locale === 'th' ? `จากทั้งหมด ${books.length} เล่ม` : `of ${books.length} total`})</span>
+            )}
+            {isAdmin && stats.inactive > 0 && (
+              <span className="ml-2 text-neutral-400 dark:text-neutral-500">
+                • {locale === 'th' ? `ปิดใช้งาน ${stats.inactive} เล่ม` : `${stats.inactive} inactive`}
+              </span>
             )}
           </p>
         </div>
@@ -539,63 +544,6 @@ export default function BooksContent({
             </button>
           )}
         </div>
-      </div>
-
-      {/* Status Filter Bar & Inactive Notice */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex p-1 bg-neutral-100 dark:bg-[#161619] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xs">
-          <button
-            type="button"
-            onClick={() => handleSetStatusFilter('all')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              statusFilter === 'all'
-                ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
-                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
-            }`}
-          >
-            {locale === 'th' ? 'หนังสือทั้งหมด' : 'All Books'} ({stats.total})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSetStatusFilter('available')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              statusFilter === 'available'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-neutral-500 hover:text-emerald-600 dark:text-neutral-400 dark:hover:text-emerald-400'
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span>{locale === 'th' ? 'พร้อมให้ยืม' : 'Available'}</span>
-            <span className="opacity-75 text-[11px]">({stats.available})</span>
-          </button>
-
-          {stats.inactive > 0 && (
-            <button
-              type="button"
-              onClick={() => handleSetStatusFilter('active')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                statusFilter === 'active'
-                  ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900 shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
-              }`}
-            >
-              <EyeOff size={13} />
-              <span>{locale === 'th' ? 'ซ่อนที่ปิดใช้งาน' : 'Hide Inactive'}</span>
-            </button>
-          )}
-        </div>
-
-        {stats.inactive > 0 && statusFilter === 'all' && (
-          <div className="flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500">
-            <Ban size={13} className="text-neutral-400" />
-            <span>
-              {locale === 'th'
-                ? `มีหนังสือปิดใช้งาน ${stats.inactive} เล่ม`
-                : `${stats.inactive} inactive books`}
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Active Filter Badges */}

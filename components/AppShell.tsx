@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   AlertCircle,
   Users,
+  EyeOff,
 } from 'lucide-react'
 
 interface Announcement {
@@ -202,6 +203,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
     applyFilters(searchQuery, selectedCategory, nextStatus)
   }
 
+  function handleSetStatusFilter(nextStatus: 'all' | 'available' | 'active') {
+    setStatusFilter(nextStatus)
+    applyFilters(searchQuery, selectedCategory, nextStatus)
+  }
+
   function handleResetFilters() {
     setSelectedCategory('all')
     setStatusFilter('all')
@@ -227,7 +233,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     {
       key: 'books',
       href: '/books',
-      label: locale === 'th' ? 'หนังสือทั้งหมด' : 'All Books',
+      label: locale === 'th' ? (isAdmin ? 'จัดการหนังสือ' : 'หนังสือทั้งหมด') : (isAdmin ? 'Manage Books' : 'All Books'),
       icon: Layers,
       isActive: pathname.startsWith('/books'),
     },
@@ -274,6 +280,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
       label: locale === 'th' ? 'ผู้ใช้งาน' : 'Users',
       icon: Users,
       isActive: pathname.startsWith('/admin/users'),
+    },
+    {
+      key: 'admin-feedback',
+      href: '/admin/feedback',
+      label: locale === 'th' ? 'ข้อเสนอแนะ' : 'Feedback',
+      icon: MessageSquare,
+      isActive: pathname.startsWith('/admin/feedback'),
     },
   ]
 
@@ -487,38 +500,57 @@ export default function AppShell({ children }: { children: ReactNode }) {
                         )}
                       </div>
 
-                      {/* 1. Quick Book Availability Toggle (หนังสือพร้อมยืม) */}
-                      <div className="mb-2.5">
+                      {/* 1. Status Filter (หนังสือทั้งหมด, พร้อมให้ยืม, ซ่อนที่ปิดใช้งาน) */}
+                      <div className="mb-3">
                         <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-1 mb-1.5">
-                          {locale === 'th' ? 'สถานะหนังสือ' : 'Availability'}
+                          {locale === 'th' ? 'สถานะหนังสือ' : 'Book Status'}
                         </div>
-                        <button
-                          type="button"
-                          onClick={handleToggleAvailable}
-                          className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
-                            statusFilter === 'available'
-                              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 shadow-xs'
-                              : 'bg-neutral-50 dark:bg-neutral-900/40 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-700'
-                          }`}
-                        >
-                          <span className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full ${
-                              statusFilter === 'available' ? 'bg-emerald-500 ring-2 ring-emerald-300 dark:ring-emerald-800 animate-pulse' : 'bg-neutral-400'
-                            }`} />
-                            <span className="font-semibold">
-                              {locale === 'th' ? 'เฉพาะหนังสือพร้อมยืม' : 'Available books only'}
+                        <div className="space-y-1">
+                          <button
+                            type="button"
+                            onClick={() => handleSetStatusFilter('all')}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                              statusFilter === 'all'
+                                ? 'bg-black text-white dark:bg-white dark:text-black font-semibold shadow-xs'
+                                : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                            }`}
+                          >
+                            <span>{locale === 'th' ? 'หนังสือทั้งหมด' : 'All Books'}</span>
+                            {statusFilter === 'all' && <Check size={13} />}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSetStatusFilter('available')}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                              statusFilter === 'available'
+                                ? 'bg-emerald-600 text-white font-semibold shadow-xs'
+                                : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className={`w-2 h-2 rounded-full ${statusFilter === 'available' ? 'bg-white' : 'bg-emerald-500'}`} />
+                              <span>{locale === 'th' ? 'พร้อมให้ยืม' : 'Available Only'}</span>
                             </span>
-                          </span>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-colors ${
-                            statusFilter === 'available'
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400'
-                          }`}>
-                            {statusFilter === 'available'
-                              ? (locale === 'th' ? 'เปิดอยู่' : 'Active')
-                              : (locale === 'th' ? 'ทั้งหมด' : 'Off')}
-                          </span>
-                        </button>
+                            {statusFilter === 'available' && <Check size={13} />}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSetStatusFilter('active')}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                              statusFilter === 'active'
+                                ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900 font-semibold shadow-xs'
+                                : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <EyeOff size={13} />
+                              <span>{locale === 'th' ? 'ซ่อนที่ปิดใช้งาน' : 'Hide Inactive'}</span>
+                            </span>
+                            {statusFilter === 'active' && <Check size={13} />}
+                          </button>
+                        </div>
                       </div>
 
                       {/* 2. Categories Filter */}

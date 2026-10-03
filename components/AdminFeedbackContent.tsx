@@ -23,15 +23,10 @@ export default function AdminFeedbackContent({ feedback }: Props) {
     : '—'
 
   return (
-    <div className="w-full p-6 sm:p-8 lg:p-10 space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Link href="/admin/dashboard" className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500">
-          <ArrowLeft size={18} />
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">ข้อเสนอแนะ (Feedback)</h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">{feedback.length} ความคิดเห็น · คะแนนเฉลี่ย {avgRating} / 5.0</p>
-        </div>
+    <div className="w-full p-6 sm:p-8 lg:p-10 space-y-6 animate-fade-in max-w-7xl mx-auto">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">ข้อเสนอแนะ (Feedback)</h1>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">{feedback.length} ความคิดเห็น · คะแนนเฉลี่ย {avgRating} / 5.0</p>
       </div>
 
       {/* Filter */}

@@ -8,7 +8,7 @@ import { th, enUS } from 'date-fns/locale'
 import {
   LayoutDashboard, Users, BookOpen, Clock, TrendingUp, AlertTriangle,
   CheckCircle2, ArrowUpRight, Plus, BookMarked, Award, ArrowRight,
-  ShieldCheck, ListOrdered, Calendar
+  ShieldCheck, ListOrdered, Calendar, MessageSquare
 } from 'lucide-react'
 
 interface Props {
@@ -81,11 +81,8 @@ export default function AdminDashboardContent({
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white flex items-center gap-3">
             <LayoutDashboard size={26} className="text-neutral-900 dark:text-white" />
-            แผงควบคุมผู้ดูแล (Admin Dashboard)
+            Dashboard
           </h1>
-          <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            ศูนย์รวมสถิติภาพรวม การหมุนเวียนหนังสือ และความถี่สมาชิก ชมรมมุสลิม มฟล.
-          </p>
         </div>
 
         {/* Quick Action Navigation Buttons */}
@@ -112,7 +109,14 @@ export default function AdminDashboardContent({
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs sm:text-sm font-semibold transition-colors"
           >
             <BookOpen size={16} />
-            คลังหนังสือทั้งหมด
+            จัดการหนังสือ
+          </Link>
+          <Link
+            href="/admin/feedback"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs sm:text-sm font-semibold transition-colors"
+          >
+            <MessageSquare size={16} />
+            ข้อเสนอแนะ
           </Link>
         </div>
       </div>
@@ -124,12 +128,12 @@ export default function AdminDashboardContent({
           className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all"
         >
           <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">หนังสือทั้งหมด</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">จัดการหนังสือ</span>
             <BookOpen size={17} className="group-hover:scale-110 transition-transform" />
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.totalBooks}</p>
           <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>พร้อมให้ยืมในระบบ</span>
+            <span>คลังหนังสือในระบบ</span>
             <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
           </p>
         </Link>
@@ -211,7 +215,7 @@ export default function AdminDashboardContent({
       </div>
 
       {/* ── Operational Shortcut Cards (Go to Outside Tabs) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Manage Borrows Card */}
         <Link
           href="/admin/borrows"
@@ -226,12 +230,12 @@ export default function AdminDashboardContent({
                 <h3 className="font-bold text-neutral-900 dark:text-white text-base">จัดการการยืมคืน</h3>
                 {stats.overdueBorrows > 0 && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">
-                    เกินกำหนด {stats.overdueBorrows}
+                    เกิน {stats.overdueBorrows}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                ตรวจสอบรายการยืม {stats.activeBorrows} เล่ม, ตรวจหลักฐานการคืน และคิวจอง
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
+                ยืม {stats.activeBorrows} เล่ม, ตรวจหลักฐาน และคิว
               </p>
             </div>
           </div>
@@ -254,8 +258,29 @@ export default function AdminDashboardContent({
                   {stats.totalUsers} คน
                 </span>
               </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                รายชื่อสมาชิก, เชิญผู้ดูแลด้วยอีเมล และจัดการระงับสิทธิ์ (Blacklist)
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
+                สมาชิก, เชิญผู้ดูแล, Blacklist
+              </p>
+            </div>
+          </div>
+          <ArrowRight size={18} className="text-neutral-400 group-hover:text-black dark:group-hover:text-white group-hover:translate-x-1 transition-all shrink-0 ml-2" />
+        </Link>
+
+        {/* Manage Feedback Card */}
+        <Link
+          href="/admin/feedback"
+          className="group p-5 rounded-2xl bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-900/60 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-900 dark:hover:border-white transition-all shadow-xs flex items-center justify-between"
+        >
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-12 h-12 rounded-2xl bg-neutral-900 text-white dark:bg-white dark:text-black flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+              <MessageSquare size={22} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-neutral-900 dark:text-white text-base">ข้อเสนอแนะ</h3>
+              </div>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
+                ความคิดเห็น, ขอเพิ่มหนังสือ และคะแนนรีวิว
               </p>
             </div>
           </div>
