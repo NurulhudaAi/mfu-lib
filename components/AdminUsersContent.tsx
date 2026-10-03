@@ -211,12 +211,12 @@ export default function AdminUsersContent({ users = [] }: Props) {
           />
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center gap-1.5 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-x-auto scrollbar-none max-w-full">
           {(['all', 'admin', 'user', 'blacklisted'] as const).map(f => (
             <button
               key={f}
               onClick={() => setFilterRole(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                 filterRole === f
                   ? 'bg-white dark:bg-neutral-800 text-neutral-950 dark:text-white shadow-xs'
                   : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
@@ -231,8 +231,8 @@ export default function AdminUsersContent({ users = [] }: Props) {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-xs">
+      {/* Table (Desktop: md+) */}
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-xs hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead>
@@ -283,7 +283,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
                     {user.created_at ? format(new Date(user.created_at), 'dd MMM yyyy', { locale: th }) : '—'}
                   </td>
 
-                  {/* Role (Fixed pill badge, no switch) */}
+                  {/* Role */}
                   <td className="px-5 py-4 text-center">
                     {user.role === 'admin' ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-neutral-900 text-white dark:bg-white dark:text-black">
@@ -349,6 +349,104 @@ export default function AdminUsersContent({ users = [] }: Props) {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Card List (< md) */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-8 text-center text-neutral-400">
+            <Users size={36} className="mx-auto mb-2 opacity-20" />
+            <p className="text-sm">ไม่พบผู้ใช้</p>
+          </div>
+        ) : (
+          filtered.map(user => (
+            <div
+              key={user.id}
+              className={`bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs space-y-3 ${
+                user.is_blacklisted ? 'border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10' : ''
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0 flex items-center justify-center">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <Users size={16} className="text-neutral-400" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-neutral-900 dark:text-white truncate text-sm">
+                      {user.full_name || 'ไม่ระบุชื่อ'}
+                    </p>
+                    {user.role === 'admin' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-900 text-white dark:bg-white dark:text-black shrink-0">
+                        <ShieldCheck size={11} />
+                        Admin
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 shrink-0">
+                        สมาชิก
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-neutral-400 truncate mt-0.5">{user.email}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-neutral-100 dark:border-neutral-800 text-neutral-500">
+                <div>
+                  <span className="text-neutral-400">รหัสนักศึกษา: </span>
+                  <span className="font-mono text-neutral-700 dark:text-neutral-300">{user.student_id || '—'}</span>
+                </div>
+                <div>
+                  {user.is_blacklisted ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white">
+                      <ShieldAlert size={10} />
+                      Blacklisted
+                    </span>
+                  ) : (
+                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                      ปกติ
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {user.is_blacklisted && user.blacklist_reason && (
+                <div className="text-[11px] p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50">
+                  <span className="font-semibold">เหตุผล: </span>{user.blacklist_reason}
+                </div>
+              )}
+
+              {user.role !== 'admin' && (
+                <div className="pt-1">
+                  {user.is_blacklisted ? (
+                    <button
+                      onClick={() => handleUnblacklist(user)}
+                      className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                    >
+                      <ShieldCheck size={14} className="text-emerald-500" />
+                      ปลดการระงับสิทธิ์ (Unblacklist)
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setBlacklistModalUser(user)
+                        setBlacklistReason('')
+                        setBlacklistError(null)
+                      }}
+                      className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
+                    >
+                      <ShieldX size={14} />
+                      ระงับสิทธิ์การใช้งาน (Blacklist)
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
       {/* Invite Modal */}

@@ -655,38 +655,45 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {/* ======================================================== */}
       {/* 3. MOBILE BOTTOM NAVIGATION BAR                          */}
       {/* ======================================================== */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#111113]/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-around z-30 px-2">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#111113]/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-around z-30 px-1">
         {navLinks.map((link) => {
           const Icon = link.icon
+          const mobileLabel = link.key === 'books' && isAdmin ? (locale === 'th' ? 'หนังสือ' : 'Books') : link.label
           return (
             <Link
               key={link.key}
               href={link.href}
-              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-xl transition-all ${
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
                 link.isActive
                   ? 'text-black dark:text-white font-bold'
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
               }`}
             >
-              <Icon size={18} />
-              <span className="text-[10px] leading-none tracking-tight">{link.label}</span>
+              <Icon size={18} className="shrink-0" />
+              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">{mobileLabel}</span>
             </Link>
           )
         })}
         {isAdmin && adminLinks.map((link) => {
           const Icon = link.icon
+          const mobileLabel =
+            link.key === 'admin-borrows'
+              ? (locale === 'th' ? 'ยืม-คืน' : 'Borrows')
+              : link.key === 'admin-dashboard'
+              ? (locale === 'th' ? 'แดชบอร์ด' : 'Dash')
+              : link.label
           return (
             <Link
               key={link.key}
               href={link.href}
-              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-xl transition-all ${
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
                 link.isActive
                   ? 'text-black dark:text-white font-bold'
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
               }`}
             >
-              <Icon size={18} />
-              <span className="text-[10px] leading-none tracking-tight">{link.label}</span>
+              <Icon size={18} className="shrink-0" />
+              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">{mobileLabel}</span>
             </Link>
           )
         })}
