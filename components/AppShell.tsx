@@ -597,12 +597,22 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           {/* Right Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Language Switch Button */}
+            <button
+              type="button"
+              onClick={() => setLocale(locale === 'th' ? 'en' : 'th')}
+              className="px-2.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-800 text-xs font-bold transition-all shadow-2xs flex items-center gap-1"
+              title={locale === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย'}
+            >
+              <span className="text-[11px] font-semibold">{locale === 'th' ? 'TH' : 'EN'}</span>
+            </button>
+
             {/* Notification Bell */}
             <button
               type="button"
               onClick={() => setIsAnnounceModalOpen(true)}
-              className="relative p-2.5 rounded-2xl bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors border border-neutral-200 dark:border-neutral-800"
+              className="relative p-2 rounded-xl sm:p-2.5 sm:rounded-2xl bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors border border-neutral-200 dark:border-neutral-800"
               title={locale === 'th' ? 'ประกาศข่าวสาร' : 'Announcements'}
             >
               <Bell size={17} />
@@ -795,7 +805,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               >
                 <div className="flex items-center gap-2">
                   {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-                  <span>{theme === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด'}</span>
+                  <span>{theme === 'dark' ? (locale === 'th' ? 'โหมดสว่าง' : 'Light Mode') : (locale === 'th' ? 'โหมดมืด' : 'Dark Mode')}</span>
                 </div>
                 <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
                   {theme}

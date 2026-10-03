@@ -8,14 +8,17 @@ import { ArrowLeft, Star, MessageSquare, Users } from 'lucide-react'
 
 interface Props { feedback: any[] }
 
-const catLabels: Record<string, string> = {
-  general: 'ทั่วไป', book_request: 'ขอเพิ่มหนังสือ', system: 'ระบบ', service: 'บริการ'
-}
-
 export default function AdminFeedbackContent({ feedback }: Props) {
   const [filter, setFilter] = useState('all')
-  const { locale } = useApp()
+  const { locale, t } = useApp()
   const dateLocale = locale === 'th' ? th : enUS
+
+  const catLabels: Record<string, string> = {
+    general: t('feedbackGeneral'),
+    book_request: t('feedbackBookRequest'),
+    system: t('feedbackSystem'),
+    service: t('feedbackService')
+  }
 
   const filtered = feedback.filter(f => filter === 'all' || f.category === filter)
   const avgRating = feedback.length
@@ -25,8 +28,12 @@ export default function AdminFeedbackContent({ feedback }: Props) {
   return (
     <div className="w-full p-6 sm:p-8 lg:p-10 space-y-6 animate-fade-in max-w-7xl mx-auto">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">ข้อเสนอแนะ (Feedback)</h1>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">{feedback.length} ความคิดเห็น · คะแนนเฉลี่ย {avgRating} / 5.0</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">
+          {t('adminFeedbackHeading')}
+        </h1>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+          {feedback.length} {t('commentsCount')} · {t('avgRatingScore')} {avgRating} / 5.0
+        </p>
       </div>
 
       {/* Filter */}
@@ -41,7 +48,7 @@ export default function AdminFeedbackContent({ feedback }: Props) {
                 : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
             }`}
           >
-            {cat === 'all' ? 'ทั้งหมด' : catLabels[cat]}
+            {cat === 'all' ? t('filterAll') : catLabels[cat]}
           </button>
         ))}
       </div>
@@ -50,7 +57,7 @@ export default function AdminFeedbackContent({ feedback }: Props) {
         {filtered.length === 0 ? (
           <div className="text-center py-20 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-2xl border border-dashed border-neutral-200 dark:border-neutral-800 text-neutral-400">
             <MessageSquare size={40} className="mx-auto mb-2 opacity-20" />
-            <p className="text-sm font-medium">ยังไม่มีข้อเสนอแนะ</p>
+            <p className="text-sm font-medium">{t('noFeedbackFound')}</p>
           </div>
         ) : filtered.map(fb => (
           <div key={fb.id} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-5 shadow-xs">

@@ -29,24 +29,6 @@ interface Props {
   queues: any[]
 }
 
-const statusConfig: Record<string, { label: string; color: string; dotColor: string }> = {
-  active: {
-    label: 'กำลังยืม',
-    color: 'text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700',
-    dotColor: 'bg-emerald-500'
-  },
-  returned: {
-    label: 'คืนแล้ว',
-    color: 'text-neutral-600 dark:text-neutral-400 bg-neutral-100/70 dark:bg-neutral-800/50',
-    dotColor: 'bg-neutral-400'
-  },
-  overdue: {
-    label: 'เกินกำหนด',
-    color: 'text-white bg-black dark:bg-white dark:text-black font-bold shadow-xs',
-    dotColor: 'bg-rose-500'
-  },
-}
-
 export default function AdminDashboardContent({
   stats,
   mostBorrowedBooks,
@@ -58,8 +40,26 @@ export default function AdminDashboardContent({
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const { locale } = useApp()
+  const { locale, t } = useApp()
   const dateLocale = locale === 'th' ? th : enUS
+
+  const statusConfig: Record<string, { label: string; color: string; dotColor: string }> = {
+    active: {
+      label: t('active'),
+      color: 'text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700',
+      dotColor: 'bg-emerald-500'
+    },
+    returned: {
+      label: t('returned'),
+      color: 'text-neutral-600 dark:text-neutral-400 bg-neutral-100/70 dark:bg-neutral-800/50',
+      dotColor: 'bg-neutral-400'
+    },
+    overdue: {
+      label: t('overdue'),
+      color: 'text-white bg-black dark:bg-white dark:text-black font-bold shadow-xs',
+      dotColor: 'bg-rose-500'
+    },
+  }
 
   function fmtDate(d: string | null) {
     if (!d) return '—'
@@ -77,11 +77,11 @@ export default function AdminDashboardContent({
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Admin Operations Center
+            {t('adminCenter')}
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white flex items-center gap-3">
             <LayoutDashboard size={26} className="text-neutral-900 dark:text-white" />
-            Dashboard
+            {t('adminDashboardTitle')}
           </h1>
         </div>
 
@@ -92,7 +92,7 @@ export default function AdminDashboardContent({
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black text-xs sm:text-sm font-semibold transition-all shadow-sm active:scale-95"
           >
             <Clock size={16} />
-            จัดการการยืมคืน
+            {t('borrowsShortcut')}
             <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-700 dark:bg-neutral-200 text-white dark:text-neutral-900">
               {stats.activeBorrows}
             </span>
@@ -102,21 +102,21 @@ export default function AdminDashboardContent({
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs sm:text-sm font-semibold transition-colors"
           >
             <Users size={16} />
-            จัดการผู้ใช้งาน
+            {t('usersShortcut')}
           </Link>
           <Link
             href="/books"
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs sm:text-sm font-semibold transition-colors"
           >
             <BookOpen size={16} />
-            จัดการหนังสือ
+            {t('adminBooksHeading')}
           </Link>
           <Link
             href="/admin/feedback"
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs sm:text-sm font-semibold transition-colors"
           >
             <MessageSquare size={16} />
-            ข้อเสนอแนะ
+            {t('feedbackShortcut')}
           </Link>
         </div>
       </div>
@@ -128,12 +128,12 @@ export default function AdminDashboardContent({
           className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all"
         >
           <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">จัดการหนังสือ</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">{t('adminBooksHeading')}</span>
             <BookOpen size={17} className="group-hover:scale-110 transition-transform" />
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.totalBooks}</p>
           <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>คลังหนังสือในระบบ</span>
+            <span>{t('totalBooksCount')}</span>
             <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
           </p>
         </Link>
@@ -143,12 +143,12 @@ export default function AdminDashboardContent({
           className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all"
         >
           <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">ผู้ใช้ทั้งหมด</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">{t('totalUsersCount')}</span>
             <Users size={17} className="group-hover:scale-110 transition-transform" />
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.totalUsers}</p>
           <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>สมาชิก & แอดมิน</span>
+            <span>{locale === 'th' ? 'สมาชิก & แอดมิน' : 'Members & Admins'}</span>
             <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
           </p>
         </Link>
@@ -158,12 +158,12 @@ export default function AdminDashboardContent({
           className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all"
         >
           <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">ยืมทั้งหมด</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">{t('totalBorrowsCount')}</span>
             <TrendingUp size={17} className="group-hover:scale-110 transition-transform" />
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.totalBorrows}</p>
           <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>ประวัติรายการสะสม</span>
+            <span>{locale === 'th' ? 'ประวัติรายการสะสม' : 'Cumulative history'}</span>
             <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
           </p>
         </Link>
@@ -173,12 +173,12 @@ export default function AdminDashboardContent({
           className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-emerald-500 transition-all"
         >
           <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">กำลังยืมอยู่</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">{t('activeBorrowsCount')}</span>
             <Clock size={17} className="text-emerald-500 group-hover:scale-110 transition-transform" />
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.activeBorrows}</p>
           <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>อยู่ระหว่างการอ่าน</span>
+            <span>{locale === 'th' ? 'อยู่ระหว่างการอ่าน' : 'Currently reading'}</span>
             <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
           </p>
         </Link>
@@ -188,12 +188,12 @@ export default function AdminDashboardContent({
           className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-rose-500 transition-all"
         >
           <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">เกินกำหนด</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">{t('overdueBorrowsCount')}</span>
             <AlertTriangle size={17} className="text-rose-500 group-hover:scale-110 transition-transform" />
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400">{stats.overdueBorrows}</p>
           <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>ต้องติดตามการคืน</span>
+            <span>{locale === 'th' ? 'ต้องติดตามการคืน' : 'Requires follow-up'}</span>
             <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
           </p>
         </Link>
@@ -203,12 +203,12 @@ export default function AdminDashboardContent({
           className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all"
         >
           <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">คืนเรียบร้อย</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">{t('returnedBorrowsCount')}</span>
             <CheckCircle2 size={17} className="text-emerald-500 group-hover:scale-110 transition-transform" />
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.returnedBorrows}</p>
           <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>ส่งคืนสำเร็จ</span>
+            <span>{locale === 'th' ? 'ส่งคืนสำเร็จ' : 'Returned successfully'}</span>
             <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
           </p>
         </Link>
@@ -227,15 +227,15 @@ export default function AdminDashboardContent({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-neutral-900 dark:text-white text-base">จัดการการยืมคืน</h3>
+                <h3 className="font-bold text-neutral-900 dark:text-white text-base">{t('borrowsShortcut')}</h3>
                 {stats.overdueBorrows > 0 && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">
-                    เกิน {stats.overdueBorrows}
+                    {locale === 'th' ? `เกิน ${stats.overdueBorrows}` : `${stats.overdueBorrows} overdue`}
                   </span>
                 )}
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
-                ยืม {stats.activeBorrows} เล่ม, ตรวจหลักฐาน และคิว
+                {t('borrowsShortcutDesc')}
               </p>
             </div>
           </div>
@@ -253,13 +253,13 @@ export default function AdminDashboardContent({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-neutral-900 dark:text-white text-base">จัดการผู้ใช้งาน</h3>
+                <h3 className="font-bold text-neutral-900 dark:text-white text-base">{t('usersShortcut')}</h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
-                  {stats.totalUsers} คน
+                  {stats.totalUsers} {locale === 'th' ? 'คน' : 'users'}
                 </span>
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
-                สมาชิก, เชิญผู้ดูแล, Blacklist
+                {t('usersShortcutDesc')}
               </p>
             </div>
           </div>
@@ -277,10 +277,10 @@ export default function AdminDashboardContent({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-neutral-900 dark:text-white text-base">ข้อเสนอแนะ</h3>
+                <h3 className="font-bold text-neutral-900 dark:text-white text-base">{t('feedbackShortcut')}</h3>
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
-                ความคิดเห็น, ขอเพิ่มหนังสือ และคะแนนรีวิว
+                {t('feedbackShortcutDesc')}
               </p>
             </div>
           </div>
@@ -299,8 +299,8 @@ export default function AdminDashboardContent({
                   <Award size={18} />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-neutral-900 dark:text-white">หนังสือที่ถูกยืมบ่อย</h2>
-                  <p className="text-xs text-neutral-400">จัดอันดับตามจำนวนครั้งที่มีการยืม</p>
+                  <h2 className="text-base font-bold text-neutral-900 dark:text-white">{t('mostBorrowedRanking')}</h2>
+                  <p className="text-xs text-neutral-400">{locale === 'th' ? 'จัดอันดับตามจำนวนครั้งที่มีการยืม' : 'Ranked by borrow frequency'}</p>
                 </div>
               </div>
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
@@ -311,7 +311,7 @@ export default function AdminDashboardContent({
             {mostBorrowedBooks.length === 0 ? (
               <div className="py-12 text-center text-neutral-400 text-sm">
                 <BookOpen size={36} className="mx-auto mb-2 opacity-20" />
-                ยังไม่มีข้อมูลการยืมหนังสือ
+                {t('noTopBooks')}
               </div>
             ) : (
               <div className="space-y-4">
@@ -349,14 +349,14 @@ export default function AdminDashboardContent({
                             {book.title}
                           </Link>
                           <p className="text-[11px] text-neutral-400 truncate">
-                            {book.author || 'ไม่ระบุผู้แต่ง'}
+                            {book.author || (locale === 'th' ? 'ไม่ระบุผู้แต่ง' : 'Unknown author')}
                           </p>
                         </div>
 
                         {/* Borrow count pill */}
                         <div className="text-right shrink-0">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-700">
-                            {book.borrowCount} ครั้ง
+                            {book.borrowCount} {locale === 'th' ? 'ครั้ง' : 'times'}
                           </span>
                         </div>
                       </div>
@@ -385,8 +385,8 @@ export default function AdminDashboardContent({
                   <Users size={18} />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-neutral-900 dark:text-white">ใครยืมบ่อย (Top Borrowers)</h2>
-                  <p className="text-xs text-neutral-400">สมาชิกที่มีความถี่ในการอ่านและยืมสูงสุด</p>
+                  <h2 className="text-base font-bold text-neutral-900 dark:text-white">{t('topBorrowersRanking')}</h2>
+                  <p className="text-xs text-neutral-400">{locale === 'th' ? 'สมาชิกที่มีความถี่ในการอ่านและยืมสูงสุด' : 'Members with highest borrow count'}</p>
                 </div>
               </div>
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
@@ -397,7 +397,7 @@ export default function AdminDashboardContent({
             {topBorrowers.length === 0 ? (
               <div className="py-12 text-center text-neutral-400 text-sm">
                 <Users size={36} className="mx-auto mb-2 opacity-20" />
-                ยังไม่มีข้อมูลผู้ยืมในระบบ
+                {t('noTopBorrowers')}
               </div>
             ) : (
               <div className="space-y-4">
@@ -416,7 +416,7 @@ export default function AdminDashboardContent({
                         </div>
 
                         {/* User Avatar */}
-                        <div className="w-9 h-9 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0">
+                        <div className="w-9 h-9 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0 flex items-center justify-center">
                           {user.avatar_url ? (
                             <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -429,7 +429,7 @@ export default function AdminDashboardContent({
                         {/* User Info */}
                         <div className="flex-1 min-w-0">
                           <p className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white truncate">
-                            {user.full_name || 'ไม่ระบุชื่อ'}
+                            {user.full_name || (locale === 'th' ? 'ไม่ระบุชื่อ' : 'Unknown')}
                           </p>
                           <p className="text-[11px] text-neutral-400 truncate">
                             {user.email || '—'}
@@ -439,7 +439,7 @@ export default function AdminDashboardContent({
                         {/* Count pill */}
                         <div className="text-right shrink-0">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-700">
-                            {user.borrowCount} เล่ม
+                            {user.borrowCount} {locale === 'th' ? 'เล่ม' : 'books'}
                           </span>
                         </div>
                       </div>
@@ -464,20 +464,20 @@ export default function AdminDashboardContent({
       <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6 shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-bold text-neutral-900 dark:text-white text-base">รายการยืมล่าสุด</h2>
-            <p className="text-xs text-neutral-400">อัปเดตแบบเรียลไทม์ตามลำดับเวลา</p>
+            <h2 className="font-bold text-neutral-900 dark:text-white text-base">{t('recentBorrowsActivity')}</h2>
+            <p className="text-xs text-neutral-400">{t('realtimeUpdates')}</p>
           </div>
           <Link
             href="/admin/borrows"
             className="text-xs font-semibold text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-1"
           >
-            ดูทั้งหมด ({allBorrows.length}) →
+            {t('viewAllRecords')} ({allBorrows.length}) →
           </Link>
         </div>
 
         <div className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
           {recentBorrows.length === 0 ? (
-            <p className="text-sm text-neutral-400 text-center py-8">ยังไม่มีประวัติการยืม</p>
+            <p className="text-sm text-neutral-400 text-center py-8">{t('noBorrowActivity')}</p>
           ) : (
             recentBorrows.slice(0, 8).map((borrow) => {
               const sc = statusConfig[borrow.status] || statusConfig.returned
@@ -498,7 +498,7 @@ export default function AdminDashboardContent({
                       {borrow.profiles?.full_name || borrow.profiles?.email}
                     </p>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                      ยืม: <span className="font-medium text-neutral-700 dark:text-neutral-300">{borrow.books?.title}</span>
+                      {locale === 'th' ? 'ยืม: ' : 'Borrowed: '}<span className="font-medium text-neutral-700 dark:text-neutral-300">{borrow.books?.title}</span>
                     </p>
                   </div>
 

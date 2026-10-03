@@ -975,7 +975,7 @@ function BorrowCard({
   onReturnClick: () => void
   showActions: boolean
 }) {
-  const { t } = useApp()
+  const { t, locale } = useApp()
   const status = statusConfig[borrow.status as keyof typeof statusConfig] || statusConfig.active
   const StatusIcon = status.icon
 
@@ -1030,14 +1030,14 @@ function BorrowCard({
             {/* Notes display if available */}
             {borrow.notes && (
               <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-2 bg-neutral-50 dark:bg-neutral-800/40 p-2.5 rounded-xl border border-neutral-200/80 dark:border-neutral-800 line-clamp-2">
-                <span className="font-semibold text-neutral-800 dark:text-neutral-200">หมายเหตุ:</span> {borrow.notes}
+                <span className="font-semibold text-neutral-800 dark:text-neutral-200">{locale === 'th' ? 'หมายเหตุ:' : 'Notes:'}</span> {borrow.notes}
               </p>
             )}
 
             <div className="flex items-center gap-2 mt-2.5">
               <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${status.color}`}>
                 <StatusIcon size={11} />
-                {status.label}
+                {locale === 'th' ? status.label : status.en}
               </span>
             </div>
           </div>
