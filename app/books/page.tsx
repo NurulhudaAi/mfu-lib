@@ -2,7 +2,7 @@ import { createServiceClient } from '@/lib/supabase-server'
 import BooksContent from '@/components/BooksContent'
 
 interface Props {
-  searchParams: Promise<{ q?: string; category?: string }>
+  searchParams: Promise<{ q?: string; category?: string; status?: string }>
 }
 
 async function getData(q?: string, category?: string) {
@@ -10,7 +10,7 @@ async function getData(q?: string, category?: string) {
 
   let query = supabase
     .from('books')
-    .select('id, title, author, cover_url, category, available_copies, total_copies, is_featured, created_at')
+    .select('id, title, author, cover_url, category, available_copies, total_copies, is_featured, is_active, created_at')
     .order('created_at', { ascending: false })
 
   if (q) {
@@ -43,6 +43,7 @@ export default async function BooksPage({ searchParams }: Props) {
       categories={categories}
       initialSearch={params.q || ''}
       initialCategory={params.category || 'all'}
+      initialStatus={params.status || 'all'}
     />
   )
 }
