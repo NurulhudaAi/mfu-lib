@@ -11,6 +11,7 @@ import {
   ClipboardList,
   MessageSquare,
   ShieldCheck,
+  LayoutDashboard,
   Sun,
   Moon,
   Search,
@@ -26,6 +27,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   AlertCircle,
+  Users,
 } from 'lucide-react'
 
 interface Announcement {
@@ -202,17 +204,44 @@ export default function AppShell({ children }: { children: ReactNode }) {
       icon: Layers,
       isActive: pathname.startsWith('/books'),
     },
+    // Only show "การยืมของฉัน" & "ข้อเสนอแนะ" for non-admin users
+    ...(!isAdmin
+      ? [
+          {
+            href: profile ? '/my-borrows' : '/login',
+            label: locale === 'th' ? 'การยืมของฉัน' : 'My Library',
+            icon: ClipboardList,
+            isActive: pathname.startsWith('/my-borrows'),
+          },
+          {
+            href: profile ? '/feedback' : '/login',
+            label: locale === 'th' ? 'ข้อเสนอแนะ' : 'Feedback',
+            icon: MessageSquare,
+            isActive: pathname.startsWith('/feedback'),
+          },
+        ]
+      : []),
+  ]
+
+  // Admin Outer Navigation Links
+  const adminLinks = [
     {
-      href: profile ? '/my-borrows' : '/login',
-      label: locale === 'th' ? 'การยืมของฉัน' : 'My Library',
-      icon: ClipboardList,
-      isActive: pathname.startsWith('/my-borrows'),
+      href: '/admin/dashboard',
+      label: locale === 'th' ? 'แดชบอร์ด' : 'Dashboard',
+      icon: LayoutDashboard,
+      isActive: pathname === '/admin/dashboard' || pathname === '/admin',
     },
     {
-      href: '/feedback',
-      label: locale === 'th' ? 'ข้อเสนอแนะ' : 'Feedback',
-      icon: MessageSquare,
-      isActive: pathname.startsWith('/feedback'),
+      href: '/admin/borrows',
+      label: locale === 'th' ? 'จัดการการยืมคืน' : 'Borrow & Return',
+      icon: ClipboardList,
+      isActive: pathname.startsWith('/admin/borrows'),
+    },
+    {
+      href: '/admin/users',
+      label: locale === 'th' ? 'ผู้ใช้งาน' : 'Users',
+      icon: Users,
+      isActive: pathname.startsWith('/admin/users'),
     },
   ]
 
@@ -259,19 +288,30 @@ export default function AppShell({ children }: { children: ReactNode }) {
               )
             })}
 
-            {/* Admin Panel Link (if admin) */}
+            {/* Admin Outer Links */}
             {isAdmin && (
-              <Link
-                href="/admin/dashboard"
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-medium text-sm transition-all border border-neutral-300 dark:border-neutral-700 mt-2 ${
-                  pathname.startsWith('/admin')
-                    ? 'bg-black text-white dark:bg-white dark:text-black'
-                    : 'text-neutral-900 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900'
-                }`}
-              >
-                <ShieldCheck size={18} />
-                <span>{locale === 'th' ? 'ระบบผู้ดูแล' : 'Admin Panel'}</span>
-              </Link>
+              <div className="pt-4 mt-3 border-t border-neutral-200 dark:border-neutral-800 space-y-1">
+                <div className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                  {locale === 'th' ? 'ระบบผู้ดูแล' : 'Administration'}
+                </div>
+                {adminLinks.map((link) => {
+                  const Icon = link.icon
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-semibold text-sm transition-all ${
+                        link.isActive
+                          ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm'
+                          : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900/60'
+                      }`}
+                    >
+                      <Icon size={18} />
+                      <span>{link.label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
             )}
           </nav>
         </div>
@@ -437,6 +477,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
                           </button>
                         ))}
                       </div>
+
+                      {/* Quick Status Filter Link */}
+                      <div className="pt-2 mt-2 border-t border-neutral-100 dark:border-neutral-800">
+                        <Link
+                          href="/books?status=available"
+                          onClick={() => setIsFilterOpen(false)}
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors font-medium"
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span>{locale === 'th' ? 'ดูเฉพาะที่พร้อมให้ยืม' : 'Available books only'}</span>
+                          </span>
+                        </Link>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -521,6 +575,23 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </Link>
           )
         })}
+        {isAdmin && adminLinks.map((link) => {
+          const Icon = link.icon
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-xl transition-all ${
+                link.isActive
+                  ? 'text-black dark:text-white font-bold'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              <Icon size={18} />
+              <span className="text-[10px] leading-none tracking-tight">{link.label}</span>
+            </Link>
+          )
+        })}
       </nav>
 
       {/* ======================================================== */}
@@ -584,14 +655,29 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 })}
 
                 {isAdmin && (
-                  <Link
-                    href="/admin/dashboard"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm border border-neutral-300 dark:border-neutral-700 mt-2"
-                  >
-                    <ShieldCheck size={18} />
-                    <span>{locale === 'th' ? 'ระบบผู้ดูแล' : 'Admin Panel'}</span>
-                  </Link>
+                  <div className="pt-4 mt-3 border-t border-neutral-200 dark:border-neutral-800 space-y-1">
+                    <div className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                      {locale === 'th' ? 'ระบบผู้ดูแล' : 'Administration'}
+                    </div>
+                    {adminLinks.map((link) => {
+                      const Icon = link.icon
+                      return (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
+                            link.isActive
+                              ? 'bg-black text-white dark:bg-white dark:text-black'
+                              : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900'
+                          }`}
+                        >
+                          <Icon size={18} />
+                          <span>{link.label}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
                 )}
               </nav>
             </div>

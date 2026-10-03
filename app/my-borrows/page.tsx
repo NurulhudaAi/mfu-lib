@@ -20,6 +20,16 @@ async function getData() {
   if (!user) redirect('/login')
 
   const supabase = createServiceClient()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role === 'admin') {
+    redirect('/admin/dashboard')
+  }
+
   const { data: borrows } = await supabase
     .from('borrows')
     .select(`
