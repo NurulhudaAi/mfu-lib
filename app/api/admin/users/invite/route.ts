@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase-server'
 import { requireAdmin } from '@/lib/admin-guard'
+import { inviteAdminSchema, validateInput } from '@/lib/validation'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAdmin()
   if (!auth.ok) return auth.response
 
+  // ── Validate input ──
   const body = await req.json()
-  const email = body.email?.trim().toLowerCase()
-
-  if (!email || !email.includes('@')) {
-    return NextResponse.json({ error: 'กรุณากรอกอีเมลที่ถูกต้อง' }, { status: 400 })
-  }
+  const parsed = validateInput(inviteAdminSchema, body)
+  if (parsed.error) return parsed.error
+  const { email } = parsed.data
 
   const supabase = createServiceClient()
 

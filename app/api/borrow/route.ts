@@ -5,6 +5,8 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { sendBorrowConfirmEmail } from '@/lib/resend'
 import { addDays } from 'date-fns'
+import { borrowSchema, validateInput } from '@/lib/validation'
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   const supabase = createServiceClient()
@@ -26,10 +28,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบก่อน' }, { status: 401 })
   }
 
-  const { bookId } = await request.json()
-  if (!bookId) {
-    return NextResponse.json({ error: 'ไม่พบรหัสหนังสือ' }, { status: 400 })
-  }
+  // ── Rate Limit: จำกัดการยืมต่อ user (5 ครั้ง/นาที) ──
+  const rl = checkRateLimit(`borrow:${user.id}`, { maxRequests: 5, windowSeconds: 60 })
+  if (!rl.allowed) return rateLimitResponse(rl.resetAt)
+
+  // ── Validate input ──
+  const body = await request.json()
+  const parsed = validateInput(borrowSchema, body)
+  if (parsed.error) return parsed.error
+  const { bookId } = parsed.data
 
   // ── ตรวจสอบ blacklist + profile ──
   const { data: profile } = await supabase
