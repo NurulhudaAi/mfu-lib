@@ -126,7 +126,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (firstInQueue) {
-    const queueProfile = Array.isArray(firstInQueue.profiles) ? firstInQueue.profiles[0] : firstInQueue.profiles
+    const queueProfile = (Array.isArray(firstInQueue.profiles) ? firstInQueue.profiles[0] : firstInQueue.profiles) as { email?: string; full_name?: string } | null
     if (queueProfile) {
       // mark ว่าแจ้งแล้ว (ก่อนส่ง email เพื่อป้องกัน double-notify)
       await supabase
@@ -134,13 +134,14 @@ export async function POST(request: Request) {
         .update({ notified: true, notified_at: new Date().toISOString() })
         .eq('id', firstInQueue.id)
 
-    sendQueueNotifyEmail({
-      to: (firstInQueue.profiles as any).email,
-      name: (firstInQueue.profiles as any).full_name ?? 'สมาชิก',
-      bookTitle: borrowBook.title,
-      bookAuthor: borrowBook.author ?? undefined,
-      bookId: borrowBook.id,
-    }).catch(err => console.error('[Email] sendQueueNotifyEmail failed:', err))
+      sendQueueNotifyEmail({
+        to: queueProfile.email || (firstInQueue.profiles as any)?.email,
+        name: queueProfile.full_name ?? 'สมาชิก',
+        bookTitle: borrowBook.title,
+        bookAuthor: borrowBook.author ?? undefined,
+        bookId: borrowBook.id,
+      }).catch(err => console.error('[Email] sendQueueNotifyEmail failed:', err))
+    }
   }
 
   return NextResponse.json({ success: true })

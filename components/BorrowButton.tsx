@@ -41,7 +41,6 @@ export default function BorrowButton({
   const [quotaBlockedMsg, setQuotaBlockedMsg] = useState<string | null>(null)
   const { t, locale, profile, showAlert, showConfirm } = useApp()
   const router = useRouter()
-  const pathname = usePathname()
 
   function triggerShake(reason?: string) {
     setIsShaking(true)
