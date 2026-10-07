@@ -11,6 +11,7 @@ import {
   ClipboardList,
   MessageSquare,
   ShieldCheck,
+  LayoutDashboard,
   Sun,
   Moon,
   Search,
@@ -26,6 +27,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   AlertCircle,
+  Users,
+  EyeOff,
 } from 'lucide-react'
 
 interface Announcement {
@@ -52,6 +55,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setSearchQuery,
     selectedCategory,
     setSelectedCategory,
+    statusFilter,
+    setStatusFilter,
     alertModal,
     closeAlert,
     toasts,
@@ -130,13 +135,19 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Close mobile drawer on route change & sync search query from URL
+  // Close mobile drawer on route change & sync search query & filters from URL
   useEffect(() => {
     setIsMobileMenuOpen(false)
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       setSearchQuery(params.get('q') || '')
       setSelectedCategory(params.get('category') || 'all')
+      const s = params.get('status')
+      if (s === 'available' || s === 'active') {
+        setStatusFilter(s)
+      } else {
+        setStatusFilter('all')
+      }
     }
   }, [pathname])
 
@@ -150,13 +161,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
     window.location.href = '/login'
   }
 
-  function applyFilters(newQuery: string, newCat: string) {
+  function applyFilters(newQuery: string, newCat: string, newStatus?: string) {
     const params = new URLSearchParams()
     if (newQuery.trim()) {
       params.set('q', newQuery.trim())
     }
     if (newCat && newCat !== 'all') {
       params.set('category', newCat)
+    }
+    const currentStatus = newStatus !== undefined ? newStatus : statusFilter
+    if (currentStatus && currentStatus !== 'all') {
+      params.set('status', currentStatus)
     }
     const queryString = params.toString()
 
@@ -174,50 +189,109 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault()
-    applyFilters(searchQuery, selectedCategory)
+    applyFilters(searchQuery, selectedCategory, statusFilter)
   }
 
   function handleSelectCategory(cat: string) {
     setSelectedCategory(cat)
-    setIsFilterOpen(false)
-    applyFilters(searchQuery, cat)
+    applyFilters(searchQuery, cat, statusFilter)
+  }
+
+  function handleToggleAvailable() {
+    const nextStatus = statusFilter === 'available' ? 'all' : 'available'
+    setStatusFilter(nextStatus)
+    applyFilters(searchQuery, selectedCategory, nextStatus)
+  }
+
+  function handleSetStatusFilter(nextStatus: 'all' | 'available' | 'active') {
+    setStatusFilter(nextStatus)
+    applyFilters(searchQuery, selectedCategory, nextStatus)
+  }
+
+  function handleResetFilters() {
+    setSelectedCategory('all')
+    setStatusFilter('all')
+    applyFilters(searchQuery, 'all', 'all')
   }
 
   function handleClearSearch() {
     setSearchQuery('')
-    applyFilters('', selectedCategory)
+    applyFilters('', selectedCategory, statusFilter)
   }
+
+  const hasActiveFilter = selectedCategory !== 'all' || statusFilter !== 'all'
 
   // Navigation Links
   const navLinks = [
     {
+      key: 'home',
       href: '/',
       label: locale === 'th' ? 'หน้าแรก' : 'Discover',
       icon: Compass,
       isActive: pathname === '/',
     },
     {
+      key: 'books',
       href: '/books',
-      label: locale === 'th' ? 'หนังสือทั้งหมด' : 'All Books',
+      label: locale === 'th' ? (isAdmin ? 'จัดการหนังสือ' : 'หนังสือทั้งหมด') : (isAdmin ? 'Manage Books' : 'All Books'),
       icon: Layers,
       isActive: pathname.startsWith('/books'),
     },
+    // Only show "การยืมของฉัน" & "ข้อเสนอแนะ" for non-admin users
+    ...(!isAdmin
+      ? [
+          {
+            key: 'my-borrows',
+            href: profile ? '/my-borrows' : '/login',
+            label: locale === 'th' ? 'การยืมของฉัน' : 'My Library',
+            icon: ClipboardList,
+            isActive: pathname.startsWith('/my-borrows'),
+          },
+          {
+            key: 'feedback',
+            href: profile ? '/feedback' : '/login',
+            label: locale === 'th' ? 'ข้อเสนอแนะ' : 'Feedback',
+            icon: MessageSquare,
+            isActive: pathname.startsWith('/feedback'),
+          },
+        ]
+      : []),
+  ]
+
+  // Admin Outer Navigation Links
+  const adminLinks = [
     {
-      href: profile ? '/my-borrows' : '/login',
-      label: locale === 'th' ? 'การยืมของฉัน' : 'My Library',
-      icon: ClipboardList,
-      isActive: pathname.startsWith('/my-borrows'),
+      key: 'admin-dashboard',
+      href: '/admin/dashboard',
+      label: locale === 'th' ? 'แดชบอร์ด' : 'Dashboard',
+      icon: LayoutDashboard,
+      isActive: pathname === '/admin/dashboard' || pathname === '/admin',
     },
     {
-      href: '/feedback',
+      key: 'admin-borrows',
+      href: '/admin/borrows',
+      label: locale === 'th' ? 'จัดการการยืมคืน' : 'Borrow & Return',
+      icon: ClipboardList,
+      isActive: pathname.startsWith('/admin/borrows'),
+    },
+    {
+      key: 'admin-users',
+      href: '/admin/users',
+      label: locale === 'th' ? 'ผู้ใช้งาน' : 'Users',
+      icon: Users,
+      isActive: pathname.startsWith('/admin/users'),
+    },
+    {
+      key: 'admin-feedback',
+      href: '/admin/feedback',
       label: locale === 'th' ? 'ข้อเสนอแนะ' : 'Feedback',
       icon: MessageSquare,
-      isActive: pathname.startsWith('/feedback'),
+      isActive: pathname.startsWith('/admin/feedback'),
     },
   ]
 
   return (
-    <div className="min-h-screen w-full bg-white dark:bg-[#0a0a0c] flex transition-colors duration-300 antialiased font-sans text-neutral-900 dark:text-neutral-100">
+    <div className="min-h-screen w-full bg-white dark:bg-[#0a0a0c] flex antialiased font-sans text-neutral-900 dark:text-neutral-100">
       
       {/* ======================================================== */}
       {/* 1. LEFT DOCKED SIDEBAR (Desktop)                         */}
@@ -245,7 +319,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               const Icon = link.icon
               return (
                 <Link
-                  key={link.href}
+                  key={link.key}
                   href={link.href}
                   className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-semibold text-sm transition-all ${
                     link.isActive
@@ -259,19 +333,30 @@ export default function AppShell({ children }: { children: ReactNode }) {
               )
             })}
 
-            {/* Admin Panel Link (if admin) */}
+            {/* Admin Outer Links */}
             {isAdmin && (
-              <Link
-                href="/admin/dashboard"
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-medium text-sm transition-all border border-neutral-300 dark:border-neutral-700 mt-2 ${
-                  pathname.startsWith('/admin')
-                    ? 'bg-black text-white dark:bg-white dark:text-black'
-                    : 'text-neutral-900 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900'
-                }`}
-              >
-                <ShieldCheck size={18} />
-                <span>{locale === 'th' ? 'ระบบผู้ดูแล' : 'Admin Panel'}</span>
-              </Link>
+              <div className="pt-4 mt-3 border-t border-neutral-200 dark:border-neutral-800 space-y-1">
+                <div className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                  {locale === 'th' ? 'ระบบผู้ดูแล' : 'Administration'}
+                </div>
+                {adminLinks.map((link) => {
+                  const Icon = link.icon
+                  return (
+                    <Link
+                      key={link.key}
+                      href={link.href}
+                      className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-semibold text-sm transition-all ${
+                        link.isActive
+                          ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm'
+                          : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900/60'
+                      }`}
+                    >
+                      <Icon size={18} />
+                      <span>{link.label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
             )}
           </nav>
         </div>
@@ -373,69 +458,136 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   </button>
                 )}
 
-                {/* Category Filter Icon Button */}
+                {/* Search Filter Icon Button (Category & Book Status) */}
                 <div className="relative" ref={filterDropdownRef}>
                   <button
                     type="button"
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className={`p-1.5 rounded-xl transition-all flex items-center justify-center ${
-                      selectedCategory !== 'all'
+                    className={`p-1.5 rounded-xl transition-all flex items-center justify-center relative ${
+                      hasActiveFilter
                         ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
                         : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800'
                     }`}
-                    title={locale === 'th' ? 'เลือกหมวดหมู่' : 'Filter category'}
-                    aria-label="Filter category"
+                    title={
+                      hasActiveFilter
+                        ? locale === 'th' ? 'ตัวกรอง (กำลังใช้งาน)' : 'Filters (Active)'
+                        : locale === 'th' ? 'ตัวกรองการค้นหา' : 'Filter search'
+                    }
+                    aria-label="Filter search"
                   >
                     <SlidersHorizontal size={14} />
+                    {hasActiveFilter && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#111113]" />
+                    )}
                   </button>
 
                   {/* Dropdown Menu */}
                   {isFilterOpen && (
-                    <div className="absolute right-0 mt-3 w-60 p-2.5 bg-white dark:bg-[#161619] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl z-50 animate-fade-in text-neutral-900 dark:text-white">
-                      <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-neutral-100 dark:border-neutral-800 px-1">
+                    <div className="absolute right-0 mt-3 w-64 sm:w-72 p-3 bg-white dark:bg-[#161619] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl z-50 animate-fade-in text-neutral-900 dark:text-white">
+                      {/* Dropdown Header */}
+                      <div className="flex items-center justify-between pb-2 mb-2 border-b border-neutral-100 dark:border-neutral-800 px-1">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-                          {locale === 'th' ? 'หมวดหมู่หนังสือ' : 'Categories'}
+                          {locale === 'th' ? 'ตัวกรองการค้นหา' : 'Search Filters'}
                         </span>
-                        {selectedCategory !== 'all' && (
+                        {hasActiveFilter && (
                           <button
                             type="button"
-                            onClick={() => handleSelectCategory('all')}
-                            className="text-[11px] font-medium text-neutral-500 hover:text-black dark:hover:text-white underline"
+                            onClick={handleResetFilters}
+                            className="text-[11px] font-medium text-neutral-500 hover:text-black dark:hover:text-white underline transition-colors"
                           >
-                            {locale === 'th' ? 'รีเซ็ต' : 'Reset'}
+                            {locale === 'th' ? 'รีเซ็ตทั้งหมด' : 'Reset all'}
                           </button>
                         )}
                       </div>
 
-                      <div className="max-h-60 overflow-y-auto space-y-0.5">
-                        <button
-                          type="button"
-                          onClick={() => handleSelectCategory('all')}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
-                            selectedCategory === 'all'
-                              ? 'bg-black text-white dark:bg-white dark:text-black font-semibold'
-                              : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
-                          }`}
-                        >
-                          <span>{locale === 'th' ? 'หมวดหมู่ทั้งหมด' : 'All Categories'}</span>
-                          {selectedCategory === 'all' && <Check size={13} />}
-                        </button>
-
-                        {categories.map((cat) => (
+                      {/* 1. Status Filter (หนังสือทั้งหมด, พร้อมให้ยืม, ซ่อนที่ปิดใช้งาน) */}
+                      <div className="mb-3">
+                        <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-1 mb-1.5">
+                          {locale === 'th' ? 'สถานะหนังสือ' : 'Book Status'}
+                        </div>
+                        <div className="space-y-1">
                           <button
-                            key={cat}
                             type="button"
-                            onClick={() => handleSelectCategory(cat)}
+                            onClick={() => handleSetStatusFilter('all')}
                             className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
-                              selectedCategory === cat
-                                ? 'bg-black text-white dark:bg-white dark:text-black font-semibold'
-                              : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                              statusFilter === 'all'
+                                ? 'bg-black text-white dark:bg-white dark:text-black font-semibold shadow-xs'
+                                : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
                             }`}
                           >
-                            <span className="truncate">{cat}</span>
-                            {selectedCategory === cat && <Check size={13} />}
+                            <span>{locale === 'th' ? 'หนังสือทั้งหมด' : 'All Books'}</span>
+                            {statusFilter === 'all' && <Check size={13} />}
                           </button>
-                        ))}
+
+                          <button
+                            type="button"
+                            onClick={() => handleSetStatusFilter('available')}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                              statusFilter === 'available'
+                                ? 'bg-emerald-600 text-white font-semibold shadow-xs'
+                                : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className={`w-2 h-2 rounded-full ${statusFilter === 'available' ? 'bg-white' : 'bg-emerald-500'}`} />
+                              <span>{locale === 'th' ? 'พร้อมให้ยืม' : 'Available Only'}</span>
+                            </span>
+                            {statusFilter === 'available' && <Check size={13} />}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSetStatusFilter('active')}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                              statusFilter === 'active'
+                                ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900 font-semibold shadow-xs'
+                                : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <EyeOff size={13} />
+                              <span>{locale === 'th' ? 'ซ่อนที่ปิดใช้งาน' : 'Hide Inactive'}</span>
+                            </span>
+                            {statusFilter === 'active' && <Check size={13} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 2. Categories Filter */}
+                      <div>
+                        <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-1 mb-1.5">
+                          {locale === 'th' ? 'หมวดหมู่หนังสือ' : 'Categories'}
+                        </div>
+                        <div className="max-h-48 overflow-y-auto space-y-0.5 pr-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleSelectCategory('all')}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                              selectedCategory === 'all'
+                                ? 'bg-black text-white dark:bg-white dark:text-black font-semibold shadow-xs'
+                                : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                            }`}
+                          >
+                            <span>{locale === 'th' ? 'ทุกหมวดหมู่' : 'All Categories'}</span>
+                            {selectedCategory === 'all' && <Check size={13} />}
+                          </button>
+
+                          {categories.map((cat) => (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => handleSelectCategory(cat)}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                                selectedCategory === cat
+                                  ? 'bg-black text-white dark:bg-white dark:text-black font-semibold shadow-xs'
+                                  : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                              }`}
+                            >
+                              <span className="truncate">{cat}</span>
+                              {selectedCategory === cat && <Check size={13} />}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -445,12 +597,22 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           {/* Right Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Language Switch Button */}
+            <button
+              type="button"
+              onClick={() => setLocale(locale === 'th' ? 'en' : 'th')}
+              className="px-2.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-800 text-xs font-bold transition-all shadow-2xs flex items-center gap-1"
+              title={locale === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย'}
+            >
+              <span className="text-[11px] font-semibold">{locale === 'th' ? 'TH' : 'EN'}</span>
+            </button>
+
             {/* Notification Bell */}
             <button
               type="button"
               onClick={() => setIsAnnounceModalOpen(true)}
-              className="relative p-2.5 rounded-2xl bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors border border-neutral-200 dark:border-neutral-800"
+              className="relative p-2 rounded-xl sm:p-2.5 sm:rounded-2xl bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors border border-neutral-200 dark:border-neutral-800"
               title={locale === 'th' ? 'ประกาศข่าวสาร' : 'Announcements'}
             >
               <Bell size={17} />
@@ -503,21 +665,45 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {/* ======================================================== */}
       {/* 3. MOBILE BOTTOM NAVIGATION BAR                          */}
       {/* ======================================================== */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#111113]/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-around z-30 px-2">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#111113]/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-around z-30 px-1">
         {navLinks.map((link) => {
           const Icon = link.icon
+          const mobileLabel = link.key === 'books' && isAdmin ? (locale === 'th' ? 'หนังสือ' : 'Books') : link.label
           return (
             <Link
-              key={link.href}
+              key={link.key}
               href={link.href}
-              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-xl transition-all ${
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
                 link.isActive
                   ? 'text-black dark:text-white font-bold'
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
               }`}
             >
-              <Icon size={18} />
-              <span className="text-[10px] leading-none tracking-tight">{link.label}</span>
+              <Icon size={18} className="shrink-0" />
+              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">{mobileLabel}</span>
+            </Link>
+          )
+        })}
+        {isAdmin && adminLinks.map((link) => {
+          const Icon = link.icon
+          const mobileLabel =
+            link.key === 'admin-borrows'
+              ? (locale === 'th' ? 'ยืม-คืน' : 'Borrows')
+              : link.key === 'admin-dashboard'
+              ? (locale === 'th' ? 'แดชบอร์ด' : 'Dash')
+              : link.label
+          return (
+            <Link
+              key={link.key}
+              href={link.href}
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
+                link.isActive
+                  ? 'text-black dark:text-white font-bold'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              <Icon size={18} className="shrink-0" />
+              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">{mobileLabel}</span>
             </Link>
           )
         })}
@@ -568,7 +754,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   const Icon = link.icon
                   return (
                     <Link
-                      key={link.href}
+                      key={link.key}
                       href={link.href}
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm ${
@@ -584,14 +770,29 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 })}
 
                 {isAdmin && (
-                  <Link
-                    href="/admin/dashboard"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm border border-neutral-300 dark:border-neutral-700 mt-2"
-                  >
-                    <ShieldCheck size={18} />
-                    <span>{locale === 'th' ? 'ระบบผู้ดูแล' : 'Admin Panel'}</span>
-                  </Link>
+                  <div className="pt-4 mt-3 border-t border-neutral-200 dark:border-neutral-800 space-y-1">
+                    <div className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                      {locale === 'th' ? 'ระบบผู้ดูแล' : 'Administration'}
+                    </div>
+                    {adminLinks.map((link) => {
+                      const Icon = link.icon
+                      return (
+                        <Link
+                          key={link.key}
+                          href={link.href}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
+                            link.isActive
+                              ? 'bg-black text-white dark:bg-white dark:text-black'
+                              : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900'
+                          }`}
+                        >
+                          <Icon size={18} />
+                          <span>{link.label}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
                 )}
               </nav>
             </div>
@@ -604,7 +805,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               >
                 <div className="flex items-center gap-2">
                   {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-                  <span>{theme === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด'}</span>
+                  <span>{theme === 'dark' ? (locale === 'th' ? 'โหมดสว่าง' : 'Light Mode') : (locale === 'th' ? 'โหมดมืด' : 'Dark Mode')}</span>
                 </div>
                 <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
                   {theme}

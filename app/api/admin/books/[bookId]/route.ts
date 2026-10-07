@@ -2,12 +2,37 @@ import { createServiceClient } from '@/lib/supabase-server'
 import { requireAdmin } from '@/lib/admin-guard'
 import { NextResponse } from 'next/server'
 
+// ── UUID format regex ──
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// ── Allowed fields for book update (prevent mass-assignment) ──
+const ALLOWED_BOOK_FIELDS = new Set([
+  'title', 'author', 'isbn', 'description', 'category', 'publisher',
+  'published_year', 'total_copies', 'available_copies',
+  'is_featured', 'is_active', 'cover_url',
+])
+
+function sanitizeBookFields(raw: Record<string, any>): Record<string, any> {
+  const result: Record<string, any> = {}
+  for (const [key, value] of Object.entries(raw)) {
+    if (ALLOWED_BOOK_FIELDS.has(key)) {
+      result[key] = value
+    }
+  }
+  return result
+}
+
 export async function PUT(request: Request, { params }: { params: Promise<{ bookId: string }> }) {
   const auth = await requireAdmin()
   if (!auth.ok) return auth.response
 
   const supabase = createServiceClient()
   const { bookId } = await params
+
+  // ── Validate UUID ──
+  if (!uuidRegex.test(bookId)) {
+    return NextResponse.json({ error: 'รหัสหนังสือไม่ถูกต้อง' }, { status: 400 })
+  }
 
   const contentType = request.headers.get('content-type') || ''
 
@@ -31,6 +56,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ book
 
     const coverFile = formData.get('cover') as File | null
     if (coverFile && coverFile.size > 0) {
+      // ── Validate file type & size ──
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+      if (!allowedTypes.includes(coverFile.type)) {
+        return NextResponse.json({ error: 'รองรับเฉพาะไฟล์ JPG, PNG, WebP, GIF' }, { status: 400 })
+      }
+      if (coverFile.size > 5 * 1024 * 1024) {
+        return NextResponse.json({ error: 'ไฟล์ปกใหญ่เกินไป (สูงสุด 5 MB)' }, { status: 400 })
+      }
+
       const ext = coverFile.name.split('.').pop()
       const path = `covers/${crypto.randomUUID()}.${ext}`
       const buffer = Buffer.from(await coverFile.arrayBuffer())
@@ -50,8 +84,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ book
     fields = await request.json()
   }
 
+  // ── Sanitize: only allow known book fields ──
   const updateData: Record<string, any> = {
-    ...fields,
+    ...sanitizeBookFields(fields),
     updated_at: new Date().toISOString(),
   }
   if (coverUrl) updateData.cover_url = coverUrl
@@ -74,9 +109,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
   const body = await request.json()
   const { bookId } = await params
 
+  // ── Validate UUID ──
+  if (!uuidRegex.test(bookId)) {
+    return NextResponse.json({ error: 'รหัสหนังสือไม่ถูกต้อง' }, { status: 400 })
+  }
+
+  // ── Sanitize: only allow known book fields ──
+  const safeBody = sanitizeBookFields(body)
+  if (Object.keys(safeBody).length === 0) {
+    return NextResponse.json({ error: 'ไม่มีข้อมูลที่ต้องอัปเดต' }, { status: 400 })
+  }
+
   const { error } = await supabase
     .from('books')
-    .update({ ...body, updated_at: new Date().toISOString() })
+    .update({ ...safeBody, updated_at: new Date().toISOString() })
     .eq('id', bookId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -89,6 +135,11 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ bookId:
 
   const supabase = createServiceClient()
   const { bookId } = await params
+
+  // ── Validate UUID ──
+  if (!uuidRegex.test(bookId)) {
+    return NextResponse.json({ error: 'รหัสหนังสือไม่ถูกต้อง' }, { status: 400 })
+  }
 
   // เช็คว่ามีการยืมที่ยังค้างอยู่มั้ย
   const { count } = await supabase

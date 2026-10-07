@@ -34,6 +34,8 @@ interface AppContextType {
   setSearchQuery: (q: string) => void
   selectedCategory: string
   setSelectedCategory: (c: string) => void
+  statusFilter: 'all' | 'available' | 'active'
+  setStatusFilter: (s: 'all' | 'available' | 'active') => void
   alertModal: AlertModalOptions | null
   showAlert: (options: AlertModalOptions) => void
   showConfirm: (options: AlertModalOptions) => void
@@ -50,6 +52,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'active'>('all')
   const [alertModal, setAlertModal] = useState<AlertModalOptions | null>(null)
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const { profile, loading: profileLoading } = useProfile()  
@@ -62,7 +65,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setTheme(savedTheme)
       document.documentElement.classList.toggle('dark', savedTheme === 'dark')
     } else {
-      document.documentElement.classList.add('dark')
+      const isDark = document.documentElement.classList.contains('dark')
+      setTheme(isDark ? 'dark' : 'light')
+      if (!isDark) {
+        document.documentElement.classList.remove('dark')
+      }
     }
   }, [])
 
@@ -128,6 +135,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSearchQuery,
       selectedCategory,
       setSelectedCategory,
+      statusFilter,
+      setStatusFilter,
       alertModal,
       showAlert,
       showConfirm,

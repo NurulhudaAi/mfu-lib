@@ -8,12 +8,15 @@ import {
   MailPlus, X, AlertCircle, Check
 } from 'lucide-react'
 import { format } from 'date-fns'
-import { th } from 'date-fns/locale'
+import { th, enUS } from 'date-fns/locale'
+import { useApp } from '@/lib/app-context'
 
 interface Props { users: any[] }
 
 export default function AdminUsersContent({ users = [] }: Props) {
   const router = useRouter()
+  const { locale, t } = useApp()
+  const dateLocale = locale === 'th' ? th : enUS
   const [isPending, startTransition] = useTransition()
   const [search, setSearch] = useState('')
   const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'user' | 'blacklisted'>('all')
@@ -156,7 +159,10 @@ export default function AdminUsersContent({ users = [] }: Props) {
 
   // Handle Un-blacklist User
   async function handleUnblacklist(user: any) {
-    if (!confirm(`ต้องการปลดการระงับสิทธิ์ของ ${user.full_name || user.email} หรือไม่?`)) return
+    const confirmMsg = locale === 'th'
+      ? `ต้องการปลดการระงับสิทธิ์ของ ${user.full_name || user.email} หรือไม่?`
+      : `Are you sure you want to unblacklist ${user.full_name || user.email}?`
+    if (!confirm(confirmMsg)) return
 
     try {
       const res = await fetch(`/api/admin/users/${user.id}`, {
@@ -170,10 +176,10 @@ export default function AdminUsersContent({ users = [] }: Props) {
         })
       } else {
         const data = await res.json()
-        alert(data.error || 'ปลดสิทธิ์ไม่สำเร็จ')
+        alert(data.error || (locale === 'th' ? 'ปลดสิทธิ์ไม่สำเร็จ' : 'Failed to unblacklist'))
       }
     } catch (_) {
-      alert('เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว')
+      alert(locale === 'th' ? 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว' : 'Failed to connect to server')
     }
   }
 
@@ -181,14 +187,13 @@ export default function AdminUsersContent({ users = [] }: Props) {
     <div className="w-full p-6 sm:p-8 lg:p-10 space-y-6 animate-fade-in max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/admin/dashboard" className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors">
-            <ArrowLeft size={18} />
-          </Link>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">จัดการผู้ใช้</h1>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">{users.length} คนทั้งหมดในระบบ</p>
-          </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">
+            {t('adminUsersHeading')}
+          </h1>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+            {users.length} {locale === 'th' ? 'คนทั้งหมดในระบบ' : 'total in system'}
+          </p>
         </div>
 
         <button
@@ -200,7 +205,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black text-xs sm:text-sm font-semibold transition-all shadow-sm"
         >
           <MailPlus size={16} />
-          เชิญผู้ดูแลด้วยอีเมล
+          {t('inviteAdminBtn')}
         </button>
       </div>
 
@@ -211,43 +216,43 @@ export default function AdminUsersContent({ users = [] }: Props) {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="ค้นหาชื่อ, อีเมล, รหัสนักศึกษา..."
+            placeholder={t('searchUsersPlaceholder')}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm outline-none focus:border-black dark:focus:border-white text-neutral-900 dark:text-white transition-colors"
           />
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center gap-1.5 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-x-auto scrollbar-none max-w-full">
           {(['all', 'admin', 'user', 'blacklisted'] as const).map(f => (
             <button
               key={f}
               onClick={() => setFilterRole(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                 filterRole === f
                   ? 'bg-white dark:bg-neutral-800 text-neutral-950 dark:text-white shadow-xs'
                   : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
               }`}
             >
-              {f === 'all' && 'ทั้งหมด'}
-              {f === 'admin' && 'แอดมิน'}
-              {f === 'user' && 'สมาชิก'}
-              {f === 'blacklisted' && 'Blacklisted'}
+              {f === 'all' && t('filterRoleAll')}
+              {f === 'admin' && t('filterRoleAdmin')}
+              {f === 'user' && t('filterRoleUser')}
+              {f === 'blacklisted' && t('filterRoleBlacklisted')}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-xs">
+      {/* Table (Desktop: md+) */}
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-xs hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead>
               <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40">
-                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider">ผู้ใช้</th>
-                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider hidden md:table-cell">รหัสนักศึกษา</th>
-                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider hidden lg:table-cell">วันที่สมัคร</th>
-                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-center">บทบาท</th>
-                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-center">สถานะ</th>
-                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-right">การจัดการ</th>
+                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider">{t('colUser')}</th>
+                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider hidden md:table-cell">{t('colStudentId')}</th>
+                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider hidden lg:table-cell">{t('colRegisteredDate')}</th>
+                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-center">{t('colRole')}</th>
+                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-center">{t('colUserStatus')}</th>
+                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-right">{t('colActions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -255,7 +260,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
                 <tr>
                   <td colSpan={6} className="text-center py-16 text-neutral-400">
                     <Users size={36} className="mx-auto mb-2 opacity-20" />
-                    ไม่พบผู้ใช้
+                    {t('noUsersFound')}
                   </td>
                 </tr>
               ) : filtered.map(user => (
@@ -273,7 +278,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
                       </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-neutral-900 dark:text-white truncate max-w-[200px]">
-                          {user.full_name || 'ไม่ระบุชื่อ'}
+                          {user.full_name || (locale === 'th' ? 'ไม่ระบุชื่อ' : 'Unknown')}
                         </p>
                         <p className="text-xs text-neutral-400 truncate max-w-[200px]">{user.email}</p>
                       </div>
@@ -285,19 +290,19 @@ export default function AdminUsersContent({ users = [] }: Props) {
                   </td>
 
                   <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400 text-xs hidden lg:table-cell">
-                    {user.created_at ? format(new Date(user.created_at), 'dd MMM yyyy', { locale: th }) : '—'}
+                    {user.created_at ? format(new Date(user.created_at), 'dd MMM yyyy', { locale: dateLocale }) : '—'}
                   </td>
 
-                  {/* Role (Fixed pill badge, no switch) */}
+                  {/* Role */}
                   <td className="px-5 py-4 text-center">
                     {user.role === 'admin' ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-neutral-900 text-white dark:bg-white dark:text-black">
                         <ShieldCheck size={13} />
-                        ผู้ดูแล (Admin)
+                        {t('roleAdminPill')}
                       </span>
                     ) : (
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700">
-                        สมาชิก
+                        {t('roleMemberPill')}
                       </span>
                     )}
                   </td>
@@ -308,17 +313,17 @@ export default function AdminUsersContent({ users = [] }: Props) {
                       <div className="inline-flex flex-col items-center">
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-600 text-white">
                           <ShieldAlert size={12} />
-                          Blacklisted
+                          {t('statusBlacklisted')}
                         </span>
                         {user.blacklist_reason && (
                           <span className="text-[10px] text-rose-500 dark:text-rose-400 max-w-[140px] truncate mt-0.5" title={user.blacklist_reason}>
-                            เหตุผล: {user.blacklist_reason}
+                            {locale === 'th' ? 'เหตุผล: ' : 'Reason: '}{user.blacklist_reason}
                           </span>
                         )}
                       </div>
                     ) : (
                       <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                        ปกติ
+                        {t('statusNormal')}
                       </span>
                     )}
                   </td>
@@ -326,14 +331,14 @@ export default function AdminUsersContent({ users = [] }: Props) {
                   {/* Blacklist Actions */}
                   <td className="px-5 py-4 text-right">
                     {user.role === 'admin' ? (
-                      <span className="text-xs text-neutral-400 italic">ผู้ดูแล</span>
+                      <span className="text-xs text-neutral-400 italic">{t('roleAdminPill')}</span>
                     ) : user.is_blacklisted ? (
                       <button
                         onClick={() => handleUnblacklist(user)}
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                       >
                         <ShieldCheck size={13} className="text-emerald-500" />
-                        ปลด Blacklist
+                        {t('unblacklistBtn')}
                       </button>
                     ) : (
                       <button
@@ -345,7 +350,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
                       >
                         <ShieldX size={13} />
-                        Blacklist
+                        {t('blacklistBtn')}
                       </button>
                     )}
                   </td>
@@ -354,6 +359,104 @@ export default function AdminUsersContent({ users = [] }: Props) {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Card List (< md) */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-8 text-center text-neutral-400">
+            <Users size={36} className="mx-auto mb-2 opacity-20" />
+            <p className="text-sm">{t('noUsersFound')}</p>
+          </div>
+        ) : (
+          filtered.map(user => (
+            <div
+              key={user.id}
+              className={`bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs space-y-3 ${
+                user.is_blacklisted ? 'border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10' : ''
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0 flex items-center justify-center">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <Users size={16} className="text-neutral-400" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-neutral-900 dark:text-white truncate text-sm">
+                      {user.full_name || (locale === 'th' ? 'ไม่ระบุชื่อ' : 'Unknown')}
+                    </p>
+                    {user.role === 'admin' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-900 text-white dark:bg-white dark:text-black shrink-0">
+                        <ShieldCheck size={11} />
+                        {t('roleAdminPill')}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 shrink-0">
+                        {t('roleMemberPill')}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-neutral-400 truncate mt-0.5">{user.email}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-neutral-100 dark:border-neutral-800 text-neutral-500">
+                <div>
+                  <span className="text-neutral-400">{t('colStudentId')}: </span>
+                  <span className="font-mono text-neutral-700 dark:text-neutral-300">{user.student_id || '—'}</span>
+                </div>
+                <div>
+                  {user.is_blacklisted ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white">
+                      <ShieldAlert size={10} />
+                      {t('statusBlacklisted')}
+                    </span>
+                  ) : (
+                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                      {t('statusNormal')}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {user.is_blacklisted && user.blacklist_reason && (
+                <div className="text-[11px] p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50">
+                  <span className="font-semibold">{locale === 'th' ? 'เหตุผล: ' : 'Reason: '}</span>{user.blacklist_reason}
+                </div>
+              )}
+
+              {user.role !== 'admin' && (
+                <div className="pt-1">
+                  {user.is_blacklisted ? (
+                    <button
+                      onClick={() => handleUnblacklist(user)}
+                      className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                    >
+                      <ShieldCheck size={14} className="text-emerald-500" />
+                      {t('unblacklistBtn')}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setBlacklistModalUser(user)
+                        setBlacklistReason('')
+                        setBlacklistError(null)
+                      }}
+                      className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
+                    >
+                      <ShieldX size={14} />
+                      {t('blacklistBtn')}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
       {/* Invite Modal */}
@@ -376,20 +479,20 @@ export default function AdminUsersContent({ users = [] }: Props) {
                 <MailPlus size={20} />
               </div>
               <div className="min-w-0 pr-6">
-                <h3 className="text-base font-bold text-neutral-900 dark:text-white truncate">เชิญผู้ดูแลด้วยอีเมล</h3>
-                <p className="text-xs text-neutral-400 truncate">แต่งตั้งสิทธิ์ Admin ผ่านอีเมล</p>
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white truncate">{t('inviteAdminModalTitle')}</h3>
+                <p className="text-xs text-neutral-400 truncate">{t('inviteAdminModalDesc')}</p>
               </div>
             </div>
 
             <form onSubmit={handleInviteAdmin} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
-                  อีเมลสมาชิก *
+                  {t('emailLabel')} *
                 </label>
                 <input
                   type="email"
                   required
-                  placeholder="admin.member@lamduan.mfu.ac.th"
+                  placeholder={t('emailPlaceholder')}
                   value={inviteEmail}
                   onChange={e => setInviteEmail(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-sm outline-none focus:border-black dark:focus:border-white text-neutral-900 dark:text-white"
@@ -413,14 +516,14 @@ export default function AdminUsersContent({ users = [] }: Props) {
                   onClick={() => setInviteModalOpen(false)}
                   className="px-4 py-2.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                 >
-                  ยกเลิก
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={inviteLoading || !inviteEmail.trim()}
                   className="px-4 py-2.5 rounded-xl text-xs font-bold bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black transition-all disabled:opacity-50"
                 >
-                  {inviteLoading ? 'กำลังดำเนินการ...' : 'ยืนยันแต่งตั้งแอดมิน'}
+                  {inviteLoading ? t('appointingBtn') : t('appointBtn')}
                 </button>
               </div>
             </form>
@@ -449,8 +552,10 @@ export default function AdminUsersContent({ users = [] }: Props) {
                 <ShieldAlert size={20} />
               </div>
               <div className="min-w-0 pr-6">
-                <h3 className="text-base font-bold text-neutral-900 dark:text-white truncate">ระงับสิทธิ์สมาชิก (Blacklist)</h3>
-                <p className="text-xs text-neutral-400 truncate">สมาชิกที่ถูกขึ้นบัญชีดำจะไม่สามารถยืมหนังสือได้</p>
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white truncate">{t('blacklistModalTitle')}</h3>
+                <p className="text-xs text-neutral-400 truncate">
+                  {locale === 'th' ? 'สมาชิกที่ถูกขึ้นบัญชีดำจะไม่สามารถยืมหนังสือได้' : 'Blacklisted members cannot borrow books'}
+                </p>
               </div>
             </div>
 
@@ -464,7 +569,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-neutral-900 dark:text-white truncate">
-                  {blacklistModalUser.full_name || 'ไม่ระบุชื่อ'}
+                  {blacklistModalUser.full_name || (locale === 'th' ? 'ไม่ระบุชื่อ' : 'Unknown')}
                 </p>
                 <p className="text-[11px] text-neutral-400 truncate">{blacklistModalUser.email}</p>
               </div>
@@ -472,12 +577,12 @@ export default function AdminUsersContent({ users = [] }: Props) {
 
             <div className="space-y-2 mb-4">
               <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-200">
-                เหตุผลการขึ้นบัญชีดำ <span className="text-rose-500 font-bold">(จำเป็นต้องระบุ *)</span>
+                {t('blacklistReasonLabel')} <span className="text-rose-500 font-bold">({locale === 'th' ? 'จำเป็นต้องระบุ *' : 'Required *'})</span>
               </label>
               <textarea
                 required
                 rows={3}
-                placeholder="เช่น คืนหนังสือชำรุดเสียหายร้ายแรง, ไม่คืนหนังสือเกินกำหนด, หรือผิดกฎระเบียบห้องสมุด..."
+                placeholder={t('blacklistReasonPlaceholder')}
                 value={blacklistReason}
                 onChange={e => setBlacklistReason(e.target.value)}
                 className="w-full p-3 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs outline-none focus:border-rose-500 text-neutral-900 dark:text-white resize-none"
@@ -497,7 +602,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
                 onClick={() => setBlacklistModalUser(null)}
                 className="px-4 py-2.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
-                ยกเลิก
+                {t('cancel')}
               </button>
               <button
                 type="button"
@@ -505,7 +610,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
                 disabled={blacklistLoading || !blacklistReason.trim()}
                 className="px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition-all disabled:opacity-50"
               >
-                {blacklistLoading ? 'กำลังบันทึก...' : 'ยืนยันขึ้นบัญชีดำ'}
+                {blacklistLoading ? t('confirmingBtn') : t('confirmBlacklistBtn')}
               </button>
             </div>
           </div>
