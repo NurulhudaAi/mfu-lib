@@ -620,11 +620,11 @@ export default function BookDetailContent({
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-neutral-900 dark:bg-white" />
                   <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider">
-                    การจัดการสำหรับผู้ดูแลระบบ (Admin Controls)
+                    {t('adminControls')}
                   </span>
                 </div>
                 <span className="text-[11px] text-neutral-500 dark:text-neutral-400 bg-neutral-200/60 dark:bg-neutral-800 px-2.5 py-0.5 rounded-full">
-                  แอดมินดูเล่มนี้ได้ แต่ไม่สามารถกดยืมได้
+                  {t('adminCannotBorrowNote')}
                 </span>
               </div>
 
@@ -636,7 +636,7 @@ export default function BookDetailContent({
                   className="flex-1 min-w-[150px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black text-xs sm:text-sm font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
                 >
                   <Pencil size={15} />
-                  แก้ไขข้อมูลหนังสือ
+                  {t('editBookInfo')}
                 </button>
 
                 {/* Toggle Active Button */}
@@ -653,12 +653,12 @@ export default function BookDetailContent({
                   {isDeactivated ? (
                     <>
                       <CheckCircle2 size={15} />
-                      <span>{togglingActive ? 'กำลังเปิดใช้งาน...' : 'เปิดใช้งานหนังสือ'}</span>
+                      <span>{togglingActive ? (locale === 'th' ? 'กำลังเปิดใช้งาน...' : 'Enabling...') : t('enableBook')}</span>
                     </>
                   ) : (
                     <>
                       <Lock size={15} />
-                      <span>{togglingActive ? 'กำลังปิดใช้งาน...' : 'ปิดใช้งานหนังสือ'}</span>
+                      <span>{togglingActive ? (locale === 'th' ? 'กำลังปิดใช้งาน...' : 'Disabling...') : t('disableBook')}</span>
                     </>
                   )}
                 </button>
@@ -842,10 +842,10 @@ export default function BookDetailContent({
             </div>
             <div>
               <p className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white">
-                มีข้อเสนอแนะเกี่ยวกับหนังสือเล่มนี้?
+                {t('haveBookFeedback')}
               </p>
               <p className="text-[11px] sm:text-xs text-neutral-400">
-                แจ้งปัญหาเกี่ยวกับหนังสือเล่มนี้ หรือเสนอแนะข้อคิดเห็นให้เจ้าหน้าที่
+                {t('haveBookFeedbackDesc')}
               </p>
             </div>
           </div>
@@ -853,7 +853,7 @@ export default function BookDetailContent({
             href={`/feedback?category=book_request&title=${encodeURIComponent(book.title)}`}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 hover:border-black dark:hover:border-white transition-all shadow-xs"
           >
-            <span>ส่งข้อเสนอแนะ</span>
+            <span>{t('sendFeedback')}</span>
             <ArrowRight size={13} />
           </Link>
         </div>
@@ -917,10 +917,10 @@ export default function BookDetailContent({
                   </div>
                   <div className="min-w-0">
                     <h3 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white truncate">
-                      แก้ไขข้อมูลหนังสือ
+                      {t('editBookModalTitle')}
                     </h3>
                     <p className="text-xs text-neutral-400 truncate">
-                      อัปเดตข้อมูลรายละเอียดหนังสือในระบบ
+                      {locale === 'th' ? 'อัปเดตข้อมูลรายละเอียดหนังสือในระบบ' : 'Update book details in the system'}
                     </p>
                   </div>
                 </div>
@@ -945,11 +945,11 @@ export default function BookDetailContent({
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
                           <Upload size={13} />
-                          <span>รูปภาพหน้าปก</span>
+                          <span>{t('coverPhotoLabel')}</span>
                         </label>
                         {editCoverUrl && !editCoverFile && (
                           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                            ✓ จาก Google Books
+                            ✓ {locale === 'th' ? 'จาก Google Books' : 'From Google Books'}
                           </span>
                         )}
                       </div>
@@ -1203,7 +1203,7 @@ export default function BookDetailContent({
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                          จำนวนเล่มทั้งหมด
+                          {t('totalCopiesInput')}
                         </label>
                         <input
                           type="number"
@@ -1215,7 +1215,7 @@ export default function BookDetailContent({
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                          จำนวนเล่มที่ว่าง
+                          {t('availableCopiesInput')}
                         </label>
                         <input
                           type="number"
@@ -1231,7 +1231,7 @@ export default function BookDetailContent({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                          สำนักพิมพ์
+                          {t('publisherInput')}
                         </label>
                         <input
                           type="text"
@@ -1242,7 +1242,7 @@ export default function BookDetailContent({
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                          ปีที่พิมพ์
+                          {t('publishedYearInput')}
                         </label>
                         <input
                           type="number"
@@ -1256,7 +1256,7 @@ export default function BookDetailContent({
                     {/* Description */}
                     <div className="space-y-1">
                       <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                        เรื่องย่อ / คำอธิบาย
+                        {t('synopsis')}
                       </label>
                       <textarea
                         rows={3}
@@ -1283,14 +1283,14 @@ export default function BookDetailContent({
                   onClick={() => setIsEditModalOpen(false)}
                   className="px-4 py-2.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                 >
-                  ยกเลิก
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={savingEdit}
                   className="px-5 py-2.5 rounded-xl text-xs font-bold bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black transition-all disabled:opacity-50 shadow-sm"
                 >
-                  {savingEdit ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
+                  {savingEdit ? t('saving') : t('saveChanges')}
                 </button>
               </div>
             </form>

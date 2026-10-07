@@ -22,7 +22,9 @@ import {
   Image as ImageIcon,
   Check,
   Eye,
-  EyeOff
+  EyeOff,
+  Upload,
+  Loader2,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { th, enUS } from 'date-fns/locale'
@@ -38,6 +40,7 @@ export interface AnnouncementItem {
   image_url?: string | null
   bg_gradient?: string | null
   is_active?: boolean
+  is_popup?: boolean | null
   expires_at?: string | null
   created_at: string
 }
@@ -45,6 +48,9 @@ export interface AnnouncementItem {
 interface Props {
   announcements: AnnouncementItem[]
   autoPlayInterval?: number
+  onOpenPopupModal?: (ann: AnnouncementItem) => void
+  externalEditingItem?: AnnouncementItem | null
+  onCloseExternalEditor?: () => void
 }
 
 // Fallback high-aesthetic library & book photography for sample slides
@@ -59,10 +65,10 @@ export function extractAnnouncementImage(ann: AnnouncementItem, index: number): 
   if (ann.image_url) return ann.image_url
 
   // Check markdown syntax: ![...](url) or [image: url]
-  const mdMatch = ann.body.match(/!\[.*?\]\((https?:\/\/[^\s)]+)\)/)
+  const mdMatch = ann.body?.match(/!\[.*?\]\((https?:\/\/[^\s)]+)\)/)
   if (mdMatch) return mdMatch[1]
 
-  const customMatch = ann.body.match(/\[(?:image|bg|cover):\s*(https?:\/\/[^\s\]]+)\]/i)
+  const customMatch = ann.body?.match(/\[(?:image|bg|cover):\s*(https?:\/\/[^\s\]]+)\]/i)
   if (customMatch) return customMatch[1]
 
   // If it's a default/sample announcement without an image, use curated aesthetic photo
@@ -76,23 +82,68 @@ export function extractAnnouncementImage(ann: AnnouncementItem, index: number): 
 // Helper to extract expiration / scheduled end date
 export function extractAnnouncementExpiry(ann: AnnouncementItem): string | null {
   if (ann.expires_at) return ann.expires_at
+  if (!ann.body) return null
   const match = ann.body.match(/\[(?:expires|until|end):\s*([^\]]+)\]/i)
   return match ? match[1].trim() : null
 }
 
-// Clean body text by stripping image and expiration tags
+// Helper to check if an announcement is designated as homepage announcement popup
+export function extractAnnouncementPopup(ann: AnnouncementItem): boolean {
+  if (ann.is_popup === true) return true
+  if (!ann.body) return false
+  return /\[(?:popup|is_popup):\s*(?:true|1|yes)\]/i.test(ann.body) || /\[popup\]/i.test(ann.body)
+}
+
+// Clean body text by stripping image, expiration, target, cta, and popup tags
 export function cleanAnnouncementBody(text: string): string {
   if (!text) return ''
   return text
     .replace(/!\[.*?\]\((https?:\/\/[^\s)]+)\)/g, '')
     .replace(/\[(?:image|bg|cover):\s*(https?:\/\/[^\s\]]+)\]/gi, '')
     .replace(/\[(?:expires|until|end):\s*([^\]]+)\]/gi, '')
+    .replace(/\[(?:popup|is_popup):\s*[^\]]+\]/gi, '')
+    .replace(/\[popup\]/gi, '')
+    .replace(/\[(?:target|audience):\s*[^\]]+\]/gi, '')
+    .replace(/\[(?:cta|action):\s*[^\]]+\]/gi, '')
+    .replace(/\[(?:carousel):\s*[^\]]+\]/gi, '')
     .trim()
 }
+
+export type AnnouncementTarget = 'all' | 'overdue' | 'active_borrowers' | 'new_members'
+
+// Helper to extract targeted audience
+export function extractAnnouncementTarget(ann: AnnouncementItem): AnnouncementTarget {
+  if (!ann.body) return 'all'
+  const match = ann.body.match(/\[(?:target|audience):\s*([^\]]+)\]/i)
+  if (match) {
+    const val = match[1].trim().toLowerCase()
+    if (val === 'overdue' || val === 'overdue_borrowers') return 'overdue'
+    if (val === 'active' || val === 'active_borrowers') return 'active_borrowers'
+    if (val === 'new' || val === 'new_members') return 'new_members'
+  }
+  return 'all'
+}
+
+// Helper to extract CTA action button
+export function extractAnnouncementCta(ann: AnnouncementItem): { text: string; url: string } | null {
+  if (!ann.body) return null
+  const match = ann.body.match(/\[(?:cta|action):\s*([^|\]]+)(?:\|([^\]]+))?\]/i)
+  if (match) {
+    return {
+      text: match[1].trim(),
+      url: match[2]?.trim() || '#',
+    }
+  }
+  return null
+}
+
 
 export default function AnnouncementCarousel({
   announcements,
   autoPlayInterval = 6000,
+  onOpenPopupModal,
+  externalEditingItem,
+  onCloseExternalEditor,
 }: Props) {
   const { locale, t, profile, showAlert, showConfirm } = useApp()
   const router = useRouter()
@@ -114,12 +165,64 @@ export default function AnnouncementCarousel({
   const [formImageUrl, setFormImageUrl] = useState('')
   const [formExpiresAt, setFormExpiresAt] = useState('')
   const [formIsActive, setFormIsActive] = useState(true)
+  const [formIsPopup, setFormIsPopup] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+
+  async function handleImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      showAlert({ type: 'warning', title: 'ไฟล์ไม่ถูกต้อง', message: 'กรุณาเลือกไฟล์รูปภาพ (JPG, PNG, WebP, GIF)' })
+      return
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      showAlert({ type: 'warning', title: 'ขนาดไฟล์เกิน', message: 'ขนาดรูปภาพต้องไม่เกิน 10 MB' })
+      return
+    }
+
+    // Set immediate preview
+    const localPreview = URL.createObjectURL(file)
+    setFormImageUrl(localPreview)
+    setUploadingImage(true)
+
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: fd,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'อัปโหลดไม่สำเร็จ')
+      setFormImageUrl(data.url)
+    } catch (err: any) {
+      console.warn('Upload API fallback to dataURL:', err)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setFormImageUrl(reader.result)
+        }
+      }
+      reader.readAsDataURL(file)
+    } finally {
+      setUploadingImage(false)
+    }
+  }
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Sync external edit trigger (e.g. from AnnouncementPopupModal)
+  useEffect(() => {
+    if (externalEditingItem) {
+      openEditModal(externalEditingItem)
+    }
+  }, [externalEditingItem])
 
   // Lock background body scroll when any announcement modal is open
   useEffect(() => {
@@ -137,6 +240,7 @@ export default function AnnouncementCarousel({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsEditorOpen(false)
+        if (onCloseExternalEditor) onCloseExternalEditor()
         setModalItem(null)
       }
     }
@@ -147,7 +251,7 @@ export default function AnnouncementCarousel({
       document.body.style.paddingRight = originalPaddingRight
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isEditorOpen, modalItem])
+  }, [isEditorOpen, modalItem, onCloseExternalEditor])
 
   // Touch swipe support
   const touchStartX = useRef<number | null>(null)
@@ -162,15 +266,17 @@ export default function AnnouncementCarousel({
       body: 'ระบบยืม-คืนหนังสือดิจิทัลสำหรับสมาชิกชมรมมุสลิม มฟล. ค้นหาหนังสือที่ต้องการและทำรายการได้ตลอด 24 ชั่วโมง',
       body_en: 'Digital book borrowing system for MFU Muslim Club members. Search and borrow your favorite books anytime.',
       type: 'info' as const,
+      is_popup: false,
       created_at: new Date().toISOString(),
     },
     {
       id: 'default-2',
-      title: 'กติกาการยืมหนังสือและการส่งคืน',
-      title_en: 'Borrowing Rules & Guidelines',
-      body: 'สมาชิกสามารถยืมหนังสือได้ครั้งละ 1 เล่ม นาน 14 วัน และต้องแนบภาพถ่ายคู่กับหนังสือเมื่อทำการส่งคืนเพื่อความโปร่งใส',
-      body_en: 'Members can borrow 1 book at a time for 14 days. Photo proof is required upon return.',
-      type: 'success' as const,
+      title: 'กฎระเบียบและแนวทางปฏิบัติในการยืม-คืนหนังสือ',
+      title_en: 'Library Borrowing & Returning Rules',
+      body: '1. สมาชิกสามารถยืมหนังสือได้ครั้งละ 1 เล่ม นานสูงสุด 14 วัน\n2. กรุณาส่งคืนหนังสือให้ตรงตามเวลาที่กำหนด เพื่อเปิดโอกาสให้เพื่อนสมาชิกท่านอื่น\n3. ต้องแนบภาพถ่ายหน้าปกหนังสือ ณ จุดคืนเพื่อเป็นหลักฐานความถูกต้อง\n4. โปรดดูแลรักษาหนังสือให้อยู่ในสภาพสมบูรณ์ ไม่ฉีกขาด ขีดเขียน หรือทำเปรอะเปื้อน\n5. หากทำหนังสือชำรุดหรือสูญหาย กรุณาติดต่อแจ้งผู้ดูแลระบบทันที\n\n[popup: true]',
+      body_en: '1. Members can borrow 1 book at a time for up to 14 days.\n2. Please return books on time to allow other members access.\n3. Photo proof at the return shelf is required upon return.\n4. Treat books with respect—do not mark, highlight, or damage pages.\n5. Contact admin immediately if a book is lost or damaged.\n\n[popup: true]',
+      type: 'warning' as const,
+      is_popup: true,
       created_at: new Date().toISOString(),
     },
   ]
@@ -198,6 +304,7 @@ export default function AnnouncementCarousel({
     setFormImageUrl('')
     setFormExpiresAt('')
     setFormIsActive(true)
+    setFormIsPopup(false)
     setIsEditorOpen(true)
   }
 
@@ -211,7 +318,14 @@ export default function AnnouncementCarousel({
     setFormImageUrl(extractAnnouncementImage(ann, 0) || '')
     setFormExpiresAt(extractAnnouncementExpiry(ann) || '')
     setFormIsActive(ann.is_active !== false)
+    setFormIsPopup(extractAnnouncementPopup(ann))
     setIsEditorOpen(true)
+  }
+
+  function closeEditorModal() {
+    setIsEditorOpen(false)
+    setEditingItem(null)
+    if (onCloseExternalEditor) onCloseExternalEditor()
   }
 
   async function handleSaveAnnouncement(e: React.FormEvent) {
@@ -228,6 +342,9 @@ export default function AnnouncementCarousel({
     }
     if (formExpiresAt.trim()) {
       finalBody += `\n\n[expires: ${formExpiresAt.trim()}]`
+    }
+    if (formIsPopup) {
+      finalBody += `\n\n[popup: true]`
     }
 
     const payload: any = {
@@ -258,7 +375,7 @@ export default function AnnouncementCarousel({
         if (data.error) throw new Error(data.error)
       }
 
-      setIsEditorOpen(false)
+      closeEditorModal()
       showAlert({ type: 'success', title: 'สำเร็จ', message: 'บันทึกประกาศเรียบร้อยแล้ว' })
       router.refresh()
     } catch (err: any) {
@@ -446,6 +563,13 @@ export default function AnnouncementCarousel({
                   <span>ถึง {format(new Date(extractAnnouncementExpiry(current)!), 'dd MMM yy HH:mm', { locale: locale === 'th' ? th : enUS })}</span>
                 </span>
               )}
+
+              {extractAnnouncementPopup(current) && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-amber-200 font-bold tracking-tight bg-amber-500/25 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-amber-400/40 shadow-xs">
+                  <Sparkles size={10} />
+                  <span>Popup</span>
+                </span>
+              )}
             </div>
 
             {/* Admin In-Place Actions & Pause Micro-Indicator */}
@@ -513,17 +637,32 @@ export default function AnnouncementCarousel({
               {displayBody}
             </p>
 
-            {/* Read full body trigger if text is longer */}
-            {displayBody.length > 90 && (
-              <button
-                type="button"
-                onClick={() => setModalItem(current)}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-white/90 hover:text-white underline underline-offset-4 decoration-white/40 hover:decoration-white transition-all pt-1"
-              >
-                <span>{locale === 'th' ? 'อ่านรายละเอียดทั้งหมด' : 'Read full announcement'}</span>
-                <ChevronRight size={13} />
-              </button>
-            )}
+            <div className="flex items-center gap-3 pt-1 flex-wrap">
+              {displayBody.length > 90 && (
+                <button
+                  type="button"
+                  onClick={() => setModalItem(current)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-white/90 hover:text-white underline underline-offset-4 decoration-white/40 hover:decoration-white transition-all cursor-pointer"
+                >
+                  <span>{locale === 'th' ? 'อ่านรายละเอียดทั้งหมด' : 'Read full announcement'}</span>
+                  <ChevronRight size={13} />
+                </button>
+              )}
+
+              {onOpenPopupModal && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onOpenPopupModal(current)
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 hover:bg-white/30 text-white backdrop-blur-md border border-white/25 transition-all active:scale-95 shadow-xs cursor-pointer"
+                >
+                  <Sparkles size={12} className="text-amber-300" />
+                  <span>{locale === 'th' ? 'ดูกฎระเบียบ / Popup' : 'View Rules / Popup'}</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Bottom Bar: Interactive Controls & Progress Indicators */}
@@ -752,69 +891,99 @@ export default function AnnouncementCarousel({
                   </div>
                 </div>
 
-                {/* Background Image URL & Presets */}
+                {/* Image Upload & Presets */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <ImageIcon size={13} />
-                      <span>ภาพพื้นหลัง Carousel (URL รูปภาพ)</span>
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
+                      <ImageIcon size={14} />
+                      <span>ภาพพื้นหลัง Carousel</span>
+                    </label>
                     {formImageUrl && (
                       <button
                         type="button"
                         onClick={() => setFormImageUrl('')}
-                        className="text-[10px] text-neutral-400 hover:text-red-500 underline"
+                        className="text-[11px] text-rose-500 hover:text-rose-600 underline font-medium cursor-pointer"
                       >
-                        ลบรูป
+                        ลบรูปภาพ
                       </button>
                     )}
-                  </label>
-
-                  <div className="flex gap-2">
-                    <input
-                      type="url"
-                      value={formImageUrl}
-                      onChange={(e) => setFormImageUrl(e.target.value)}
-                      placeholder="https://images.unsplash.com/..."
-                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
-                    />
                   </div>
 
+                  {/* Direct File Upload Dropzone / Preview */}
+                  {formImageUrl ? (
+                    <div className="relative h-28 sm:h-32 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-700 shadow-inner group">
+                      <img src={formImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <label className="px-3 py-1.5 rounded-xl bg-white text-black text-xs font-bold cursor-pointer hover:bg-neutral-100 transition-colors shadow-sm inline-flex items-center gap-1.5">
+                          <Upload size={13} />
+                          <span>เปลี่ยนรูป</span>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            onChange={handleImageFileChange}
+                            className="sr-only"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setFormImageUrl('')}
+                          className="px-3 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-colors shadow-sm cursor-pointer"
+                        >
+                          ลบรูป
+                        </button>
+                      </div>
+                      {uploadingImage && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white gap-2">
+                          <Loader2 size={18} className="animate-spin" />
+                          <span className="text-xs font-medium">กำลังอัปโหลด...</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <label className="relative flex flex-col items-center justify-center p-5 border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-black dark:hover:border-white rounded-2xl cursor-pointer bg-neutral-50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-all group">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        onChange={handleImageFileChange}
+                        className="sr-only"
+                      />
+                      <div className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 shadow-xs border border-neutral-200 dark:border-neutral-700 flex items-center justify-center text-neutral-600 dark:text-neutral-300 group-hover:scale-110 transition-transform mb-1.5">
+                        <Upload size={18} />
+                      </div>
+                      <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                        {uploadingImage ? 'กำลังอัปโหลดรูปภาพ...' : 'คลิกเพื่อเลือกรูปภาพจากเครื่อง'}
+                      </p>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">
+                        รองรับ JPG, PNG, WebP (สูงสุด 10 MB)
+                      </p>
+                    </label>
+                  )}
+
                   {/* Preset Image Options */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[11px] text-neutral-400 mr-1">รูปตัวอย่าง:</span>
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[11px] text-neutral-400 mr-1">หรือเลือกภาพสำเร็จรูป:</span>
                     <button
                       type="button"
                       onClick={() => setFormImageUrl(DEFAULT_PRESET_IMAGES[0])}
-                      className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
                     >
                       🏛️ หอสมุด
                     </button>
                     <button
                       type="button"
                       onClick={() => setFormImageUrl(DEFAULT_PRESET_IMAGES[1])}
-                      className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
                     >
                       📚 ชั้นหนังสือ
                     </button>
                     <button
                       type="button"
                       onClick={() => setFormImageUrl(DEFAULT_PRESET_IMAGES[2])}
-                      className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
                     >
                       ✨ มินิมอล
                     </button>
                   </div>
-
-                  {/* Live Preview Thumbnail */}
-                  {formImageUrl && (
-                    <div className="relative h-24 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-700 shadow-inner mt-2">
-                      <img src={formImageUrl} alt="Preview" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-2.5">
-                        <span className="text-[10px] text-white/90 font-medium truncate">ตัวอย่างภาพพื้นหลัง</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Body TH */}
@@ -843,6 +1012,28 @@ export default function AnnouncementCarousel({
                       type="checkbox"
                       checked={formIsActive}
                       onChange={(e) => setFormIsActive(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black dark:peer-checked:bg-white dark:peer-checked:after:bg-black"></div>
+                  </label>
+                </div>
+
+                {/* Announcement Popup Toggle Switch */}
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+                  <div className="pr-3">
+                    <p className="text-xs font-semibold text-neutral-900 dark:text-white flex items-center gap-1.5">
+                      <Sparkles size={13} className="text-amber-500" />
+                      <span>{t('showAsPopup')}</span>
+                    </p>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      {t('showAsPopupDesc')}
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={formIsPopup}
+                      onChange={(e) => setFormIsPopup(e.target.checked)}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black dark:peer-checked:bg-white dark:peer-checked:after:bg-black"></div>
