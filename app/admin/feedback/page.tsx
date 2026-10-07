@@ -1,5 +1,4 @@
 import { createServiceClient } from '@/lib/supabase-server'
-import Navbar from '@/components/Navbar'
 import AdminFeedbackContent from '@/components/AdminFeedbackContent'
 
 async function getData() {
@@ -14,9 +13,6 @@ async function getData() {
 export default async function AdminFeedbackPage() {
   const { feedback } = await getData()
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
-      <AdminFeedbackContent feedback={feedback} />
-    </div>
+    <AdminFeedbackContent feedback={feedback} />
   )
 }

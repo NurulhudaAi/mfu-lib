@@ -4,36 +4,45 @@ import HomeContent from '@/components/HomeContent'
 
 async function getData() {
   const supabase = createServiceClient()
-  const [{ data: newBooks }, { data: announcements }] = await Promise.all([
+  const [{ data: books }, { data: announcements }, { data: catData }] = await Promise.all([
     supabase
       .from('books')
-      .select('id, title, author, cover_url, category, available_copies, total_copies, is_featured, created_at')
+      .select('id, title, author, cover_url, category, available_copies, total_copies, is_featured, is_active, created_at, description, isbn, publisher, published_year')
       .order('created_at', { ascending: false })
-      .limit(12),
+      .limit(60),
     supabase
       .from('announcements')
       .select('*')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
-      .limit(5),
+      .limit(6),
+    supabase
+      .from('books')
+      .select('category')
+      .not('category', 'is', null),
   ])
-  return { newBooks: newBooks || [], announcements: announcements || [] }
+
+  const categories = [
+    ...new Set([
+      ...(catData || []).map((b: any) => b.category),
+      ...(books || []).map((b: any) => b.category),
+    ].filter(Boolean)),
+  ]
+
+  return { books: books || [], announcements: announcements || [], categories }
 }
 
 export default async function HomePage() {
-  const { newBooks, announcements } = await getData()
-
-const supabase = await createSessionClient()  // ✅ เพิ่ม await
-const { data: { user } } = await supabase.auth.getUser()
+  const { books, announcements, categories } = await getData()
+  const supabase = await createSessionClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
-      <HomeContent
-        newBooks={newBooks}
-        announcements={announcements}
-        userId={user?.id ?? null}
-      />
-    </div>
+    <HomeContent
+      books={books}
+      announcements={announcements}
+      categories={categories}
+      userId={user?.id ?? null}
+    />
   )
 }

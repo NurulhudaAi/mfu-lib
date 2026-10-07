@@ -1,10 +1,11 @@
-// ✅ BUG FIX #4 (Security): ตัวอย่าง /api/queue/route.ts ที่ verify userId จาก session
-// วางไว้ที่ app/api/queue/route.ts
-
+// app/api/queue/route.ts
 import { createServiceClient } from '@/lib/supabase-server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { queueSchema, validateInput } from '@/lib/validation'
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { checkBlacklist } from '@/lib/security'
 
 export async function POST(req: Request) {
   const cookieStore = await cookies()
@@ -18,13 +19,22 @@ export async function POST(req: Request) {
   const { data: { user } } = await userSupabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { bookId, action } = await req.json()
+  // ── Rate Limit: 10 ครั้ง/นาที ──
+  const rl = checkRateLimit(`queue:${user.id}`, { maxRequests: 10, windowSeconds: 60 })
+  if (!rl.allowed) return rateLimitResponse(rl.resetAt)
+
+  // ── Blacklist check ──
+  const blocked = await checkBlacklist(user.id)
+  if (blocked) return blocked
+
+  // ── Validate input ──
+  const body = await req.json()
+  const parsed = validateInput(queueSchema, body)
+  if (parsed.error) return parsed.error
+  const { bookId, action } = parsed.data
+
   // ✅ ใช้ user.id จาก session เสมอ — ไม่ใช้ userId จาก request body
   const userId = user.id
-
-  if (!bookId || !action) {
-    return NextResponse.json({ error: 'ข้อมูลไม่ครบ' }, { status: 400 })
-  }
 
   const supabase = createServiceClient()
 
@@ -54,6 +64,16 @@ export async function POST(req: Request) {
   }
 
   if (action === 'leave') {
+    // 1. หาตำแหน่งปัจจุบันก่อน
+    const { data: existing } = await supabase
+      .from('queue')
+      .select('position')
+      .eq('user_id', userId)
+      .eq('book_id', bookId)
+      .maybeSingle()
+
+    if (!existing) return NextResponse.json({ success: true })
+
     const { error } = await supabase
       .from('queue')
       .delete()
@@ -61,6 +81,23 @@ export async function POST(req: Request) {
       .eq('book_id', bookId)
 
     if (error) return NextResponse.json({ error: 'ยกเลิกคิวไม่สำเร็จ' }, { status: 500 })
+
+    // 2. อัปเดตตำแหน่งคนที่อยู่หลังให้ขยับขึ้นมา
+    const { data: remaining } = await supabase
+      .from('queue')
+      .select('id, position')
+      .eq('book_id', bookId)
+      .gt('position', existing.position)
+
+    if (remaining && remaining.length > 0) {
+      for (const item of remaining) {
+        await supabase
+          .from('queue')
+          .update({ position: item.position - 1 })
+          .eq('id', item.id)
+      }
+    }
+
     return NextResponse.json({ success: true })
   }
 

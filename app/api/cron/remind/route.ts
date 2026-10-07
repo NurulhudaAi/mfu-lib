@@ -31,17 +31,15 @@ export async function GET(request: Request) {
     .lte('due_date', endOfDay(tomorrow).toISOString())
 
   let reminderSent = 0
-  for (const borrow of (dueTomorrow as any[]) ?? []) {
-    const profile = Array.isArray(borrow.profiles) ? borrow.profiles[0] : borrow.profiles
-    const book = Array.isArray(borrow.books) ? borrow.books[0] : borrow.books
-    if (!profile || !book) continue
-
+  for (const borrow of dueTomorrow ?? []) {
+    const profile = borrow.profiles as unknown as { email: string; full_name: string | null }
+    const book = borrow.books as unknown as { title: string; author: string | null }
     try {
       await sendReminderEmail({
-        to: profile.email,
-        name: profile.full_name ?? 'สมาชิก',
-        bookTitle: book.title,
-        bookAuthor: book.author ?? undefined,
+        to: (borrow.profiles as any).email,
+        name: (borrow.profiles as any).full_name ?? 'สมาชิก',
+        bookTitle: (borrow.books as any).title,
+        bookAuthor: (borrow.books as any).author ?? undefined,
         dueDate: new Date(borrow.due_date),
       })
       await supabase
@@ -65,18 +63,16 @@ export async function GET(request: Request) {
     .lt('due_date', startOfDay(now).toISOString())   // due_date < วันนี้ตอนเที่ยงคืน
 
   let overdueSent = 0
-  for (const borrow of (overdueRows as any[]) ?? []) {
-    const profile = Array.isArray(borrow.profiles) ? borrow.profiles[0] : borrow.profiles
-    const book = Array.isArray(borrow.books) ? borrow.books[0] : borrow.books
-    if (!profile || !book) continue
-
+  for (const borrow of overdueRows ?? []) {
+    const profile = borrow.profiles as unknown as { email: string; full_name: string | null }
+    const book = borrow.books as unknown as { title: string; author: string | null }
     const daysOverdue = differenceInDays(now, new Date(borrow.due_date))
     try {
       await sendOverdueEmail({
-        to: profile.email,
-        name: profile.full_name ?? 'สมาชิก',
-        bookTitle: book.title,
-        bookAuthor: book.author ?? undefined,
+        to: (borrow.profiles as any).email,
+        name: (borrow.profiles as any).full_name ?? 'สมาชิก',
+        bookTitle: (borrow.books as any).title,
+        bookAuthor: (borrow.books as any).author ?? undefined,
         dueDate: new Date(borrow.due_date),
         daysOverdue,
       })

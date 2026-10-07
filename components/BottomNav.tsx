@@ -44,11 +44,11 @@ export default function BottomNav() {
 
   return (
     <div
-      className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 ease-in-out
+      className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 ease-in-out lg:hidden
         ${isCollapsed ? 'w-[60px]' : 'w-[96%] max-w-lg'}`}
     >
       <div
-        className={`flex items-center p-2 rounded-full bg-white/40 dark:bg-gray-950/40 backdrop-blur-xl border border-white/40 dark:border-gray-800/40 shadow-xl overflow-hidden transition-all duration-500
+        className={`flex items-center p-2 rounded-full bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border border-neutral-200/80 dark:border-neutral-800/80 shadow-2xl overflow-hidden transition-all duration-500
           ${isCollapsed ? 'justify-center px-2' : 'justify-between px-3'}
           ${isPending ? 'opacity-85' : 'opacity-100'}`}
       >
@@ -62,8 +62,8 @@ export default function BottomNav() {
                   onClick={() => handleTabClick(href)}
                   className={`flex flex-col items-center justify-center gap-0.5 py-2 px-1 rounded-full transition-all duration-200 flex-1 min-w-0 select-none
                     ${isActive
-                      ? 'text-primary-700 dark:text-primary-400 bg-white/70 dark:bg-gray-950/70 font-semibold scale-105 shadow-md border border-white/30 dark:border-gray-800/40'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/20'
+                      ? 'text-black dark:text-white bg-neutral-100 dark:bg-neutral-800 font-bold scale-105 shadow-sm border border-neutral-300/60 dark:border-neutral-700/60'
+                      : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-100/50'
                     }`}
                 >
                   {icon}

@@ -3,9 +3,7 @@ import './globals.css'
 import { AppProvider } from '@/lib/app-context'
 import { Sarabun, Playfair_Display } from 'next/font/google'
 
-// นำเข้า Navbar และ BottomNav
-// import Navbar from '@/components/Navbar' // ⚠️ ปรับตำแหน่ง Path ให้ตรงกับโฟลเดอร์จริงของคุณ
-import BottomNav from '@/components/BottomNav' // ⚠️ ปรับตำแหน่ง Path ให้ตรงกับโฟลเดอร์จริงของคุณ
+import AppShell from '@/components/AppShell'
 
 // ตั้งค่าคอนฟิกฟอนต์ Sarabun
 const sarabun = Sarabun({
@@ -37,19 +35,40 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning 
       data-scroll-behavior="smooth"
     >
-      {/* เพิ่ม pb-24 เพื่อดันเนื้อหาท้ายเว็บขึ้นมา ไม่ให้บาร์ลอยด้านล่างบังเนื้อหา */}
-      <body className="font-sans antialiased bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen md:pb-6 pb-24">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var saved = localStorage.getItem('theme');
+                  if (saved === 'light') {
+                    document.documentElement.classList.remove('dark');
+                  } else {
+                    document.documentElement.classList.add('dark');
+                  }
+                } catch (e) {
+                  document.documentElement.classList.add('dark');
+                }
+              })();
+            `,
+          }}
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link 
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@100;200;300;400;500;600;700&display=swap" 
+          rel="stylesheet" 
+        />
+      </head>
+      <body 
+        className="font-sans antialiased bg-white dark:bg-[#0a0a0c] text-neutral-900 dark:text-neutral-100 min-h-screen"
+        suppressHydrationWarning
+      >
         <AppProvider>
-          {/* 1. Navbar บนสำหรับแสดงโลโก้ สลับภาษา ธีม และโปรไฟล์ */}
-          {/* <Navbar /> */}
-
-          {/* เนื้อหาหลักของแต่ละหน้าจอ */}
-          <main>
+          <AppShell>
             {children}
-          </main>
-
-          {/* 2. แท็บทางลัดลอยได้ด้านล่างสุดของหน้าจอ */}
-          <BottomNav />
+          </AppShell>
         </AppProvider>
       </body>
     </html>

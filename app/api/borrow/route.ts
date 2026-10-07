@@ -5,6 +5,8 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { sendBorrowConfirmEmail } from '@/lib/resend'
 import { addDays } from 'date-fns'
+import { borrowSchema, validateInput } from '@/lib/validation'
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   const supabase = createServiceClient()
@@ -26,10 +28,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบก่อน' }, { status: 401 })
   }
 
-  const { bookId } = await request.json()
-  if (!bookId) {
-    return NextResponse.json({ error: 'ไม่พบรหัสหนังสือ' }, { status: 400 })
-  }
+  // ── Rate Limit: จำกัดการยืมต่อ user (5 ครั้ง/นาที) ──
+  const rl = checkRateLimit(`borrow:${user.id}`, { maxRequests: 5, windowSeconds: 60 })
+  if (!rl.allowed) return rateLimitResponse(rl.resetAt)
+
+  // ── Validate input ──
+  const body = await request.json()
+  const parsed = validateInput(borrowSchema, body)
+  if (parsed.error) return parsed.error
+  const { bookId } = parsed.data
 
   // ── ตรวจสอบ blacklist + profile ──
   const { data: profile } = await supabase
@@ -51,18 +58,20 @@ export async function POST(request: Request) {
     .select('id')
     .eq('user_id', user.id)
     .eq('status', 'active')
-    .maybeSingle()
+    .limit(1)
 
-  if (activeBorrow) {
+  if (activeBorrow && activeBorrow.length > 0) {
     return NextResponse.json({ error: 'คุณมีหนังสือที่ยืมอยู่แล้ว กรุณาคืนก่อน' }, { status: 400 })
   }
 
   // ── ตรวจสอบหนังสือว่าง ──
+  // ── ลด available_copies (ตอนนี้ใช้ DB Trigger update_book_availability จัดการแทนแล้ว) ──
   const { data: book } = await supabase
     .from('books')
     .select('id, title, author, available_copies, total_copies, is_active')
     .eq('id', bookId)
-    .single()
+    .limit(1)
+    .maybeSingle()
 
   if (!book) {
     return NextResponse.json({ error: 'ไม่พบหนังสือ' }, { status: 404 })
@@ -95,11 +104,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: borrowError.message }, { status: 500 })
   }
 
-  // ── ลด available_copies ──
-  await supabase
-    .from('books')
-    .update({ available_copies: book.available_copies - 1 })
-    .eq('id', bookId)
+  // DB trigger `update_book_availability()` จัดการลด available_copies อัตโนมัติแล้ว
 
   // ── ส่ง email ยืนยัน (fire-and-forget — ไม่ block response) ──
   sendBorrowConfirmEmail({

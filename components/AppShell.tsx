@@ -1,0 +1,1022 @@
+'use client'
+
+import { useState, useEffect, useRef, useMemo, ReactNode } from 'react'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { useApp } from '@/lib/app-context'
+import { createClient } from '@/lib/supabase'
+import {
+  Compass,
+  BookOpen,
+  ClipboardList,
+  MessageSquare,
+  ShieldCheck,
+  LayoutDashboard,
+  Sun,
+  Moon,
+  Search,
+  SlidersHorizontal,
+  Check,
+  Bell,
+  User,
+  LogOut,
+  X,
+  Layers,
+  Menu,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  AlertCircle,
+  Users,
+  EyeOff,
+} from 'lucide-react'
+
+interface Announcement {
+  id: string
+  title: string
+  title_en?: string | null
+  body: string
+  body_en?: string | null
+  type: 'info' | 'warning' | 'success'
+  created_at: string
+}
+
+export default function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const {
+    t,
+    locale,
+    setLocale,
+    theme,
+    toggleTheme,
+    profile,
+    searchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory,
+    statusFilter,
+    setStatusFilter,
+    alertModal,
+    closeAlert,
+    toasts,
+    removeToast,
+  } = useApp()
+  const supabase = createClient()
+
+  const [categories, setCategories] = useState<string[]>([])
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const filterDropdownRef = useRef<HTMLDivElement>(null)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isAnnounceModalOpen, setIsAnnounceModalOpen] = useState(false)
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+
+  const isAdmin = profile?.role === 'admin'
+
+  // Dynamic search placeholder depending on current page context
+  const searchPlaceholder = useMemo(() => {
+    if (pathname === '/my-borrows') {
+      return locale === 'th'
+        ? 'ค้นหาหนังสือที่ยืมหรือจองคิว...'
+        : 'Search borrowed or queued books...'
+    }
+    if (pathname.startsWith('/admin/books')) {
+      return locale === 'th'
+        ? 'ค้นหาหนังสือในคลัง...'
+        : 'Search library books...'
+    }
+    if (pathname.startsWith('/admin/borrows')) {
+      return locale === 'th'
+        ? 'ค้นหารายการยืมหรือผู้ยืม...'
+        : 'Search borrows or members...'
+    }
+    return locale === 'th'
+      ? 'ค้นหาชื่อหนังสือ, ผู้แต่ง, หมวดหมู่...'
+      : 'Search books, authors, categories...'
+  }, [pathname, locale])
+
+  // Fetch announcements for notification bell globally & unique categories
+  useEffect(() => {
+    async function fetchInitialData() {
+      try {
+        const { data: annData } = await supabase
+          .from('announcements')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(6)
+        if (annData) setAnnouncements(annData)
+
+        const { data: catData } = await supabase
+          .from('books')
+          .select('category')
+          .not('category', 'is', null)
+        if (catData) {
+          const uniqueCats = [...new Set(catData.map((b: any) => b.category).filter(Boolean))] as string[]
+          setCategories(uniqueCats)
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+    fetchInitialData()
+  }, [])
+
+  // Close category dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setIsFilterOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  // Close mobile drawer on route change & sync search query & filters from URL
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      setSearchQuery(params.get('q') || '')
+      setSelectedCategory(params.get('category') || 'all')
+      const s = params.get('status')
+      if (s === 'available' || s === 'active') {
+        setStatusFilter(s)
+      } else {
+        setStatusFilter('all')
+      }
+    }
+  }, [pathname])
+
+  // Login page has its own minimal full-screen layout
+  if (pathname === '/login') {
+    return <>{children}</>
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }
+
+  function applyFilters(newQuery: string, newCat: string, newStatus?: string) {
+    const params = new URLSearchParams()
+    if (newQuery.trim()) {
+      params.set('q', newQuery.trim())
+    }
+    if (newCat && newCat !== 'all') {
+      params.set('category', newCat)
+    }
+    const currentStatus = newStatus !== undefined ? newStatus : statusFilter
+    if (currentStatus && currentStatus !== 'all') {
+      params.set('status', currentStatus)
+    }
+    const queryString = params.toString()
+
+    let targetPath = '/books'
+    if (pathname === '/my-borrows') {
+      targetPath = '/my-borrows'
+    } else if (pathname.startsWith('/admin/books')) {
+      targetPath = '/admin/books'
+    } else if (pathname.startsWith('/admin/borrows')) {
+      targetPath = '/admin/borrows'
+    }
+
+    router.push(`${targetPath}${queryString ? `?${queryString}` : ''}`)
+  }
+
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    applyFilters(searchQuery, selectedCategory, statusFilter)
+  }
+
+  function handleSelectCategory(cat: string) {
+    setSelectedCategory(cat)
+    applyFilters(searchQuery, cat, statusFilter)
+  }
+
+  function handleToggleAvailable() {
+    const nextStatus = statusFilter === 'available' ? 'all' : 'available'
+    setStatusFilter(nextStatus)
+    applyFilters(searchQuery, selectedCategory, nextStatus)
+  }
+
+  function handleSetStatusFilter(nextStatus: 'all' | 'available' | 'active') {
+    setStatusFilter(nextStatus)
+    applyFilters(searchQuery, selectedCategory, nextStatus)
+  }
+
+  function handleResetFilters() {
+    setSelectedCategory('all')
+    setStatusFilter('all')
+    applyFilters(searchQuery, 'all', 'all')
+  }
+
+  function handleClearSearch() {
+    setSearchQuery('')
+    applyFilters('', selectedCategory, statusFilter)
+  }
+
+  const hasActiveFilter = selectedCategory !== 'all' || statusFilter !== 'all'
+
+  // Navigation Links
+  const navLinks = [
+    {
+      key: 'home',
+      href: '/',
+      label: locale === 'th' ? 'หน้าแรก' : 'Discover',
+      icon: Compass,
+      isActive: pathname === '/',
+    },
+    {
+      key: 'books',
+      href: '/books',
+      label: locale === 'th' ? (isAdmin ? 'จัดการหนังสือ' : 'หนังสือทั้งหมด') : (isAdmin ? 'Manage Books' : 'All Books'),
+      icon: Layers,
+      isActive: pathname.startsWith('/books'),
+    },
+    // Only show "การยืมของฉัน" & "ข้อเสนอแนะ" for non-admin users
+    ...(!isAdmin
+      ? [
+          {
+            key: 'my-borrows',
+            href: profile ? '/my-borrows' : '/login',
+            label: locale === 'th' ? 'การยืมของฉัน' : 'My Library',
+            icon: ClipboardList,
+            isActive: pathname.startsWith('/my-borrows'),
+          },
+          {
+            key: 'feedback',
+            href: profile ? '/feedback' : '/login',
+            label: locale === 'th' ? 'ข้อเสนอแนะ' : 'Feedback',
+            icon: MessageSquare,
+            isActive: pathname.startsWith('/feedback'),
+          },
+        ]
+      : []),
+  ]
+
+  // Admin Outer Navigation Links
+  const adminLinks = [
+    {
+      key: 'admin-dashboard',
+      href: '/admin/dashboard',
+      label: locale === 'th' ? 'แดชบอร์ด' : 'Dashboard',
+      icon: LayoutDashboard,
+      isActive: pathname === '/admin/dashboard' || pathname === '/admin',
+    },
+    {
+      key: 'admin-borrows',
+      href: '/admin/borrows',
+      label: locale === 'th' ? 'จัดการการยืมคืน' : 'Borrow & Return',
+      icon: ClipboardList,
+      isActive: pathname.startsWith('/admin/borrows'),
+    },
+    {
+      key: 'admin-users',
+      href: '/admin/users',
+      label: locale === 'th' ? 'ผู้ใช้งาน' : 'Users',
+      icon: Users,
+      isActive: pathname.startsWith('/admin/users'),
+    },
+    {
+      key: 'admin-feedback',
+      href: '/admin/feedback',
+      label: locale === 'th' ? 'ข้อเสนอแนะ' : 'Feedback',
+      icon: MessageSquare,
+      isActive: pathname.startsWith('/admin/feedback'),
+    },
+  ]
+
+  return (
+    <div className="min-h-screen w-full bg-white dark:bg-[#0a0a0c] flex antialiased font-sans text-neutral-900 dark:text-neutral-100">
+      
+      {/* ======================================================== */}
+      {/* 1. LEFT DOCKED SIDEBAR (Desktop)                         */}
+      {/* ======================================================== */}
+      <aside className="w-60 xl:w-64 h-screen sticky top-0 shrink-0 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#111113] p-5 flex-col justify-between hidden lg:flex z-30">
+        <div className="space-y-8">
+          {/* Brand Logo & Name */}
+          <Link href="/" className="flex items-center gap-3 px-2 group">
+            <div className="w-10 h-10 rounded-2xl bg-white p-1 flex items-center justify-center shadow-xs border border-neutral-200 dark:border-neutral-700 transition-transform group-hover:scale-105 shrink-0 overflow-hidden">
+              <img src="/logo.jpg" alt="Muslim Club Logo" className="w-full h-full object-contain" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-bold text-base tracking-tight text-neutral-900 dark:text-white leading-none">
+                Muslim Club
+              </div>
+              <div className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium tracking-wide mt-1 truncate">
+                MFU Library
+              </div>
+            </div>
+          </Link>
+
+          {/* Navigation Menu Links */}
+          <nav className="space-y-1">
+            {navLinks.map((link) => {
+              const Icon = link.icon
+              return (
+                <Link
+                  key={link.key}
+                  href={link.href}
+                  className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-semibold text-sm transition-all ${
+                    link.isActive
+                      ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm'
+                      : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900/60'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span>{link.label}</span>
+                </Link>
+              )
+            })}
+
+            {/* Admin Outer Links */}
+            {isAdmin && (
+              <div className="pt-4 mt-3 border-t border-neutral-200 dark:border-neutral-800 space-y-1">
+                <div className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                  {locale === 'th' ? 'ระบบผู้ดูแล' : 'Administration'}
+                </div>
+                {adminLinks.map((link) => {
+                  const Icon = link.icon
+                  return (
+                    <Link
+                      key={link.key}
+                      href={link.href}
+                      className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-semibold text-sm transition-all ${
+                        link.isActive
+                          ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm'
+                          : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900/60'
+                      }`}
+                    >
+                      <Icon size={18} />
+                      <span>{link.label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </nav>
+        </div>
+
+        {/* Bottom Settings & Controls */}
+        <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800 space-y-2">
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+              <span>{theme === 'dark' ? (locale === 'th' ? 'โหมดสว่าง' : 'Light Mode') : (locale === 'th' ? 'โหมดมืด' : 'Dark Mode')}</span>
+            </div>
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
+              {theme}
+            </span>
+          </button>
+
+          {/* Language Switcher */}
+          <button
+            onClick={() => setLocale(locale === 'th' ? 'en' : 'th')}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-all"
+          >
+            <span className="flex items-center gap-3">
+              <span className="w-4 h-4 rounded-full border border-neutral-400 dark:border-neutral-600 flex items-center justify-center text-[9px] font-bold">
+                {locale === 'th' ? 'TH' : 'EN'}
+              </span>
+              <span>{locale === 'th' ? 'ภาษา' : 'Language'}</span>
+            </span>
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
+              {locale === 'th' ? 'ไทย' : 'ENG'}
+            </span>
+          </button>
+
+          {/* Sign Out / Sign In */}
+          {profile ? (
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-semibold text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-all text-left"
+            >
+              <LogOut size={16} />
+              <span>{locale === 'th' ? 'ออกจากระบบ' : 'Logout'}</span>
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold bg-black text-white dark:bg-white dark:text-black hover:opacity-90 transition-all shadow-sm"
+            >
+              <User size={14} />
+              <span>{locale === 'th' ? 'เข้าสู่ระบบ' : 'Login'}</span>
+            </Link>
+          )}
+        </div>
+      </aside>
+
+      {/* ======================================================== */}
+      {/* 2. MAIN APPLICATION CONTENT (Edge-to-Edge)               */}
+      {/* ======================================================== */}
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen bg-white dark:bg-[#0a0a0c]">
+        
+        {/* Global Top Header Bar */}
+        <header className="h-16 px-6 sm:px-8 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between gap-4 sticky top-0 z-20 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-md">
+          {/* Mobile hamburger & search */}
+          <div className="flex items-center gap-3 flex-1 max-w-xl">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-2 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 lg:hidden"
+              aria-label="Open Navigation"
+            >
+              <Menu size={20} />
+            </button>
+
+            {/* Unified Top Header Search Bar with Integrated Category Filter Icon */}
+            <form onSubmit={handleSearchSubmit} className="relative flex-1">
+              <Search
+                size={16}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full pl-10 pr-20 py-2 rounded-2xl bg-neutral-100 dark:bg-[#151518] border border-neutral-200 dark:border-neutral-800 text-xs sm:text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 outline-none focus:border-black dark:focus:border-white transition-all shadow-xs"
+              />
+
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="p-1 rounded-lg text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                    title={locale === 'th' ? 'ล้างการค้นหา' : 'Clear search'}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+
+                {/* Search Filter Icon Button (Category & Book Status) */}
+                <div className="relative" ref={filterDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                    className={`p-1.5 rounded-xl transition-all flex items-center justify-center relative ${
+                      hasActiveFilter
+                        ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                        : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800'
+                    }`}
+                    title={
+                      hasActiveFilter
+                        ? locale === 'th' ? 'ตัวกรอง (กำลังใช้งาน)' : 'Filters (Active)'
+                        : locale === 'th' ? 'ตัวกรองการค้นหา' : 'Filter search'
+                    }
+                    aria-label="Filter search"
+                  >
+                    <SlidersHorizontal size={14} />
+                    {hasActiveFilter && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#111113]" />
+                    )}
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isFilterOpen && (
+                    <div className="absolute right-0 mt-3 w-64 sm:w-72 p-3 bg-white dark:bg-[#161619] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl z-50 animate-fade-in text-neutral-900 dark:text-white">
+                      {/* Dropdown Header */}
+                      <div className="flex items-center justify-between pb-2 mb-2 border-b border-neutral-100 dark:border-neutral-800 px-1">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                          {locale === 'th' ? 'ตัวกรองการค้นหา' : 'Search Filters'}
+                        </span>
+                        {hasActiveFilter && (
+                          <button
+                            type="button"
+                            onClick={handleResetFilters}
+                            className="text-[11px] font-medium text-neutral-500 hover:text-black dark:hover:text-white underline transition-colors"
+                          >
+                            {locale === 'th' ? 'รีเซ็ตทั้งหมด' : 'Reset all'}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* 1. Status Filter (หนังสือทั้งหมด, พร้อมให้ยืม, ซ่อนที่ปิดใช้งาน) */}
+                      <div className="mb-3">
+                        <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-1 mb-1.5">
+                          {locale === 'th' ? 'สถานะหนังสือ' : 'Book Status'}
+                        </div>
+                        <div className="space-y-1">
+                          <button
+                            type="button"
+                            onClick={() => handleSetStatusFilter('all')}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                              statusFilter === 'all'
+                                ? 'bg-black text-white dark:bg-white dark:text-black font-semibold shadow-xs'
+                                : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                            }`}
+                          >
+                            <span>{locale === 'th' ? 'หนังสือทั้งหมด' : 'All Books'}</span>
+                            {statusFilter === 'all' && <Check size={13} />}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSetStatusFilter('available')}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                              statusFilter === 'available'
+                                ? 'bg-emerald-600 text-white font-semibold shadow-xs'
+                                : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className={`w-2 h-2 rounded-full ${statusFilter === 'available' ? 'bg-white' : 'bg-emerald-500'}`} />
+                              <span>{locale === 'th' ? 'พร้อมให้ยืม' : 'Available Only'}</span>
+                            </span>
+                            {statusFilter === 'available' && <Check size={13} />}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSetStatusFilter('active')}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                              statusFilter === 'active'
+                                ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900 font-semibold shadow-xs'
+                                : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <EyeOff size={13} />
+                              <span>{locale === 'th' ? 'ซ่อนที่ปิดใช้งาน' : 'Hide Inactive'}</span>
+                            </span>
+                            {statusFilter === 'active' && <Check size={13} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 2. Categories Filter */}
+                      <div>
+                        <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-1 mb-1.5">
+                          {locale === 'th' ? 'หมวดหมู่หนังสือ' : 'Categories'}
+                        </div>
+                        <div className="max-h-48 overflow-y-auto space-y-0.5 pr-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleSelectCategory('all')}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                              selectedCategory === 'all'
+                                ? 'bg-black text-white dark:bg-white dark:text-black font-semibold shadow-xs'
+                                : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                            }`}
+                          >
+                            <span>{locale === 'th' ? 'ทุกหมวดหมู่' : 'All Categories'}</span>
+                            {selectedCategory === 'all' && <Check size={13} />}
+                          </button>
+
+                          {categories.map((cat) => (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => handleSelectCategory(cat)}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                                selectedCategory === cat
+                                  ? 'bg-black text-white dark:bg-white dark:text-black font-semibold shadow-xs'
+                                  : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
+                              }`}
+                            >
+                              <span className="truncate">{cat}</span>
+                              {selectedCategory === cat && <Check size={13} />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </form>
+          </div>
+
+          {/* Right Controls */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Language Switch Button */}
+            <button
+              type="button"
+              onClick={() => setLocale(locale === 'th' ? 'en' : 'th')}
+              className="px-2.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-800 text-xs font-bold transition-all shadow-2xs flex items-center gap-1"
+              title={locale === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย'}
+            >
+              <span className="text-[11px] font-semibold">{locale === 'th' ? 'TH' : 'EN'}</span>
+            </button>
+
+            {/* Notification Bell */}
+            <button
+              type="button"
+              onClick={() => setIsAnnounceModalOpen(true)}
+              className="relative p-2 rounded-xl sm:p-2.5 sm:rounded-2xl bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors border border-neutral-200 dark:border-neutral-800"
+              title={locale === 'th' ? 'ประกาศข่าวสาร' : 'Announcements'}
+            >
+              <Bell size={17} />
+              {announcements.length > 0 && (
+                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-black dark:bg-white ring-2 ring-white dark:ring-neutral-900" />
+              )}
+            </button>
+
+            {/* Profile Capsule */}
+            {profile ? (
+              <div className="flex items-center gap-2.5 pl-2 sm:pl-3 border-l border-neutral-200 dark:border-neutral-800">
+                <div className="w-8 h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 overflow-hidden flex items-center justify-center shrink-0 border border-neutral-300 dark:border-neutral-700">
+                  {profile.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User size={16} className="text-neutral-600 dark:text-neutral-300" />
+                  )}
+                </div>
+                <div className="hidden sm:block text-left">
+                  <div className="text-xs font-bold text-neutral-900 dark:text-white leading-tight">
+                    {profile.full_name?.split(' ')[0] || profile.email?.split('@')[0]}
+                  </div>
+                  <div className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">
+                    {isAdmin ? 'Admin' : 'Member'}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-black text-white dark:bg-white dark:text-black hover:opacity-90 transition-all shadow-sm"
+              >
+                <User size={14} />
+                <span>{locale === 'th' ? 'เข้าสู่ระบบ' : 'Sign In'}</span>
+              </Link>
+            )}
+          </div>
+        </header>
+
+        {/* Page Content Body (Full-Width, Edge-to-Edge) */}
+        <main className="flex-1 min-w-0 pb-16 lg:pb-0">
+          {children}
+        </main>
+      </div>
+
+      {/* ======================================================== */}
+      {/* 3. MOBILE BOTTOM NAVIGATION BAR                          */}
+      {/* ======================================================== */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#111113]/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-around z-30 px-1">
+        {navLinks.map((link) => {
+          const Icon = link.icon
+          const mobileLabel = link.key === 'books' && isAdmin ? (locale === 'th' ? 'หนังสือ' : 'Books') : link.label
+          return (
+            <Link
+              key={link.key}
+              href={link.href}
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
+                link.isActive
+                  ? 'text-black dark:text-white font-bold'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              <Icon size={18} className="shrink-0" />
+              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">{mobileLabel}</span>
+            </Link>
+          )
+        })}
+        {isAdmin && adminLinks.map((link) => {
+          const Icon = link.icon
+          const mobileLabel =
+            link.key === 'admin-borrows'
+              ? (locale === 'th' ? 'ยืม-คืน' : 'Borrows')
+              : link.key === 'admin-dashboard'
+              ? (locale === 'th' ? 'แดชบอร์ด' : 'Dash')
+              : link.label
+          return (
+            <Link
+              key={link.key}
+              href={link.href}
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
+                link.isActive
+                  ? 'text-black dark:text-white font-bold'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              <Icon size={18} className="shrink-0" />
+              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">{mobileLabel}</span>
+            </Link>
+          )
+        })}
+      </nav>
+
+      {/* ======================================================== */}
+      {/* 4. MOBILE NAVIGATION DRAWER                              */}
+      {/* ======================================================== */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+          />
+
+          <div className="relative w-72 max-w-[80vw] bg-white dark:bg-[#111113] border-r border-neutral-200 dark:border-neutral-800 p-6 flex flex-col justify-between z-10 animate-slide-in">
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <Link
+                  href="/"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-3"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-white p-1 flex items-center justify-center shadow-xs border border-neutral-200 dark:border-neutral-700 shrink-0 overflow-hidden">
+                    <img src="/logo.jpg" alt="Muslim Club Logo" className="w-full h-full object-contain" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm text-neutral-900 dark:text-white leading-none">
+                      Muslim Club
+                    </div>
+                    <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
+                      MFU Library
+                    </div>
+                  </div>
+                </Link>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Mobile Links */}
+              <nav className="space-y-1">
+                {navLinks.map((link) => {
+                  const Icon = link.icon
+                  return (
+                    <Link
+                      key={link.key}
+                      href={link.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm ${
+                        link.isActive
+                          ? 'bg-black text-white dark:bg-white dark:text-black'
+                          : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-900'
+                      }`}
+                    >
+                      <Icon size={18} />
+                      <span>{link.label}</span>
+                    </Link>
+                  )
+                })}
+
+                {isAdmin && (
+                  <div className="pt-4 mt-3 border-t border-neutral-200 dark:border-neutral-800 space-y-1">
+                    <div className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                      {locale === 'th' ? 'ระบบผู้ดูแล' : 'Administration'}
+                    </div>
+                    {adminLinks.map((link) => {
+                      const Icon = link.icon
+                      return (
+                        <Link
+                          key={link.key}
+                          href={link.href}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
+                            link.isActive
+                              ? 'bg-black text-white dark:bg-white dark:text-black'
+                              : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900'
+                          }`}
+                        >
+                          <Icon size={18} />
+                          <span>{link.label}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </nav>
+            </div>
+
+            {/* Mobile Footer Settings */}
+            <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800 space-y-2">
+              <button
+                onClick={toggleTheme}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400"
+              >
+                <div className="flex items-center gap-2">
+                  {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                  <span>{theme === 'dark' ? (locale === 'th' ? 'โหมดสว่าง' : 'Light Mode') : (locale === 'th' ? 'โหมดมืด' : 'Dark Mode')}</span>
+                </div>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
+                  {theme}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setLocale(locale === 'th' ? 'en' : 'th')}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400"
+              >
+                <span>{locale === 'th' ? 'ภาษา' : 'Language'}</span>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
+                  {locale === 'th' ? 'TH' : 'EN'}
+                </span>
+              </button>
+
+              {profile ? (
+                <button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                >
+                  <LogOut size={16} />
+                  <span>{locale === 'th' ? 'ออกจากระบบ' : 'Logout'}</span>
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-black text-white dark:bg-white dark:text-black"
+                >
+                  <User size={14} />
+                  <span>{locale === 'th' ? 'เข้าสู่ระบบ' : 'Sign In'}</span>
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 5. GLOBAL ANNOUNCEMENTS MODAL                             */}
+      {/* ======================================================== */}
+      {isAnnounceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={() => setIsAnnounceModalOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+          />
+
+          <div className="relative w-full max-w-lg bg-white dark:bg-[#121214] rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl p-6 sm:p-7 z-10 space-y-5 animate-slide-up">
+            <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center text-neutral-900 dark:text-white">
+                  <Bell size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-neutral-900 dark:text-white leading-tight">
+                    {locale === 'th' ? 'ประกาศจากห้องสมุด' : 'Library Announcements'}
+                  </h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    {announcements.length} {locale === 'th' ? 'รายการประกาศล่าสุด' : 'recent updates'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAnnounceModalOpen(false)}
+                className="p-2 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Announcement List */}
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+              {announcements.length === 0 ? (
+                <div className="text-center py-10 text-neutral-400">
+                  <Info size={32} className="mx-auto mb-2 opacity-40" />
+                  <p className="text-sm font-medium">
+                    {locale === 'th' ? 'ยังไม่มีประกาศใหม่ในขณะนี้' : 'No announcements currently'}
+                  </p>
+                </div>
+              ) : (
+                announcements.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="font-bold text-sm text-neutral-900 dark:text-white">
+                        {locale === 'th' ? item.title : (item.title_en || item.title)}
+                      </h4>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 uppercase shrink-0">
+                        {item.type}
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                      {locale === 'th' ? item.body : (item.body_en || item.body)}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setIsAnnounceModalOpen(false)}
+                className="w-full py-3 rounded-xl bg-black text-white dark:bg-white dark:text-black font-semibold text-xs tracking-wide hover:opacity-90 transition-all"
+              >
+                {locale === 'th' ? 'ปิดหน้าต่าง' : 'Close'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 6. GLOBAL INTERACTIVE ALERT / CONFIRM MODAL             */}
+      {/* ======================================================== */}
+      {alertModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={closeAlert}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+          />
+
+          <div className="relative w-full max-w-sm bg-white dark:bg-[#141416] rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl p-6 z-10 text-center animate-scale-in space-y-4">
+            {/* Icon */}
+            <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center mx-auto text-neutral-900 dark:text-white shadow-xs">
+              {alertModal.type === 'success' && (
+                <CheckCircle2 size={28} className="text-black dark:text-white" />
+              )}
+              {alertModal.type === 'warning' && (
+                <AlertTriangle size={28} className="text-black dark:text-white" />
+              )}
+              {alertModal.type === 'error' && (
+                <AlertCircle size={28} className="text-black dark:text-white" />
+              )}
+              {(!alertModal.type || alertModal.type === 'info') && (
+                <Info size={28} className="text-black dark:text-white" />
+              )}
+            </div>
+
+            {/* Title & Message */}
+            <div>
+              <h3 className="text-lg font-bold text-neutral-900 dark:text-white tracking-tight">
+                {alertModal.title}
+              </h3>
+              <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed whitespace-pre-line">
+                {alertModal.message}
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className={`flex items-center gap-2.5 pt-2 ${alertModal.showCancel ? 'flex-row' : 'flex-col'}`}>
+              {alertModal.showCancel && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (alertModal.onCancel) alertModal.onCancel()
+                    closeAlert()
+                  }}
+                  className="flex-1 py-2.5 px-4 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 font-semibold text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  {alertModal.cancelText || (locale === 'th' ? 'ยกเลิก' : 'Cancel')}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (alertModal.onConfirm) alertModal.onConfirm()
+                  closeAlert()
+                }}
+                className={`py-2.5 px-4 rounded-xl font-bold text-xs transition-opacity shadow-sm ${
+                  alertModal.showCancel ? 'flex-1' : 'w-full'
+                } bg-black text-white dark:bg-white dark:text-black hover:opacity-90`}
+              >
+                {alertModal.confirmText || (locale === 'th' ? 'ตกลง' : 'OK')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 7. GLOBAL TOAST NOTIFICATIONS                            */}
+      {/* ======================================================== */}
+      {toasts.length > 0 && (
+        <div className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 flex flex-col gap-2 pointer-events-none">
+          {toasts.map((toast) => (
+            <div
+              key={toast.id}
+              className="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl bg-neutral-900 text-white dark:bg-white dark:text-black shadow-xl border border-neutral-800 dark:border-neutral-200 text-xs font-semibold animate-slide-up max-w-sm"
+            >
+              {toast.type === 'success' && <CheckCircle2 size={16} />}
+              {toast.type === 'warning' && <AlertTriangle size={16} />}
+              {toast.type === 'error' && <AlertCircle size={16} />}
+              {(!toast.type || toast.type === 'info') && <Info size={16} />}
+              <span className="flex-1">{toast.message}</span>
+              <button
+                type="button"
+                onClick={() => removeToast(toast.id)}
+                className="p-1 rounded-lg hover:bg-white/20 dark:hover:bg-black/20 transition-colors"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

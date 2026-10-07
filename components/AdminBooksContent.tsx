@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { BookOpen, Plus, Trash2, Star, ArrowLeft, Search, Pencil, X, Upload, ToggleLeft, ToggleRight, Tag } from 'lucide-react'
 
+import { useApp } from '@/lib/app-context'
+
 interface Props {
   books: any[]
   categories: string[]  // ✅ รับ categories จาก DB ผ่าน props
@@ -36,14 +38,20 @@ export default function AdminBooksContent({ books, categories: initialCategories
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [showCatManager, setShowCatManager] = useState(false)
   const [newCatName, setNewCatName] = useState('')
-  const { categories, addCategory, deleteCategory } = useCategories(initialCategories)  // ✅ ส่ง initialCategories เข้าไป
+  const { categories, addCategory, deleteCategory } = useCategories(initialCategories)
+  const { searchQuery, selectedCategory, locale, t } = useApp()
   const router = useRouter()
 
-  const filtered = books.filter(b =>
-    !search ||
-    b.title?.toLowerCase().includes(search.toLowerCase()) ||
-    b.author?.toLowerCase().includes(search.toLowerCase())
-  )
+  const effectiveSearch = search || searchQuery
+  const filtered = books.filter(b => {
+    const matchSearch =
+      !effectiveSearch ||
+      b.title?.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+      b.author?.toLowerCase().includes(effectiveSearch.toLowerCase())
+    const matchCat =
+      selectedCategory === 'all' || b.category === selectedCategory
+    return matchSearch && matchCat
+  })
 
   function openEdit(book: any) {
     setEditing({ ...book })
@@ -58,14 +66,14 @@ export default function AdminBooksContent({ books, categories: initialCategories
   }
 
   async function handleDelete(bookId: string) {
-    if (!confirm('ลบหนังสือเล่มนี้?')) return
+    if (!confirm(t('deleteBookConfirm'))) return
     setDeleting(bookId)
     const res = await fetch(`/api/admin/books/${bookId}`, { method: 'DELETE' })
     if (res.ok) {
       router.refresh()
     } else {
       const data = await res.json().catch(() => ({}))
-      alert(data.error || 'ลบไม่สำเร็จ')
+      alert(data.error || (locale === 'th' ? 'ลบไม่สำเร็จ' : 'Failed to delete'))
       setDeleting(null)
     }
   }
@@ -125,29 +133,33 @@ export default function AdminBooksContent({ books, categories: initialCategories
   }
 
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+    <div className="w-full p-6 sm:p-8 lg:p-10 space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/admin/dashboard" className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500">
+      <div className="flex flex-wrap items-center gap-3">
+        <Link href="/admin/dashboard" className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500">
           <ArrowLeft size={18} />
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">จัดการหนังสือ</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{books.length} เล่มทั้งหมด</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">
+            {t('adminBooksHeading')}
+          </h1>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+            {books.length} {locale === 'th' ? 'เล่มทั้งหมด' : 'books total'}
+          </p>
         </div>
         <button
           onClick={() => setShowCatManager(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-xl text-xs sm:text-sm font-semibold transition-colors border border-neutral-200 dark:border-neutral-800"
         >
           <Tag size={16} />
-          หมวดหมู่
+          {t('categoriesBtn')}
         </button>
         <Link
           href="/admin/books/add"
-          className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm"
         >
           <Plus size={16} />
-          เพิ่มหนังสือ
+          {t('addBookBtn')}
         </Link>
       </div>
 
@@ -157,110 +169,226 @@ export default function AdminBooksContent({ books, categories: initialCategories
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="ค้นหาหนังสือ..."
+          placeholder={t('searchAdminBooksPlaceholder')}
           className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm focus:border-green-500 outline-none"
         />
       </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-              <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">หนังสือ</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 hidden md:table-cell">หมวดหมู่</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">จำนวน</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">แนะนำ</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">สถานะ</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="text-center py-12 text-gray-400">
-                  <BookOpen size={36} className="mx-auto mb-2 opacity-20" />
-                  ไม่พบหนังสือ
-                </td>
+      {/* Table (Desktop: md+) */}
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-xs hidden md:block">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40">
+                <th className="text-left px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">{t('colBook')}</th>
+                <th className="text-left px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300 hidden md:table-cell">{t('categorySelect')}</th>
+                <th className="text-center px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">{t('colBookCopies')}</th>
+                <th className="text-center px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">{t('colBookFeatured')}</th>
+                <th className="text-center px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">{t('status')}</th>
+                <th className="text-center px-4 py-3 font-semibold text-neutral-700 dark:text-neutral-300">{t('colActions')}</th>
               </tr>
-            ) : filtered.map(book => (
-              <tr
-                key={book.id}
-                className={`border-b border-gray-50 dark:border-gray-800 transition-colors ${
-                  book.is_active === false
-                    ? 'opacity-50 bg-gray-50/50 dark:bg-gray-800/20'
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                }`}
-              >
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-14 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0">
-                      {book.cover_url ? (
-                        <img src={book.cover_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <BookOpen size={14} className="text-gray-400" />
-                        </div>
-                      )}
+            </thead>
+            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-12 text-neutral-400">
+                    <BookOpen size={36} className="mx-auto mb-2 opacity-20" />
+                    {t('noBooksFound')}
+                  </td>
+                </tr>
+              ) : filtered.map(book => (
+                <tr
+                  key={book.id}
+                  className={`transition-colors ${
+                    book.is_active === false
+                      ? 'opacity-50 bg-neutral-50/50 dark:bg-neutral-800/20'
+                      : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/30'
+                  }`}
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-14 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0">
+                        {book.cover_url ? (
+                          <img src={book.cover_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <BookOpen size={14} className="text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 dark:text-white truncate max-w-[200px]">{book.title}</p>
+                        {book.author && <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{book.author}</p>}
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-gray-900 dark:text-white truncate max-w-[200px]">{book.title}</p>
-                      {book.author && <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{book.author}</p>}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400 hidden md:table-cell">
+                    {book.category || '—'}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${
+                      book.available_copies > 0
+                        ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 border-transparent'
+                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-700'
+                    }`}>
+                      {book.available_copies}/{book.total_copies}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => toggleFeatured(book.id, book.is_featured)}
+                      className={`p-1.5 rounded-xl transition-all ${
+                        book.is_featured
+                          ? 'text-neutral-950 bg-neutral-200 dark:text-white dark:bg-neutral-800 shadow-xs'
+                          : 'text-neutral-300 dark:text-neutral-600 hover:text-neutral-800 dark:hover:text-neutral-200'
+                      }`}
+                      title={locale === 'th' ? 'แนะนำเล่มนี้' : 'Feature this book'}
+                    >
+                      <Star size={16} fill={book.is_featured ? 'currentColor' : 'none'} />
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => toggleActive(book.id, book.is_active !== false)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold transition-all border ${
+                        book.is_active === false
+                          ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-700'
+                          : 'bg-neutral-900 text-white dark:bg-white dark:text-black border-transparent shadow-xs'
+                      }`}
+                    >
+                      {book.is_active === false
+                        ? <><ToggleLeft size={14} /> {t('toggleOff')}</>
+                        : <><ToggleRight size={14} /> {t('toggleOn')}</>
+                      }
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button
+                        onClick={() => openEdit(book)}
+                        className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                        title={t('editBtn')}
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(book.id)}
+                        disabled={deleting === book.id}
+                        className="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 dark:hover:bg-white dark:hover:text-neutral-950 transition-colors disabled:opacity-50"
+                        title={t('deleteBtn')}
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden md:table-cell">
-                  {book.category || '—'}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <span className={`text-sm font-medium ${book.available_copies > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {book.available_copies}/{book.total_copies}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <button
-                    onClick={() => toggleFeatured(book.id, book.is_featured)}
-                    className={`p-1.5 rounded-lg transition-colors ${book.is_featured ? 'text-amber-500 bg-amber-50 dark:bg-amber-950/30' : 'text-gray-300 dark:text-gray-600 hover:text-amber-400'}`}
-                  >
-                    <Star size={16} fill={book.is_featured ? 'currentColor' : 'none'} />
-                  </button>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <button
-                    onClick={() => toggleActive(book.id, book.is_active !== false)}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                      book.is_active === false
-                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-red-50 hover:text-red-500'
-                        : 'bg-green-50 dark:bg-green-950/30 text-green-600 hover:bg-gray-100 hover:text-gray-500'
-                    }`}
-                  >
-                    {book.is_active === false
-                      ? <><ToggleLeft size={14} /> ปิด</>
-                      : <><ToggleRight size={14} /> เปิด</>
-                    }
-                  </button>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-center gap-1">
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Mobile Card List (< md) */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-8 text-center text-neutral-400">
+            <BookOpen size={36} className="mx-auto mb-2 opacity-20" />
+            <p className="text-sm">{t('noBooksFound')}</p>
+          </div>
+        ) : (
+          filtered.map(book => (
+            <div
+              key={book.id}
+              className={`bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs space-y-3 ${
+                book.is_active === false ? 'opacity-60 bg-neutral-50/50 dark:bg-neutral-800/20' : ''
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-14 h-20 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0">
+                  {book.cover_url ? (
+                    <img src={book.cover_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <BookOpen size={18} className="text-neutral-400" />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-semibold text-neutral-900 dark:text-white text-sm line-clamp-2">
+                      {book.title}
+                    </h3>
                     <button
-                      onClick={() => openEdit(book)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
+                      onClick={() => toggleFeatured(book.id, book.is_featured)}
+                      className={`p-1.5 rounded-lg shrink-0 transition-all ${
+                        book.is_featured
+                          ? 'text-neutral-950 bg-neutral-200 dark:text-white dark:bg-neutral-800 shadow-xs'
+                          : 'text-neutral-300 dark:text-neutral-600 hover:text-neutral-800'
+                      }`}
+                      title={locale === 'th' ? 'แนะนำเล่มนี้' : 'Feature this book'}
                     >
-                      <Pencil size={15} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(book.id)}
-                      disabled={deleting === book.id}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50"
-                    >
-                      <Trash2 size={15} />
+                      <Star size={16} fill={book.is_featured ? 'currentColor' : 'none'} />
                     </button>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  {book.author && (
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
+                      {book.author}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    {book.category && (
+                      <span className="text-[11px] px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
+                        {book.category}
+                      </span>
+                    )}
+                    <span className={`text-[11px] px-2 py-0.5 rounded-md font-semibold border ${
+                      book.available_copies > 0
+                        ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 border-transparent'
+                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border-neutral-200 dark:border-neutral-700'
+                    }`}>
+                      {locale === 'th' ? 'พร้อมยืม' : 'Available'} {book.available_copies}/{book.total_copies}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                <button
+                  onClick={() => toggleActive(book.id, book.is_active !== false)}
+                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                    book.is_active === false
+                      ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-700'
+                      : 'bg-neutral-900 text-white dark:bg-white dark:text-black border-transparent shadow-xs'
+                  }`}
+                >
+                  {book.is_active === false
+                    ? <><ToggleLeft size={14} /> {t('toggleOff')}</>
+                    : <><ToggleRight size={14} /> {t('toggleOn')}</>
+                  }
+                </button>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => openEdit(book)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                  >
+                    <Pencil size={13} />
+                    {t('editBtn')}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(book.id)}
+                    disabled={deleting === book.id}
+                    className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 dark:hover:bg-white dark:hover:text-neutral-950 transition-colors disabled:opacity-50 border border-neutral-200 dark:border-neutral-700"
+                    title={t('deleteBtn')}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* ── Category Manager Modal ── */}
@@ -268,7 +396,7 @@ export default function AdminBooksContent({ books, categories: initialCategories
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-base font-bold text-gray-900 dark:text-white">จัดการหมวดหมู่</h2>
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">{t('categoryManagerTitle')}</h2>
               <button onClick={() => setShowCatManager(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500">
                 <X size={18} />
               </button>
@@ -282,19 +410,19 @@ export default function AdminBooksContent({ books, categories: initialCategories
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       if (addCategory(newCatName)) setNewCatName('')
-                      else alert('หมวดหมู่นี้มีอยู่แล้ว')
+                      else alert(t('categoryExistsAlert'))
                     }
                   }}
-                  placeholder="ชื่อหมวดหมู่ใหม่"
+                  placeholder={t('newCategoryPlaceholder')}
                   className="flex-1 input-field"
                 />
                 <button
                   type="button"
                   onClick={() => {
                     if (addCategory(newCatName)) setNewCatName('')
-                    else alert('หมวดหมู่นี้มีอยู่แล้ว')
+                    else alert(t('categoryExistsAlert'))
                   }}
-                  className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition-colors"
+                  className="px-3.5 py-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-xl text-sm font-semibold transition-colors shadow-xs"
                 >
                   <Plus size={16} />
                 </button>
@@ -307,7 +435,8 @@ export default function AdminBooksContent({ books, categories: initialCategories
                     <span className="text-sm text-gray-700 dark:text-gray-300">{cat}</span>
                     <button
                       onClick={() => {
-                        if (confirm(`ลบหมวดหมู่ "${cat}"?`)) deleteCategory(cat)
+                        const confirmMsg = locale === 'th' ? `ลบหมวดหมู่ "${cat}"?` : `Delete category "${cat}"?`
+                        if (confirm(confirmMsg)) deleteCategory(cat)
                       }}
                       className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
                     >
@@ -327,7 +456,7 @@ export default function AdminBooksContent({ books, categories: initialCategories
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
-              <h2 className="text-base font-bold text-gray-900 dark:text-white">แก้ไขหนังสือ</h2>
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">{t('editBookModalTitle')}</h2>
               <button onClick={closeEdit} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500">
                 <X size={18} />
               </button>
@@ -349,7 +478,7 @@ export default function AdminBooksContent({ books, categories: initialCategories
                   </div>
                   <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:border-green-400 transition-colors p-4 text-center h-28">
                     <Upload size={18} className="text-gray-400 mb-1" />
-                    <span className="text-xs text-gray-500">เปลี่ยนรูปปก</span>
+                    <span className="text-xs text-gray-500">{locale === 'th' ? 'เปลี่ยนรูปปก' : 'Change cover'}</span>
                     <input type="file" accept="image/*" onChange={e => {
                       const f = e.target.files?.[0]
                       if (f) { setCoverFile(f); setCoverPreview(URL.createObjectURL(f)) }
@@ -357,22 +486,22 @@ export default function AdminBooksContent({ books, categories: initialCategories
                   </label>
                 </div>
 
-                <Field label="ชื่อหนังสือ *">
+                <Field label={`${t('bookTitleInput')} *`}>
                   <input required value={editing.title || ''} onChange={e => setEditing({ ...editing, title: e.target.value })} className="input-field w-full" />
                 </Field>
 
-                <Field label="ผู้แต่ง">
+                <Field label={t('authorInput')}>
                   <input value={editing.author || ''} onChange={e => setEditing({ ...editing, author: e.target.value })} className="input-field w-full" />
                 </Field>
 
-                <Field label="คำอธิบาย">
+                <Field label={t('synopsis')}>
                   <textarea value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={3} className="input-field w-full resize-none" />
                 </Field>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="หมวดหมู่">
+                  <Field label={t('categorySelect')}>
                     <select value={editing.category || ''} onChange={e => setEditing({ ...editing, category: e.target.value })} className="input-field w-full">
-                      <option value="">เลือกหมวดหมู่</option>
+                      <option value="">{locale === 'th' ? 'เลือกหมวดหมู่' : 'Select category'}</option>
                       {categories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </Field>
@@ -382,19 +511,19 @@ export default function AdminBooksContent({ books, categories: initialCategories
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="สำนักพิมพ์">
+                  <Field label={t('publisherInput')}>
                     <input value={editing.publisher || ''} onChange={e => setEditing({ ...editing, publisher: e.target.value })} className="input-field w-full" />
                   </Field>
-                  <Field label="ปีที่พิมพ์">
+                  <Field label={t('publishedYearInput')}>
                     <input type="number" value={editing.published_year || ''} onChange={e => setEditing({ ...editing, published_year: e.target.value })} className="input-field w-full" />
                   </Field>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="จำนวนทั้งหมด">
+                  <Field label={t('totalCopiesInput')}>
                     <input type="number" min={1} value={editing.total_copies ?? 1} onChange={e => setEditing({ ...editing, total_copies: +e.target.value })} className="input-field w-full" />
                   </Field>
-                  <Field label="จำนวนว่าง">
+                  <Field label={t('availableCopiesInput')}>
                     <input type="number" min={0} value={editing.available_copies ?? 0} onChange={e => setEditing({ ...editing, available_copies: +e.target.value })} className="input-field w-full" />
                   </Field>
                 </div>
@@ -402,10 +531,10 @@ export default function AdminBooksContent({ books, categories: initialCategories
 
               <div className="flex gap-2 px-6 py-4 border-t border-gray-100 dark:border-gray-800 shrink-0">
                 <button type="button" onClick={closeEdit} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                  ยกเลิก
+                  {t('cancel')}
                 </button>
-                <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-50 transition-colors">
-                  {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+                <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black text-sm font-semibold disabled:opacity-50 transition-colors shadow-xs">
+                  {saving ? t('saving') : t('saveChanges')}
                 </button>
               </div>
             </form>
@@ -417,22 +546,22 @@ export default function AdminBooksContent({ books, categories: initialCategories
         .input-field {
           padding: 0.5rem 0.75rem;
           border-radius: 0.75rem;
-          border: 1px solid rgb(229 231 235);
-          background-color: rgb(249 250 251);
-          color: rgb(17 24 39);
+          border: 1px solid rgb(228 228 231);
+          background-color: rgb(250 250 250);
+          color: rgb(9 9 11);
           font-size: 0.875rem;
           outline: none;
           transition: border-color 0.15s;
         }
-        .input-field:focus { border-color: rgb(34 197 94); }
+        .input-field:focus { border-color: rgb(0 0 0); }
         .dark .input-field {
-          border-color: rgb(55 65 81);
-          background-color: rgb(31 41 55);
-          color: rgb(243 244 246);
+          border-color: rgb(39 39 42);
+          background-color: rgb(18 18 20);
+          color: rgb(250 250 250);
         }
-        .dark .input-field:focus { border-color: rgb(34 197 94); }
+        .dark .input-field:focus { border-color: rgb(255 255 255); }
       `}</style>
-    </main>
+    </div>
   )
 }
 

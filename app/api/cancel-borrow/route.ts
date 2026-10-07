@@ -2,6 +2,8 @@ import { createServiceClient } from '@/lib/supabase-server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { cancelBorrowSchema, validateInput } from '@/lib/validation'
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   // --- Auth verify: ตรวจสอบ session จริงจาก cookie ---
@@ -22,7 +24,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบก่อน' }, { status: 401 })
   }
 
-  const { borrowId } = await request.json()
+  // ── Rate Limit: 5 ครั้ง/นาที ──
+  const rl = checkRateLimit(`cancel-borrow:${user.id}`, { maxRequests: 5, windowSeconds: 60 })
+  if (!rl.allowed) return rateLimitResponse(rl.resetAt)
+
+  // ── Validate input ──
+  const body = await request.json()
+  const parsed = validateInput(cancelBorrowSchema, body)
+  if (parsed.error) return parsed.error
+  const { borrowId } = parsed.data
 
   // ใช้ userId จาก session เท่านั้น (ไม่รับจาก client)
   const userId = user.id
@@ -51,17 +61,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
 
-  // Safety fallback: อัปเดต available_copies โดยตรงเพื่อความแน่ใจ
-  if (borrow.books) {
-    const newAvailable = Math.min(
-      (borrow.books.available_copies ?? 0) + 1,
-      borrow.books.total_copies ?? 999
-    )
-    await supabase
-      .from('books')
-      .update({ available_copies: newAvailable })
-      .eq('id', borrow.book_id)
-  }
+  // Safety fallback: ตอนนี้ใช้ DB Trigger จัดการแล้ว ไม่ต้อง manual update
 
   // Notify next in queue
   const { data: firstQueue } = await supabase

@@ -1,164 +1,218 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
-import Navbar from '@/components/Navbar'
-import { Star, Send, MessageSquare, CheckCircle } from 'lucide-react'
+import { MessageSquare, Star, Send, CheckCircle2, Sparkles, BookPlus, Wrench, Headphones } from 'lucide-react'
 
-export default function FeedbackPage() {
+function FeedbackContent() {
+  const { t, locale, profile } = useApp()
+  const searchParams = useSearchParams()
+  const supabase = createClient()
+
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
+  const [category, setCategory] = useState<'general' | 'book_request' | 'system' | 'service'>('general')
   const [message, setMessage] = useState('')
-  const [category, setCategory] = useState('general')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const { t } = useApp()
 
-  async function handleSubmit() {
+  // Pre-fill from query params if available (e.g. from book detail)
+  useEffect(() => {
+    const cat = searchParams.get('category')
+    const title = searchParams.get('title')
+    if (cat === 'book_request' || cat === 'system' || cat === 'service' || cat === 'general') {
+      setCategory(cat)
+    }
+    if (title) {
+      setMessage(`[หนังสือ: ${title}] `)
+    }
+  }, [searchParams])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
     if (!message.trim() || rating === 0) {
-      alert('กรุณาให้คะแนนและเขียนความคิดเห็น')
+      alert(t('feedbackAlert') || 'กรุณาให้คะแนนและเขียนความคิดเห็น')
       return
     }
+
     setLoading(true)
-
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    const res = await fetch('/api/feedback', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user?.id || null,
-        rating,
-        message: message.trim(),
-        category,
-      }),
+    const { error } = await supabase.from('feedback').insert({
+      user_id: profile?.id ?? null,
+      rating,
+      category,
+      message: message.trim(),
     })
+    setLoading(false)
 
-    const data = await res.json()
-    if (data.error) { alert(data.error); setLoading(false); return }
+    if (error) {
+      alert(t('error') || 'ส่งความคิดเห็นไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+      return
+    }
 
     setSuccess(true)
-    setLoading(false)
   }
 
-  const categories = [
-    { value: 'general', label: 'ทั่วไป' },
-    { value: 'book_request', label: 'ขอเพิ่มหนังสือ' },
-    { value: 'system', label: 'ระบบ' },
-    { value: 'service', label: 'บริการ' },
+  const categoryOptions = [
+    { value: 'general', label: t('feedbackGeneral') || 'ทั่วไป', icon: Sparkles },
+    { value: 'book_request', label: t('feedbackBookRequest') || 'ขอเพิ่มหนังสือ', icon: BookPlus },
+    { value: 'system', label: t('feedbackSystem') || 'ระบบ', icon: Wrench },
+    { value: 'service', label: t('feedbackService') || 'บริการ', icon: Headphones },
+  ] as const
+
+  const ratingLabels = [
+    '',
+    t('rating1') || 'แย่มาก',
+    t('rating2') || 'แย่',
+    t('rating3') || 'ปานกลาง',
+    t('rating4') || 'ดี',
+    t('rating5') || 'ดีมาก',
   ]
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <Navbar />
-        <div className="flex items-center justify-center min-h-[60vh] px-4">
-          <div className="text-center animate-fade-in">
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-950 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle size={40} className="text-green-600 dark:text-green-400" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('thankYou')}</h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">ความคิดเห็นของคุณมีคุณค่ามากสำหรับเรา</p>
-            <button
-              onClick={() => { setSuccess(false); setRating(0); setMessage(''); setCategory('general') }}
-              className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors"
-            >
-              ส่งอีกครั้ง
-            </button>
+      <div className="w-full max-w-lg mx-auto py-16 px-4 animate-fade-in text-center">
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-8 sm:p-10 shadow-lg">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-5">
+            <CheckCircle2 size={36} />
           </div>
+          <h2 className="text-2xl font-extrabold text-neutral-900 dark:text-white mb-2">
+            {t('thankYou') || 'ขอบคุณสำหรับข้อเสนอแนะ!'}
+          </h2>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-8 max-w-sm mx-auto">
+            {t('feedbackValue') || 'ความคิดเห็นของคุณมีคุณค่าอย่างยิ่งในการพัฒนาห้องสมุดชมรมมุสลิม มฟล.'}
+          </p>
+          <button
+            onClick={() => {
+              setSuccess(false)
+              setRating(0)
+              setMessage('')
+              setCategory('general')
+            }}
+            className="px-6 py-2.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-xl text-sm font-bold transition-all shadow-sm active:scale-95"
+          >
+            {t('feedbackResubmit') || 'ส่งข้อเสนอแนะอีกครั้ง'}
+          </button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
-      <main className="max-w-lg mx-auto px-4 py-8 animate-fade-in">
-        <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 shadow-xl shadow-gray-200/50 dark:shadow-black/20">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-14 h-14 bg-green-100 dark:bg-green-950 rounded-2xl flex items-center justify-center mx-auto mb-3">
-              <MessageSquare size={24} className="text-green-600 dark:text-green-400" />
+    <div className="w-full max-w-xl mx-auto py-10 px-4 sm:px-6 animate-fade-in">
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white mb-3">
+          <MessageSquare size={24} />
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight">
+          {t('feedbackTitle') || 'ข้อเสนอแนะและความคิดเห็น'}
+        </h1>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1.5">
+          {t('feedbackDesc') || 'ช่วยเราพัฒนาห้องสมุดชมรมมุสลิม มฟล. ให้ดียิ่งขึ้น'}
+        </p>
+      </div>
+
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-xs">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Category Chips */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-2.5">
+              {t('feedbackCategory') || 'ประเภทข้อเสนอแนะ'}
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {categoryOptions.map(cat => {
+                const Icon = cat.icon
+                const isSelected = category === cat.value
+                return (
+                  <button
+                    key={cat.value}
+                    type="button"
+                    onClick={() => setCategory(cat.value)}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold border transition-all ${
+                      isSelected
+                        ? 'bg-neutral-900 text-white dark:bg-white dark:text-black border-transparent shadow-xs'
+                        : 'bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200 dark:border-neutral-700/60 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700'
+                    }`}
+                  >
+                    <Icon size={14} />
+                    <span>{cat.label}</span>
+                  </button>
+                )
+              })}
             </div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('feedbackTitle')}</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('feedbackDesc')}</p>
           </div>
 
-          {/* Category */}
-          <div className="mb-5">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ประเภท</label>
-            <div className="flex flex-wrap gap-2">
-              {categories.map(cat => (
-                <button
-                  key={cat.value}
-                  onClick={() => setCategory(cat.value)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    category === cat.value
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Star rating */}
-          <div className="mb-5">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('rating')}</label>
-            <div className="flex gap-2">
+          {/* Star Rating */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-2">
+              {t('rating') || 'ให้คะแนนความพึงพอใจ'} *
+            </label>
+            <div className="flex items-center gap-2">
               {[1, 2, 3, 4, 5].map(star => (
                 <button
                   key={star}
+                  type="button"
                   onClick={() => setRating(star)}
                   onMouseEnter={() => setHoverRating(star)}
                   onMouseLeave={() => setHoverRating(0)}
-                  className="transition-transform hover:scale-110"
+                  className="transition-transform hover:scale-115 p-1 rounded-lg focus:outline-none"
                 >
                   <Star
-                    size={32}
+                    size={30}
                     className={`transition-colors ${
                       star <= (hoverRating || rating)
                         ? 'fill-amber-400 text-amber-400'
-                        : 'text-gray-200 dark:text-gray-700'
+                        : 'text-neutral-300 dark:text-neutral-700'
                     }`}
                   />
                 </button>
               ))}
+              {rating > 0 && (
+                <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 ml-2">
+                  {ratingLabels[rating]}
+                </span>
+              )}
             </div>
-            {rating > 0 && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {['', 'แย่มาก', 'แย่', 'ปานกลาง', 'ดี', 'ดีมาก'][rating]}
-              </p>
-            )}
           </div>
 
-          {/* Message */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('yourFeedback')}</label>
+          {/* Message Textarea */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400">
+                {t('yourFeedback') || 'ข้อความของคุณ'} *
+              </label>
+              <span className="text-[11px] text-neutral-400">{message.length}/500</span>
+            </div>
             <textarea
+              required
+              rows={5}
+              maxLength={500}
               value={message}
               onChange={e => setMessage(e.target.value)}
-              placeholder={t('feedbackPlaceholder')}
-              rows={5}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:border-green-500 outline-none transition-colors resize-none"
+              placeholder={t('feedbackPlaceholder') || 'แบ่งปันความคิดเห็น ขอเสนอแนะ หรือรายงานปัญหา...'}
+              className="w-full p-4 rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-sm outline-none focus:border-neutral-900 dark:focus:border-white text-neutral-900 dark:text-white resize-none transition-colors"
             />
-            <p className="text-xs text-gray-400 dark:text-gray-600 mt-1 text-right">{message.length}/500</p>
           </div>
 
+          {/* Submit Button */}
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={loading || !message.trim() || rating === 0}
-            className="w-full flex items-center justify-center gap-2 py-3.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold rounded-xl transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 disabled:opacity-40 text-white dark:text-black font-bold text-sm transition-all shadow-sm active:scale-[0.99]"
           >
-            <Send size={18} />
-            {loading ? t('loading') : t('submit')}
+            <Send size={16} />
+            <span>{loading ? t('loading') || 'กำลังส่ง...' : t('submit') || 'ส่งความคิดเห็น'}</span>
           </button>
-        </div>
-      </main>
+        </form>
+      </div>
     </div>
+  )
+}
+
+export default function FeedbackPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-sm text-neutral-400">กำลังโหลด...</div>}>
+      <FeedbackContent />
+    </Suspense>
   )
 }

@@ -17,10 +17,23 @@ create table if not exists profiles (
 
 alter table profiles enable row level security;
 
+-- Helper function เพื่อตรวจ admin โดยไม่ trigger RLS recursion
+create or replace function is_admin()
+returns boolean
+language sql
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
+
 create policy "Users can view own profile" on profiles for select using (auth.uid() = id);
-create policy "Admins can view all profiles" on profiles for select using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+create policy "Admins can view all profiles" on profiles for select using (is_admin());
 create policy "Users can update own profile" on profiles for update using (auth.uid() = id);
-create policy "Admins can update any profile" on profiles for update using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+create policy "Admins can update any profile" on profiles for update using (is_admin());
 
 -- 2. BOOKS TABLE
 create table if not exists books (
@@ -36,6 +49,7 @@ create table if not exists books (
   total_copies int not null default 1,
   available_copies int not null default 1,
   is_featured boolean not null default false,
+  is_active boolean not null default true,
   added_by uuid references profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -58,7 +72,9 @@ create table if not exists borrows (
   due_date timestamptz not null,
   returned_at timestamptz,
   return_proof_url text,
-  notes text
+  notes text,
+  reminder_sent boolean not null default false,
+  overdue_notified boolean not null default false
 );
 
 alter table borrows enable row level security;
@@ -216,3 +232,13 @@ values (
   'Our online book borrowing system is now live. Borrow up to 14 days.',
   'success'
 );
+
+-- =============================================
+-- ADD MISSING COLUMNS
+-- =============================================
+ALTER TABLE borrows ADD COLUMN IF NOT EXISTS reminder_sent boolean NOT NULL DEFAULT false;
+ALTER TABLE borrows ADD COLUMN IF NOT EXISTS overdue_notified boolean NOT NULL DEFAULT false;
+ALTER TABLE borrows ADD COLUMN IF NOT EXISTS proof_signed_url text;
+ALTER TABLE borrows ADD COLUMN IF NOT EXISTS notes text;
+ALTER TABLE queue ADD COLUMN IF NOT EXISTS notified_at timestamptz;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
