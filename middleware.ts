@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { toSessionCookieOptions } from '@/lib/session-cookie'
 
 // Service role client สำหรับ query profiles (bypass RLS ที่มี recursion)
 function getServiceClient() {
@@ -67,8 +68,9 @@ export async function middleware(request: NextRequest) {
           for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
             response.headers.set(key, value)
           }
+          // แปลงเป็น session cookie (หมดอายุเมื่อปิดเบราว์เซอร์)
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
+            response.cookies.set(name, value, toSessionCookieOptions(value, options))
           )
         },
       },
@@ -82,9 +84,10 @@ export async function middleware(request: NextRequest) {
 
   // ── Guard: หน้าที่ต้อง login ──
   const requiresAuth = pathname.startsWith('/my-borrows') || pathname.startsWith('/return/')
-  if (requiresAuth && !user) {
+  const requiresLoginOnly = pathname.startsWith('/invite')
+  if ((requiresAuth || requiresLoginOnly) && !user) {
     const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('redirect', pathname)
+    loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search)
     return NextResponse.redirect(loginUrl)
   }
 

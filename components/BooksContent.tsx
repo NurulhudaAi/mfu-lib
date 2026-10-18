@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import BookCard from './BookCard'
 import { useApp } from '@/lib/app-context'
+import { getCategoryLabel } from '@/lib/i18n'
 
 const ISBNScanner = dynamic(() => import('./ISBNScanner'), { ssr: false })
 
@@ -327,6 +328,15 @@ export default function BooksContent({
     setIsBookModalOpen(true)
   }
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isAdmin) {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('action') === 'add') {
+        openAddBookModal()
+      }
+    }
+  }, [isAdmin])
+
   function openEditBookModal(book: any) {
     setEditingBook(book)
     setBookTitle(book.title || '')
@@ -502,11 +512,23 @@ export default function BooksContent({
   return (
     <div className="w-full max-w-7xl mx-auto p-6 sm:p-8 lg:p-10 space-y-6 sm:space-y-8 animate-fade-in">
       {/* Page Title & Stats */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-5">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white mb-1">
-            {isAdmin ? (locale === 'th' ? 'จัดการหนังสือ' : 'Manage Books') : t('allBooks')}
-          </h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-5">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">
+              {isAdmin ? (locale === 'th' ? 'จัดการหนังสือ' : 'Manage Books') : t('allBooks')}
+            </h1>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={openAddBookModal}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-xl text-xs font-semibold transition-all shadow-xs active:scale-95"
+              >
+                <Plus size={15} />
+                <span>{locale === 'th' ? 'เพิ่มหนังสือ' : 'Add Book'}</span>
+              </button>
+            )}
+          </div>
           <p className="text-neutral-500 dark:text-neutral-400 text-xs sm:text-sm">
             {filtered.length} {locale === 'th' ? 'เล่มที่แสดง' : 'books shown'}
             {filtered.length !== books.length && (
@@ -520,30 +542,16 @@ export default function BooksContent({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Admin Add Book Button */}
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={openAddBookModal}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm active:scale-95"
-            >
-              <Plus size={16} />
-              <span>{locale === 'th' ? 'เพิ่มหนังสือใหม่' : 'Add Book'}</span>
-            </button>
-          )}
-
-          {/* Clear All action if multiple filters active */}
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={handleClearAll}
-              className="text-xs font-semibold text-neutral-500 hover:text-black dark:hover:text-white underline self-start sm:self-auto transition-colors"
-            >
-              {locale === 'th' ? 'ล้างตัวกรองทั้งหมด' : 'Clear all filters'}
-            </button>
-          )}
-        </div>
+        {/* Clear All action if multiple filters active */}
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={handleClearAll}
+            className="text-xs font-semibold text-neutral-500 hover:text-black dark:hover:text-white underline self-start sm:self-auto transition-colors"
+          >
+            {locale === 'th' ? 'ล้างตัวกรองทั้งหมด' : 'Clear all filters'}
+          </button>
+        )}
       </div>
 
       {/* Active Filter Badges */}
@@ -571,7 +579,7 @@ export default function BooksContent({
           {selectedCategory !== 'all' && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-[#151518] text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 font-medium shadow-xs">
               <span className="text-neutral-400">{locale === 'th' ? 'หมวดหมู่:' : 'Category:'}</span>
-              <span className="font-semibold">{selectedCategory}</span>
+              <span className="font-semibold">{getCategoryLabel(selectedCategory, locale)}</span>
               <button
                 type="button"
                 onClick={handleClearCategory}
@@ -644,7 +652,7 @@ export default function BooksContent({
       {/* Admin Add / Edit Book Modal Dialog (Portal to document.body) */}
       {mounted && isBookModalOpen && createPortal(
         <div
-          className="fixed inset-0 w-screen h-[100dvh] z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-fade-in"
+          className="fixed inset-0 w-screen h-[100dvh] z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/50 dark:bg-black/70 animate-fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsBookModalOpen(false)
           }}

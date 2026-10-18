@@ -640,3 +640,74 @@ export const translations = {
 };
 
 export type TranslationKey = keyof typeof translations.th;
+
+// ── Bilingual Book Categories ──
+export const CATEGORY_MAP: Record<string, { th: string; en: string }> = {
+  'all': { th: 'ทุกหมวดหมู่', en: 'All Categories' },
+  'ทั่วไป': { th: 'ทั่วไป', en: 'General' },
+  'general': { th: 'ทั่วไป', en: 'General' },
+  'อิสลาม': { th: 'อิสลาม', en: 'Islam' },
+  'islam': { th: 'อิสลาม', en: 'Islam' },
+  'ฟิกฮฺ': { th: 'ฟิกฮฺ', en: 'Fiqh' },
+  'ฟิกฮ์': { th: 'ฟิกฮฺ', en: 'Fiqh' },
+  'fiqh': { th: 'ฟิกฮฺ', en: 'Fiqh' },
+  'วิทยาศาสตร์': { th: 'วิทยาศาสตร์', en: 'Science' },
+  'science': { th: 'วิทยาศาสตร์', en: 'Science' },
+  'หะดีษ': { th: 'หะดีษ', en: 'Hadith' },
+  'ฮะดีษ': { th: 'หะดีษ', en: 'Hadith' },
+  'hadith': { th: 'หะดีษ', en: 'Hadith' },
+  'อัลกุรอาน': { th: 'อัลกุรอาน', en: 'Quran' },
+  'กุรอาน': { th: 'อัลกุรอาน', en: 'Quran' },
+  'quran': { th: 'อัลกุรอาน', en: 'Quran' },
+  'เตาฮีด': { th: 'เตาฮีด', en: 'Tawhid' },
+  'tawhid': { th: 'เตาฮีด', en: 'Tawhid' },
+  'หลักศรัทธา': { th: 'หลักศรัทธา', en: 'Aqeedah' },
+  'aqeedah': { th: 'หลักศรัทธา', en: 'Aqeedah' },
+  'ประวัติศาสตร์': { th: 'ประวัติศาสตร์', en: 'History' },
+  'ประวัติศาสตร์อิสลาม': { th: 'ประวัติศาสตร์อิสลาม', en: 'Islamic History' },
+  'history': { th: 'ประวัติศาสตร์', en: 'History' },
+  'ชีวประวัติ': { th: 'ชีวประวัติ', en: 'Biography' },
+  'biography': { th: 'ชีวประวัติ', en: 'Biography' },
+  'seerah': { th: 'ชีวประวัติ', en: 'Biography / Seerah' },
+  'จิตวิทยา': { th: 'จิตวิทยา', en: 'Psychology' },
+  'psychology': { th: 'จิตวิทยา', en: 'Psychology' },
+  'พัฒนาตนเอง': { th: 'พัฒนาตนเอง', en: 'Self-Development' },
+  'จิตวิทยาและการพัฒนาตนเอง': { th: 'พัฒนาตนเอง', en: 'Self-Development' },
+  'self-development': { th: 'พัฒนาตนเอง', en: 'Self-Development' },
+  'วิชาการ': { th: 'วิชาการ', en: 'Academic' },
+  'academic': { th: 'วิชาการ', en: 'Academic' },
+  'วรรณกรรม': { th: 'วรรณกรรม', en: 'Literature' },
+  'literature': { th: 'วรรณกรรม', en: 'Literature' },
+  'นิยาย': { th: 'นิยาย', en: 'Fiction' },
+  'fiction': { th: 'นิยาย', en: 'Fiction' },
+  'ปรัชญา': { th: 'ปรัชญา', en: 'Philosophy' },
+  'philosophy': { th: 'ปรัชญา', en: 'Philosophy' },
+  'สังคมศาสตร์': { th: 'สังคมศาสตร์', en: 'Social Sciences' },
+  'social sciences': { th: 'สังคมศาสตร์', en: 'Social Sciences' },
+  'ภาษา': { th: 'ภาษา', en: 'Languages' },
+  'ภาษาและวรรณกรรม': { th: 'ภาษาและวรรณกรรม', en: 'Language & Literature' },
+  'languages': { th: 'ภาษา', en: 'Languages' },
+  'เศรษฐศาสตร์': { th: 'เศรษฐศาสตร์', en: 'Economics' },
+  'economics': { th: 'เศรษฐศาสตร์', en: 'Economics' },
+  'การเงินอิสลาม': { th: 'การเงินอิสลาม', en: 'Islamic Finance' },
+  'เด็กและเยาวชน': { th: 'เด็กและเยาวชน', en: 'Youth & Children' },
+  'เยาวชน': { th: 'เยาวชน', en: 'Youth' },
+  'children': { th: 'เด็กและเยาวชน', en: 'Youth & Children' },
+};
+
+/**
+ * Returns the localized name of a category given the current locale.
+ */
+export function getCategoryLabel(category: string | null | undefined, locale: Locale = 'th'): string {
+  if (!category) return locale === 'th' ? 'ทั่วไป' : 'General';
+  const clean = category.trim();
+  const lower = clean.toLowerCase();
+  if (CATEGORY_MAP[lower]) {
+    return CATEGORY_MAP[lower][locale];
+  }
+  if (CATEGORY_MAP[clean]) {
+    return CATEGORY_MAP[clean][locale];
+  }
+  return clean;
+}
+

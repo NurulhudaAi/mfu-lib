@@ -1,7 +1,9 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
+import { cookies } from 'next/headers'
 import './globals.css'
 import { AppProvider } from '@/lib/app-context'
 import { Sarabun, Playfair_Display } from 'next/font/google'
+import { PREF_COOKIE_LOCALE, PREF_COOKIE_THEME } from '@/lib/session-cookie'
 
 import AppShell from '@/components/AppShell'
 
@@ -27,33 +29,30 @@ export const metadata: Metadata = {
   icons: { icon: '/logo.jpg' }, 
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0c' },
+  ],
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // อ่านการตั้งค่าจาก cookie ฝั่ง server → ธีม/ภาษาถูกต้องตั้งแต่ render แรก (ไม่กระพริบ)
+  const cookieStore = await cookies()
+  const initialTheme = cookieStore.get(PREF_COOKIE_THEME)?.value === 'light' ? 'light' : 'dark'
+  const initialLocale = cookieStore.get(PREF_COOKIE_LOCALE)?.value === 'en' ? 'en' : 'th'
+
   return (
     <html 
-      lang="th" 
-      className={`dark ${sarabun.variable} ${playfair.variable}`} 
+      lang={initialLocale} 
+      className={`${initialTheme === 'dark' ? 'dark' : ''} ${sarabun.variable} ${playfair.variable}`} 
       suppressHydrationWarning 
       data-scroll-behavior="smooth"
     >
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var saved = localStorage.getItem('theme');
-                  if (saved === 'light') {
-                    document.documentElement.classList.remove('dark');
-                  } else {
-                    document.documentElement.classList.add('dark');
-                  }
-                } catch (e) {
-                  document.documentElement.classList.add('dark');
-                }
-              })();
-            `,
-          }}
-        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link 
@@ -65,7 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className="font-sans antialiased bg-white dark:bg-[#0a0a0c] text-neutral-900 dark:text-neutral-100 min-h-screen"
         suppressHydrationWarning
       >
-        <AppProvider>
+        <AppProvider initialLocale={initialLocale} initialTheme={initialTheme}>
           <AppShell>
             {children}
           </AppShell>

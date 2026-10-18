@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { translations, type Locale, type TranslationKey } from './i18n'
 import { useProfile, type Profile } from './useProfile'
+import { PREF_COOKIE_LOCALE, PREF_COOKIE_THEME, setPrefCookie } from './session-cookie'
 
 export type AlertType = 'success' | 'warning' | 'error' | 'info'
 
@@ -47,9 +48,17 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null)
 
-export function AppProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('th')
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+export function AppProvider({
+  children,
+  initialLocale = 'th',
+  initialTheme = 'dark',
+}: {
+  children: ReactNode
+  initialLocale?: Locale
+  initialTheme?: 'light' | 'dark'
+}) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale)
+  const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'active'>('all')
@@ -57,31 +66,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const { profile, loading: profileLoading } = useProfile()  
 
+  // One-time migration: old versions stored prefs in localStorage → move to cookies
   useEffect(() => {
-    const savedLocale = localStorage.getItem('locale') as Locale | null
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
-    if (savedLocale) setLocaleState(savedLocale)
-    if (savedTheme) {
-      setTheme(savedTheme)
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark')
-    } else {
-      const isDark = document.documentElement.classList.contains('dark')
-      setTheme(isDark ? 'dark' : 'light')
-      if (!isDark) {
-        document.documentElement.classList.remove('dark')
+    try {
+      const hasCookie = (n: string) => document.cookie.split(';').some(c => c.trim().startsWith(`${n}=`))
+      const legacyLocale = localStorage.getItem('locale') as Locale | null
+      const legacyTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
+      if (legacyLocale && !hasCookie(PREF_COOKIE_LOCALE)) {
+        setPrefCookie(PREF_COOKIE_LOCALE, legacyLocale)
+        setLocaleState(legacyLocale)
       }
-    }
+      if (legacyTheme && !hasCookie(PREF_COOKIE_THEME)) {
+        setPrefCookie(PREF_COOKIE_THEME, legacyTheme)
+        setTheme(legacyTheme)
+        document.documentElement.classList.toggle('dark', legacyTheme === 'dark')
+      }
+      localStorage.removeItem('locale')
+      localStorage.removeItem('theme')
+    } catch { /* storage unavailable */ }
   }, [])
 
   function setLocale(l: Locale) {
     setLocaleState(l)
-    localStorage.setItem('locale', l)
+    setPrefCookie(PREF_COOKIE_LOCALE, l)
+    document.documentElement.lang = l
   }
 
   function toggleTheme() {
     const next = theme === 'dark' ? 'light' : 'dark'
     setTheme(next)
-    localStorage.setItem('theme', next)
+    setPrefCookie(PREF_COOKIE_THEME, next)
     document.documentElement.classList.toggle('dark', next === 'dark')
   }
 

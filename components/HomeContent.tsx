@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '@/lib/app-context'
+import { getCategoryLabel } from '@/lib/i18n'
 import {
   BookOpen,
   Sparkles,
@@ -61,9 +63,14 @@ export default function HomeContent({
   const [onlyAvailable, setOnlyAvailable] = useState<boolean>(false)
 
   // Announcement Popup Modal state
+  const [mounted, setMounted] = useState(false)
   const [isPopupOpen, setIsPopupOpen] = useState(false)
   const [activePopupAnnouncement, setActivePopupAnnouncement] = useState<AnnouncementItem | null>(null)
   const [externalEditingAnnouncement, setExternalEditingAnnouncement] = useState<AnnouncementItem | null>(null)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Default preset borrowing rules announcement
   const defaultBorrowingRulesAnnouncement: AnnouncementItem = useMemo(() => ({
@@ -107,11 +114,11 @@ export default function HomeContent({
       return
     }
 
-    // Soft delay for silky smooth initial rendering
+    // Instant, silky smooth popup entrance
     const timer = setTimeout(() => {
       setActivePopupAnnouncement(primaryPopupAnnouncement)
       setIsPopupOpen(true)
-    }, 600)
+    }, 80)
 
     return () => clearTimeout(timer)
   }, [primaryPopupAnnouncement])
@@ -327,7 +334,7 @@ export default function HomeContent({
                   : 'bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800'
               }`}
             >
-              {locale === 'th' ? 'ทั้งหมด' : 'All'}
+              {locale === 'th' ? 'ทุกหมวดหมู่' : 'All'}
             </button>
             {categories.map((cat) => (
               <button
@@ -340,7 +347,7 @@ export default function HomeContent({
                     : 'bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800'
                 }`}
               >
-                {cat}
+                {getCategoryLabel(cat, locale)}
               </button>
             ))}
           </div>
@@ -373,6 +380,9 @@ export default function HomeContent({
         onClose={() => setIsPopupOpen(false)}
         announcement={activePopupAnnouncement || primaryPopupAnnouncement}
         isAdmin={isAdmin}
+        onSaved={(updated) => {
+          setActivePopupAnnouncement(updated)
+        }}
         onEdit={(ann) => {
           setIsPopupOpen(false)
           setExternalEditingAnnouncement(ann)
@@ -381,21 +391,34 @@ export default function HomeContent({
         onDelete={handleDeleteFromPopup}
       />
 
-      {/* Floating Borrowing Rules Quick Access Button */}
-      <aside aria-label={locale === 'th' ? 'กฎการยืม-คืนหนังสือ' : 'Borrowing Rules'}>
-        <button
-          type="button"
-          onClick={() => {
-            setActivePopupAnnouncement(primaryPopupAnnouncement)
-            setIsPopupOpen(true)
-          }}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-neutral-900/90 hover:bg-black dark:bg-white/90 dark:hover:bg-white text-white dark:text-neutral-900 font-bold text-xs shadow-xl backdrop-blur-md border border-white/20 dark:border-black/20 hover:scale-105 active:scale-95 transition-all group cursor-pointer"
-          title={locale === 'th' ? 'ดูกฎระเบียบการยืม-คืนหนังสือ' : 'View Borrowing Rules'}
-        >
-          <ScrollText size={15} className="group-hover:rotate-6 transition-transform text-amber-400 dark:text-amber-600" />
-          <span>{locale === 'th' ? 'กฎการยืม-คืน' : 'Borrowing Rules'}</span>
-        </button>
-      </aside>
+      {/* Floating Borrowing Rules Quick Access Button - Portaled directly to document.body to remain 100% viewport-fixed while scrolling */}
+      {mounted && createPortal(
+        <aside aria-label={locale === 'th' ? 'กฎการยืม-คืนหนังสือ' : 'Borrowing Rules'}>
+          <button
+            type="button"
+            onClick={() => {
+              const rulesAnn = announcements?.find(
+                (a) =>
+                  a.id === 'default-2' ||
+                  (a.title && (a.title.includes('กฎ') || a.title.includes('ระเบียบ') || a.title.toLowerCase().includes('rule')))
+              ) || defaultBorrowingRulesAnnouncement
+              setActivePopupAnnouncement(rulesAnn)
+              setIsPopupOpen(true)
+            }}
+            className="fixed bottom-20 lg:bottom-6 right-4 sm:right-6 lg:right-8 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-neutral-900/95 dark:bg-white/95 text-white dark:text-neutral-900 font-semibold text-xs shadow-2xl backdrop-blur-md border border-neutral-700/50 dark:border-neutral-200 hover:scale-105 active:scale-95 transition-all group cursor-pointer ring-1 ring-black/5 dark:ring-white/10"
+            title={locale === 'th' ? 'ดูกฎระเบียบการยืม-คืนหนังสือ' : 'View Borrowing Rules'}
+          >
+            <ScrollText size={14} className="group-hover:rotate-6 transition-transform text-neutral-300 dark:text-neutral-700 shrink-0" />
+            <span className="tracking-tight">{locale === 'th' ? 'กฎการยืม-คืน' : 'Borrowing Rules'}</span>
+            {isAdmin && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-neutral-800 text-neutral-300 dark:bg-neutral-200 dark:text-neutral-800 text-[10px] font-bold">
+                {locale === 'th' ? 'แก้ไข' : 'Edit'}
+              </span>
+            )}
+          </button>
+        </aside>,
+        document.body
+      )}
 
     </div>
   )

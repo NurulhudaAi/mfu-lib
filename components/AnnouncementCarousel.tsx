@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,6 +15,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ExternalLink,
+  BookOpen,
   X,
   Plus,
   Edit3,
@@ -257,8 +259,16 @@ export default function AnnouncementCarousel({
   const touchStartX = useRef<number | null>(null)
   const touchEndX = useRef<number | null>(null)
 
+  // Local state for slides to ensure immediate UI feedback for admin
+  const [slidesList, setSlidesList] = useState<AnnouncementItem[]>(announcements || [])
+  useEffect(() => {
+    if (announcements) {
+      setSlidesList(announcements)
+    }
+  }, [announcements])
+
   // Filter slides (non-admins don't see expired slides)
-  const rawSlides = announcements && announcements.length > 0 ? announcements : [
+  const rawSlides = slidesList && slidesList.length > 0 ? slidesList : [
     {
       id: 'default-1',
       title: 'ยินดีต้อนรับสู่ห้องสมุดชมรมมุสลิม มหาวิทยาลัยแม่ฟ้าหลวง',
@@ -347,11 +357,18 @@ export default function AnnouncementCarousel({
       finalBody += `\n\n[popup: true]`
     }
 
+    let finalBodyEn = formBodyEn.trim()
+    if (finalBodyEn) {
+      if (formImageUrl.trim()) finalBodyEn += `\n\n[image: ${formImageUrl.trim()}]`
+      if (formExpiresAt.trim()) finalBodyEn += `\n\n[expires: ${formExpiresAt.trim()}]`
+      if (formIsPopup) finalBodyEn += `\n\n[popup: true]`
+    }
+
     const payload: any = {
       title: formTitle.trim(),
       title_en: formTitleEn.trim() || null,
       body: finalBody,
-      body_en: formBodyEn.trim() || null,
+      body_en: finalBodyEn || null,
       type: formType,
       is_active: formIsActive,
     }
@@ -364,7 +381,13 @@ export default function AnnouncementCarousel({
           body: JSON.stringify(payload),
         })
         const data = await res.json()
-        if (data.error) throw new Error(data.error)
+        if (!res.ok || data.error) throw new Error(data.error || 'บันทึกไม่สำเร็จ')
+
+        if (data.data) {
+          setSlidesList((prev) =>
+            prev.map((item) => (item.id === editingItem.id ? data.data : item))
+          )
+        }
       } else {
         const res = await fetch('/api/admin/announcements', {
           method: 'POST',
@@ -372,7 +395,12 @@ export default function AnnouncementCarousel({
           body: JSON.stringify(payload),
         })
         const data = await res.json()
-        if (data.error) throw new Error(data.error)
+        if (!res.ok || data.error) throw new Error(data.error || 'สร้างประกาศไม่สำเร็จ')
+
+        if (data.data) {
+          setSlidesList((prev) => [data.data, ...prev.filter((x) => !x.id.startsWith('default-'))])
+          setCurrentIndex(0)
+        }
       }
 
       closeEditorModal()
@@ -401,7 +429,10 @@ export default function AnnouncementCarousel({
         try {
           const res = await fetch(`/api/admin/announcements/${ann.id}`, { method: 'DELETE' })
           const data = await res.json()
-          if (data.error) throw new Error(data.error)
+          if (!res.ok || data.error) throw new Error(data.error || 'เกิดข้อผิดพลาดในการลบ')
+
+          setSlidesList((prev) => prev.filter((item) => item.id !== ann.id))
+          setCurrentIndex(0)
           showAlert({ type: 'success', title: 'ลบประกาศแล้ว', message: 'ประกาศถูกลบออกจากระบบเรียบร้อย' })
           router.refresh()
         } catch (err: any) {
@@ -475,6 +506,8 @@ export default function AnnouncementCarousel({
   const displayTitle = locale === 'th' ? current.title : (current.title_en || current.title)
   const rawBody = locale === 'th' ? current.body : (current.body_en || current.body)
   const displayBody = cleanAnnouncementBody(rawBody)
+  const currentCta = extractAnnouncementCta(current)
+  const isBodyLong = displayBody.length > 70 || displayBody.includes('\n')
 
   // Badge icon by type
   const getTypeBadge = (type?: string) => {
@@ -582,11 +615,11 @@ export default function AnnouncementCarousel({
                       e.stopPropagation()
                       openCreateModal()
                     }}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white text-neutral-900 hover:bg-neutral-100 text-[11px] font-bold shadow-xs transition-all active:scale-95"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-neutral-900 hover:bg-neutral-100 text-xs font-bold shadow-xs transition-all active:scale-95"
                     title="สร้างประกาศใหม่"
                   >
-                    <Plus size={12} className="stroke-[3]" />
-                    <span className="hidden sm:inline">เพิ่มประกาศ</span>
+                    <Plus size={13} className="stroke-[3]" />
+                    <span className="inline">เพิ่มประกาศ</span>
                   </button>
 
                   <button
@@ -633,18 +666,39 @@ export default function AnnouncementCarousel({
               {displayTitle}
             </h2>
 
-            <p className="text-xs sm:text-sm text-neutral-200/90 leading-relaxed line-clamp-2 sm:line-clamp-3 font-normal drop-shadow-xs">
-              {displayBody}
-            </p>
+            {/* If content is short, display it. If it is long, hide it to keep slide pristine */}
+            {!isBodyLong && displayBody.trim() && (
+              <p className="text-xs sm:text-sm text-neutral-200/90 leading-relaxed font-normal drop-shadow-xs">
+                {displayBody}
+              </p>
+            )}
 
-            <div className="flex items-center gap-3 pt-1 flex-wrap">
-              {displayBody.length > 90 && (
+            <div className="flex items-center gap-2.5 pt-1 flex-wrap">
+              {currentCta && currentCta.text && (
+                <Link
+                  href={currentCta.url || '#'}
+                  target={currentCta.url?.startsWith('http') ? '_blank' : undefined}
+                  rel={currentCta.url?.startsWith('http') ? 'noopener noreferrer' : undefined}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-neutral-950 hover:bg-neutral-100 transition-all shadow-md active:scale-95 cursor-pointer"
+                >
+                  <span>{currentCta.text}</span>
+                  {currentCta.url?.startsWith('http') ? (
+                    <ExternalLink size={13} />
+                  ) : (
+                    <ChevronRight size={13} />
+                  )}
+                </Link>
+              )}
+
+              {isBodyLong && (
                 <button
                   type="button"
                   onClick={() => setModalItem(current)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-white/90 hover:text-white underline underline-offset-4 decoration-white/40 hover:decoration-white transition-all cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white backdrop-blur-md border border-white/25 text-xs font-semibold transition-all active:scale-95 shadow-xs cursor-pointer"
                 >
-                  <span>{locale === 'th' ? 'อ่านรายละเอียดทั้งหมด' : 'Read full announcement'}</span>
+                  <BookOpen size={13} className="text-white/80" />
+                  <span>{locale === 'th' ? 'อ่านรายละเอียดเพิ่มเติม' : 'Read full details'}</span>
                   <ChevronRight size={13} />
                 </button>
               )}
@@ -656,7 +710,7 @@ export default function AnnouncementCarousel({
                     e.stopPropagation()
                     onOpenPopupModal(current)
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 hover:bg-white/30 text-white backdrop-blur-md border border-white/25 transition-all active:scale-95 shadow-xs cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/15 hover:bg-white/25 text-white backdrop-blur-md border border-white/20 transition-all active:scale-95 shadow-xs cursor-pointer"
                 >
                   <Sparkles size={12} className="text-amber-300" />
                   <span>{locale === 'th' ? 'ดูกฎระเบียบ / Popup' : 'View Rules / Popup'}</span>
@@ -729,7 +783,7 @@ export default function AnnouncementCarousel({
       {/* Full Detail Modal Dialog (Portal to document.body) */}
       {mounted && modalItem && createPortal(
         <div
-          className="fixed inset-0 w-screen h-[100dvh] z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-fade-in"
+          className="fixed inset-0 w-screen h-[100dvh] z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/50 dark:bg-black/70 animate-fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) setModalItem(null)
           }}
@@ -776,17 +830,6 @@ export default function AnnouncementCarousel({
                 )}
               </p>
             </div>
-
-            {/* Fixed Footer */}
-            <div className="p-4 sm:p-5 border-t border-neutral-100 dark:border-neutral-800 shrink-0 flex justify-end bg-neutral-50/70 dark:bg-neutral-900/70">
-              <button
-                type="button"
-                onClick={() => setModalItem(null)}
-                className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 hover:opacity-90 transition-opacity"
-              >
-                {locale === 'th' ? 'ปิดหน้าต่าง' : 'Close'}
-              </button>
-            </div>
           </div>
         </div>,
         document.body
@@ -795,14 +838,14 @@ export default function AnnouncementCarousel({
       {/* Admin Create / Edit Modal Dialog */}
       {mounted && isEditorOpen && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 w-screen h-[100dvh] z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+          className="fixed inset-0 w-screen h-[100dvh] z-[9999] bg-black/50 dark:bg-black/70 flex items-center justify-center p-3 sm:p-4 animate-fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsEditorOpen(false)
           }}
         >
           <div className="relative w-[calc(100vw-24px)] sm:w-[min(600px,calc(100vw-32px))] max-h-[calc(100dvh-24px)] sm:max-h-[calc(100dvh-32px)] bg-white dark:bg-[#161619] rounded-2xl sm:rounded-3xl shadow-2xl border border-neutral-200 dark:border-neutral-800 flex flex-col overflow-hidden animate-scale-in">
             <form onSubmit={handleSaveAnnouncement} className="flex flex-col h-full max-h-[inherit] overflow-hidden">
-              {/* Fixed Header */}
+              {/* Fixed Header (No redundant X because footer has 'ยกเลิก') */}
               <div className="flex items-center justify-between p-5 sm:p-6 border-b border-neutral-100 dark:border-neutral-800 shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0 pr-3">
                   <span className="p-2.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white shrink-0">
@@ -817,14 +860,6 @@ export default function AnnouncementCarousel({
                     </p>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsEditorOpen(false)}
-                  className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors shrink-0"
-                >
-                  <X size={18} />
-                </button>
               </div>
 
               {/* Scrollable Content */}
@@ -870,9 +905,9 @@ export default function AnnouncementCarousel({
                       onChange={(e) => setFormType(e.target.value as any)}
                       className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
                     >
-                      <option value="info">📢 ข่าวสารทั่วไป (Info)</option>
-                      <option value="warning">⚠️ แจ้งเตือนสำคัญ (Notice / Warning)</option>
-                      <option value="success">✨ แนะนำ / กิจกรรมพิเศษ (Featured)</option>
+                      <option value="info">ข่าวสารทั่วไป (Info)</option>
+                      <option value="warning">แจ้งเตือนสำคัญ (Notice / Warning)</option>
+                      <option value="success">แนะนำ / กิจกรรมพิเศษ (Featured)</option>
                     </select>
                   </div>
 
@@ -967,21 +1002,21 @@ export default function AnnouncementCarousel({
                       onClick={() => setFormImageUrl(DEFAULT_PRESET_IMAGES[0])}
                       className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
                     >
-                      🏛️ หอสมุด
+                      หอสมุด
                     </button>
                     <button
                       type="button"
                       onClick={() => setFormImageUrl(DEFAULT_PRESET_IMAGES[1])}
                       className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
                     >
-                      📚 ชั้นหนังสือ
+                      ชั้นหนังสือ
                     </button>
                     <button
                       type="button"
                       onClick={() => setFormImageUrl(DEFAULT_PRESET_IMAGES[2])}
                       className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
                     >
-                      ✨ มินิมอล
+                      มินิมอล
                     </button>
                   </div>
                 </div>
@@ -997,6 +1032,20 @@ export default function AnnouncementCarousel({
                     value={formBody}
                     onChange={(e) => setFormBody(e.target.value)}
                     placeholder="เขียนข้อความประชาสัมพันธ์ที่ต้องการ..."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
+                  />
+                </div>
+
+                {/* Body EN */}
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    เนื้อหาประกาศ (English - ไม่บังคับ)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={formBodyEn}
+                    onChange={(e) => setFormBodyEn(e.target.value)}
+                    placeholder="Optional announcement content in English..."
                     className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
                   />
                 </div>

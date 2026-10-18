@@ -75,8 +75,8 @@ export const returnSchema = z.object({
 export const createAnnouncementSchema = z.object({
   title: safeString(200),
   title_en: optionalSafeString(200),
-  body: safeString(2000),
-  body_en: optionalSafeString(2000),
+  body: safeString(10000),
+  body_en: optionalSafeString(10000),
   type: z.enum(['info', 'warning', 'success']).default('info'),
   is_active: z.boolean().default(true),
 })
@@ -85,8 +85,8 @@ export const createAnnouncementSchema = z.object({
 export const updateAnnouncementSchema = z.object({
   title: safeString(200).optional(),
   title_en: optionalSafeString(200),
-  body: safeString(2000).optional(),
-  body_en: optionalSafeString(2000),
+  body: safeString(10000).optional(),
+  body_en: optionalSafeString(10000),
   type: z.enum(['info', 'warning', 'success']).optional(),
   is_active: z.boolean().optional(),
 })
@@ -97,6 +97,13 @@ export const inviteAdminSchema = z.object({
     .string()
     .email('อีเมลไม่ถูกต้อง')
     .transform((s) => s.trim().toLowerCase()),
+  /** แอดมินที่จะถูกแทนที่ (จำเป็นเมื่อมีแอดมินครบ 2 คนแล้ว) */
+  replaceAdminId: z.string().uuid('รหัสแอดมินไม่ถูกต้อง').optional().nullable(),
+})
+
+/** GET/POST /api/invite — token จากลิงก์ในอีเมล */
+export const inviteTokenSchema = z.object({
+  token: z.string().regex(/^[a-f0-9]{64}$/, 'ลิงก์ไม่ถูกต้องหรือหมดอายุ'),
 })
 
 /** PATCH /api/admin/users/[userId] */

@@ -103,3 +103,75 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ error: 'action ไม่ถูกต้อง' }, { status: 400 })
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const cookieStore = await cookies()
+    const userSupabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
+    )
+    const { data: { user } } = await userSupabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'Queue ID is required' }, { status: 400 })
+
+    const supabase = createServiceClient()
+
+    // 1. Fetch queue item
+    const { data: queueItem } = await supabase
+      .from('queue')
+      .select('id, book_id, user_id, position')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (!queueItem) {
+      return NextResponse.json({ success: true, message: 'Queue item already removed' })
+    }
+
+    // 2. Check permission (admin or item owner)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const isAdmin = profile?.role === 'admin'
+    if (!isAdmin && queueItem.user_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    // 3. Delete queue item
+    const { error: deleteError } = await supabase
+      .from('queue')
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) {
+      return NextResponse.json({ error: 'Failed to delete queue item' }, { status: 500 })
+    }
+
+    // 4. Shift subsequent positions down
+    const { data: remaining } = await supabase
+      .from('queue')
+      .select('id, position')
+      .eq('book_id', queueItem.book_id)
+      .gt('position', queueItem.position)
+
+    if (remaining && remaining.length > 0) {
+      for (const item of remaining) {
+        await supabase
+          .from('queue')
+          .update({ position: item.position - 1 })
+          .eq('id', item.id)
+      }
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 })
+  }
+}

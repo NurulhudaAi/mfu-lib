@@ -115,10 +115,9 @@ export async function POST(request: Request) {
   }).catch(err => console.error('[Email] sendReturnConfirmEmail failed:', err))
 
   // ── แจ้งเตือนคนที่ 1 ในคิว ──
-  // ── เพิ่ม available_copies กลับ (ตอนนี้ใช้ DB Trigger update_book_availability จัดการแทนแล้ว) ──
   const { data: firstInQueue } = await supabase
     .from('queue')
-    .select('id, profiles(email, full_name)')
+    .select('id, user_id, book_id, profiles(email, full_name)')
     .eq('book_id', borrowBook.id)
     .eq('notified', false)           // ยังไม่เคยแจ้ง
     .order('position', { ascending: true })
@@ -127,16 +126,18 @@ export async function POST(request: Request) {
 
   if (firstInQueue) {
     const queueProfile = (Array.isArray(firstInQueue.profiles) ? firstInQueue.profiles[0] : firstInQueue.profiles) as { email?: string; full_name?: string } | null
-    if (queueProfile) {
-      // mark ว่าแจ้งแล้ว (ก่อนส่ง email เพื่อป้องกัน double-notify)
-      await supabase
-        .from('queue')
-        .update({ notified: true, notified_at: new Date().toISOString() })
-        .eq('id', firstInQueue.id)
+    const recipientEmail = queueProfile?.email || (firstInQueue.profiles as any)?.email
 
+    // mark ว่าแจ้งแล้ว (ใน DB เพื่อให้ web notification และ email ทราบว่าถึงคิวแล้ว)
+    await supabase
+      .from('queue')
+      .update({ notified: true, notified_at: new Date().toISOString() })
+      .eq('id', firstInQueue.id)
+
+    if (recipientEmail) {
       sendQueueNotifyEmail({
-        to: queueProfile.email || (firstInQueue.profiles as any)?.email,
-        name: queueProfile.full_name ?? 'สมาชิก',
+        to: recipientEmail,
+        name: queueProfile?.full_name ?? 'สมาชิก',
         bookTitle: borrowBook.title,
         bookAuthor: borrowBook.author ?? undefined,
         bookId: borrowBook.id,

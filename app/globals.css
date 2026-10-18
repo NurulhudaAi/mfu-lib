@@ -289,19 +289,40 @@ html.dark body {
   backdrop-filter: blur(8px);
 }
 
-@keyframes modalScaleIn {
+@keyframes modalOverlayFade {
   from {
     opacity: 0;
-    transform: scale(0.97) translateY(8px);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
   }
 }
 
+@keyframes modalContentPop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-modal-fade {
+  animation: modalOverlayFade 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-modal-pop {
+  animation: modalContentPop 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+  transform-origin: center center;
+}
+
 .animate-scale-in {
-  animation: modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: modalContentPop 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+  transform-origin: center center;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -350,3 +371,32 @@ textarea:focus-visible {
   }
 }
 
+
+/* Sheet slide up for mobile modal */
+@keyframes sheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-sheet-up {
+  animation: sheetUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Minimalist icon standard stroke */
+svg.lucide {
+  stroke-width: 1.6;
+}
+
+/* Safe Area Inset utilities for mobile browsers */
+.pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+.pt-safe {
+  padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+}

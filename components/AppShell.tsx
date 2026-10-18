@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useApp } from '@/lib/app-context'
+import { getCategoryLabel } from '@/lib/i18n'
 import { createClient } from '@/lib/supabase'
 import {
   Compass,
@@ -29,7 +30,13 @@ import {
   AlertCircle,
   Users,
   EyeOff,
+  Megaphone,
+  Sparkles,
+  Clock,
+  ArrowRight,
+  CheckCheck,
 } from 'lucide-react'
+import { cleanAnnouncementBody } from './AnnouncementCarousel'
 
 interface Announcement {
   id: string
@@ -39,6 +46,25 @@ interface Announcement {
   body_en?: string | null
   type: 'info' | 'warning' | 'success'
   created_at: string
+}
+
+interface UserNotification {
+  id: string
+  type: 'queue_ready' | 'due_tomorrow' | 'overdue'
+  title: string
+  titleEn: string
+  message: string
+  messageEn: string
+  bookId?: string
+  bookTitle?: string
+  bookAuthor?: string
+  coverUrl?: string
+  borrowId?: string
+  actionUrl: string
+  actionLabel: string
+  actionLabelEn: string
+  createdAt: string
+  priority: 'high' | 'warning' | 'danger'
 }
 
 export default function AppShell({ children }: { children: ReactNode }) {
@@ -69,9 +95,71 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const filterDropdownRef = useRef<HTMLDivElement>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isAnnounceModalOpen, setIsAnnounceModalOpen] = useState(false)
+  const [selectedNotification, setSelectedNotification] = useState<{
+    id: string
+    title: string
+    body?: string
+    type: string
+    tag: string
+    actionUrl?: string
+    actionLabel?: string
+    createdAt?: string
+  } | null>(null)
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [personalNotifications, setPersonalNotifications] = useState<UserNotification[]>([])
+  const [unreadCount, setUnreadCount] = useState<number>(0)
+
+  // Unified notifications stream without section divisions (headline-only)
+  const allNotifications = useMemo(() => {
+    type UnifiedNotify = {
+      id: string
+      title: string
+      body?: string
+      type: 'queue_ready' | 'due_tomorrow' | 'overdue' | 'announcement'
+      actionUrl?: string
+      actionLabel?: string
+      tag: string
+      createdAt?: string
+    }
+
+    const items: UnifiedNotify[] = []
+
+    for (const p of personalNotifications) {
+      let tag = locale === 'th' ? 'การแจ้งเตือน' : 'Alert'
+      if (p.type === 'queue_ready') tag = locale === 'th' ? 'ถึงคิวแล้ว' : 'Ready'
+      else if (p.type === 'due_tomorrow') tag = locale === 'th' ? 'เตือน 1 วัน' : 'Due 1d'
+      else if (p.type === 'overdue') tag = locale === 'th' ? 'เกินกำหนด' : 'Overdue'
+
+      items.push({
+        id: `personal-${p.id}`,
+        title: locale === 'th' ? p.title : (p.titleEn || p.title),
+        body: locale === 'th' ? p.message : (p.messageEn || p.message),
+        type: p.type,
+        actionUrl: p.actionUrl,
+        actionLabel: locale === 'th' ? p.actionLabel : (p.actionLabelEn || p.actionLabel),
+        tag,
+        createdAt: p.createdAt,
+      })
+    }
+
+    for (const a of announcements) {
+      items.push({
+        id: `ann-${a.id}`,
+        title: locale === 'th' ? a.title : (a.title_en || a.title),
+        body: locale === 'th' ? a.body : (a.body_en || a.body),
+        type: 'announcement',
+        actionUrl: undefined,
+        actionLabel: undefined,
+        tag: locale === 'th' ? 'ประกาศ' : 'Announcement',
+        createdAt: a.created_at,
+      })
+    }
+
+    return items
+  }, [personalNotifications, announcements, locale])
 
   const isAdmin = profile?.role === 'admin'
+  const isFeedbackPage = pathname.startsWith('/feedback') || pathname.startsWith('/admin/feedback')
 
   // Dynamic search placeholder depending on current page context
   const searchPlaceholder = useMemo(() => {
@@ -94,6 +182,23 @@ export default function AppShell({ children }: { children: ReactNode }) {
       ? 'ค้นหาชื่อหนังสือ, ผู้แต่ง, หมวดหมู่...'
       : 'Search books, authors, categories...'
   }, [pathname, locale])
+
+  // Fetch notifications and announcements
+  const fetchNotificationsData = async () => {
+    try {
+      const res = await fetch('/api/notifications')
+      if (res.ok) {
+        const data = await res.json()
+        setPersonalNotifications(data.personalNotifications || [])
+        setUnreadCount(data.unreadCount || 0)
+        if (data.announcements && data.announcements.length > 0) {
+          setAnnouncements(data.announcements)
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   // Fetch announcements for notification bell globally & unique categories
   useEffect(() => {
@@ -120,7 +225,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
       }
     }
     fetchInitialData()
-  }, [])
+    fetchNotificationsData()
+
+    // Refresh notifications every 45s or when route changes
+    const interval = setInterval(fetchNotificationsData, 45000)
+    return () => clearInterval(interval)
+  }, [profile?.id, pathname])
 
   // Close category dropdown on outside click
   useEffect(() => {
@@ -282,6 +392,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
       isActive: pathname.startsWith('/admin/users'),
     },
     {
+      key: 'admin-announcements',
+      href: '/admin/announcements',
+      label: locale === 'th' ? 'จัดการประกาศ' : 'Announcements',
+      icon: Megaphone,
+      isActive: pathname.startsWith('/admin/announcements'),
+    },
+    {
       key: 'admin-feedback',
       href: '/admin/feedback',
       label: locale === 'th' ? 'ข้อเสนอแนะ' : 'Feedback',
@@ -423,18 +540,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <header className="h-16 px-6 sm:px-8 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between gap-4 sticky top-0 z-20 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-md">
           {/* Mobile hamburger & search */}
           <div className="flex items-center gap-3 flex-1 max-w-xl">
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="p-2 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 lg:hidden"
-              aria-label="Open Navigation"
+            <Link
+              href="/"
+              className="flex items-center gap-2 shrink-0 lg:hidden group"
+              aria-label="Muslim Club MFU Library"
             >
-              <Menu size={20} />
-            </button>
+              <div className="w-9 h-9 rounded-xl bg-white p-1 flex items-center justify-center shadow-xs border border-neutral-200 dark:border-neutral-700 overflow-hidden shrink-0 transition-transform group-hover:scale-105">
+                <img src="/logo.jpg" alt="Muslim Club Logo" className="w-full h-full object-contain" />
+              </div>
+            </Link>
 
-            {/* Unified Top Header Search Bar with Integrated Category Filter Icon */}
-            <form onSubmit={handleSearchSubmit} className="relative flex-1">
-              <Search
+            {/* Unified Top Header Search Bar (Hidden on Feedback pages) */}
+            {!isFeedbackPage && (
+              <form onSubmit={handleSearchSubmit} className="relative flex-1">
+                <Search
                 size={16}
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
               />
@@ -583,56 +702,37 @@ export default function AppShell({ children }: { children: ReactNode }) {
                                   : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
                               }`}
                             >
-                              <span className="truncate">{cat}</span>
+                              <span className="truncate">{getCategoryLabel(cat, locale)}</span>
                               {selectedCategory === cat && <Check size={13} />}
                             </button>
                           ))}
                         </div>
-                      </div>
-
-                      {/* Quick Status Filter Link */}
-                      <div className="pt-2 mt-2 border-t border-neutral-100 dark:border-neutral-800">
-                        <Link
-                          href="/books?status=available"
-                          onClick={() => setIsFilterOpen(false)}
-                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors font-medium"
-                        >
-                          <span className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            <span>{locale === 'th' ? 'ดูเฉพาะที่พร้อมให้ยืม' : 'Available books only'}</span>
-                          </span>
-                        </Link>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
             </form>
+            )}
           </div>
 
           {/* Right Controls */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Language Switch Button */}
-            <button
-              type="button"
-              onClick={() => setLocale(locale === 'th' ? 'en' : 'th')}
-              className="px-2.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-800 text-xs font-bold transition-all shadow-2xs flex items-center gap-1"
-              title={locale === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย'}
-            >
-              <span className="text-[11px] font-semibold">{locale === 'th' ? 'TH' : 'EN'}</span>
-            </button>
-
             {/* Notification Bell */}
             <button
               type="button"
               onClick={() => setIsAnnounceModalOpen(true)}
               className="relative p-2 rounded-xl sm:p-2.5 sm:rounded-2xl bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors border border-neutral-200 dark:border-neutral-800"
-              title={locale === 'th' ? 'ประกาศข่าวสาร' : 'Announcements'}
+              title={locale === 'th' ? 'การแจ้งเตือน' : 'Notifications'}
             >
               <Bell size={17} />
-              {announcements.length > 0 && (
+              {unreadCount > 0 ? (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-extrabold flex items-center justify-center ring-2 ring-white dark:ring-[#111113] shadow-xs">
+                  {unreadCount}
+                </span>
+              ) : allNotifications.length > 0 ? (
                 <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-black dark:bg-white ring-2 ring-white dark:ring-neutral-900" />
-              )}
+              ) : null}
             </button>
 
             {/* Profile Capsule */}
@@ -671,7 +771,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         {/* Page Content Body (Full-Width, Edge-to-Edge) */}
-        <main className="flex-1 min-w-0 pb-16 lg:pb-0">
+        <main className="flex-1 min-w-0 pb-20 sm:pb-24 lg:pb-0">
           {children}
         </main>
       </div>
@@ -679,65 +779,105 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {/* ======================================================== */}
       {/* 3. MOBILE BOTTOM NAVIGATION BAR                          */}
       {/* ======================================================== */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#111113]/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-around z-30 px-1">
-        {navLinks.map((link) => {
-          const Icon = link.icon
-          const mobileLabel = link.key === 'books' && isAdmin ? (locale === 'th' ? 'หนังสือ' : 'Books') : link.label
-          return (
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#111113]/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-around z-30 px-1.5 pb-safe">
+        {isAdmin ? (
+          <>
+            {/* 1. Dashboard */}
             <Link
-              key={link.key}
-              href={link.href}
+              href="/admin/dashboard"
               className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
-                link.isActive
+                pathname === '/admin/dashboard' || pathname === '/admin'
                   ? 'text-black dark:text-white font-bold'
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
               }`}
             >
-              <Icon size={18} className="shrink-0" />
-              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">{mobileLabel}</span>
+              <LayoutDashboard size={18} className="shrink-0" />
+              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">
+                {locale === 'th' ? 'แดชบอร์ด' : 'Dashboard'}
+              </span>
             </Link>
-          )
-        })}
-        {isAdmin && adminLinks.map((link) => {
-          const Icon = link.icon
-          const mobileLabel =
-            link.key === 'admin-borrows'
-              ? (locale === 'th' ? 'ยืม-คืน' : 'Borrows')
-              : link.key === 'admin-dashboard'
-              ? (locale === 'th' ? 'แดชบอร์ด' : 'Dash')
-              : link.label
-          return (
+
+            {/* 2. Books */}
             <Link
-              key={link.key}
-              href={link.href}
+              href="/books"
               className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
-                link.isActive
+                pathname.startsWith('/books')
                   ? 'text-black dark:text-white font-bold'
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
               }`}
             >
-              <Icon size={18} className="shrink-0" />
-              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">{mobileLabel}</span>
+              <Layers size={18} className="shrink-0" />
+              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">
+                {locale === 'th' ? 'หนังสือ' : 'Books'}
+              </span>
             </Link>
-          )
-        })}
-        {isAdmin && adminLinks.map((link) => {
-          const Icon = link.icon
-          return (
+
+            {/* 3. Borrows */}
             <Link
-              key={link.href}
-              href={link.href}
-              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-xl transition-all ${
-                link.isActive
+              href="/admin/borrows"
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
+                pathname.startsWith('/admin/borrows')
                   ? 'text-black dark:text-white font-bold'
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
               }`}
             >
-              <Icon size={18} />
-              <span className="text-[10px] leading-none tracking-tight">{link.label}</span>
+              <ClipboardList size={18} className="shrink-0" />
+              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">
+                {locale === 'th' ? 'ยืม-คืน' : 'Borrows'}
+              </span>
             </Link>
-          )
-        })}
+
+            {/* 4. Users */}
+            <Link
+              href="/admin/users"
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
+                pathname.startsWith('/admin/users')
+                  ? 'text-black dark:text-white font-bold'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              <Users size={18} className="shrink-0" />
+              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">
+                {locale === 'th' ? 'ผู้ใช้งาน' : 'Users'}
+              </span>
+            </Link>
+
+            {/* 5. More / Menu Drawer */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
+                pathname.startsWith('/admin/feedback') || pathname.startsWith('/admin/announcements') || pathname === '/'
+                  ? 'text-black dark:text-white font-bold'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+              aria-label="Open Full Navigation Menu"
+            >
+              <Menu size={18} className="shrink-0" />
+              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">
+                {locale === 'th' ? 'เมนู' : 'Menu'}
+              </span>
+            </button>
+          </>
+        ) : (
+          navLinks.map((link) => {
+            const Icon = link.icon
+            return (
+              <Link
+                key={link.key}
+                href={link.href}
+                className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
+                  link.isActive
+                    ? 'text-black dark:text-white font-bold'
+                    : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                }`}
+              >
+                <Icon size={18} className="shrink-0" />
+                <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">{link.label}</span>
+              </Link>
+            )
+          })
+        )}
       </nav>
 
       {/* ======================================================== */}
@@ -747,7 +887,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
             onClick={() => setIsMobileMenuOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/50 dark:bg-black/70 transition-opacity"
           />
 
           <div className="relative w-72 max-w-[80vw] bg-white dark:bg-[#111113] border-r border-neutral-200 dark:border-neutral-800 p-6 flex flex-col justify-between z-10 animate-slide-in">
@@ -877,78 +1017,259 @@ export default function AppShell({ children }: { children: ReactNode }) {
       )}
 
       {/* ======================================================== */}
-      {/* 5. GLOBAL ANNOUNCEMENTS MODAL                             */}
+      {/* 5. GLOBAL NOTIFICATIONS MODAL (UNIFIED & HEADLINE-ONLY)  */}
       {/* ======================================================== */}
       {isAnnounceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             onClick={() => setIsAnnounceModalOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+            className="fixed inset-0 bg-black/50 dark:bg-black/70 animate-fade-in"
           />
 
-          <div className="relative w-full max-w-lg bg-white dark:bg-[#121214] rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl p-6 sm:p-7 z-10 space-y-5 animate-slide-up">
-            <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-4">
+          <div className="relative w-full max-w-lg bg-white dark:bg-[#121214] rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl p-5 sm:p-6 z-10 space-y-4 animate-slide-up">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3.5">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center text-neutral-900 dark:text-white">
-                  <Bell size={20} />
+                  <Bell size={19} />
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-neutral-900 dark:text-white leading-tight">
-                    {locale === 'th' ? 'ประกาศจากห้องสมุด' : 'Library Announcements'}
+                    {locale === 'th' ? 'การแจ้งเตือน' : 'Notifications'}
                   </h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    {announcements.length} {locale === 'th' ? 'รายการประกาศล่าสุด' : 'recent updates'}
+                    {allNotifications.length > 0
+                      ? locale === 'th'
+                        ? `ทั้งหมด ${allNotifications.length} รายการ`
+                        : `${allNotifications.length} notification${allNotifications.length > 1 ? 's' : ''}`
+                      : locale === 'th'
+                      ? 'ไม่มีการแจ้งเตือน'
+                      : 'No notifications'}
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsAnnounceModalOpen(false)}
-                className="p-2 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
-              >
-                <X size={18} />
-              </button>
+
+              <div className="flex items-center gap-1.5">
+                {allNotifications.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUnreadCount(0)
+                      if (typeof window !== 'undefined') {
+                        localStorage.setItem('mfu_lib_notifications_read', String(Date.now()))
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer"
+                    title={locale === 'th' ? 'ทำเครื่องหมายว่าอ่านแล้วทั้งหมด' : 'Mark all as read'}
+                  >
+                    <CheckCheck size={14} className={unreadCount > 0 ? 'text-emerald-500' : 'text-neutral-400'} />
+                    <span>{locale === 'th' ? 'อ่านทั้งหมด' : 'Mark all read'}</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsAnnounceModalOpen(false)}
+                  className="p-2 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
-            {/* Announcement List */}
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-              {announcements.length === 0 ? (
-                <div className="text-center py-10 text-neutral-400">
-                  <Info size={32} className="mx-auto mb-2 opacity-40" />
-                  <p className="text-sm font-medium">
-                    {locale === 'th' ? 'ยังไม่มีประกาศใหม่ในขณะนี้' : 'No announcements currently'}
+            {/* Unified Headline-Only Notification List */}
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+              {allNotifications.length === 0 ? (
+                <div className="text-center py-12 px-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/40 border border-dashed border-neutral-200 dark:border-neutral-800">
+                  <CheckCircle2 size={34} className="mx-auto mb-2 text-neutral-400 opacity-60" />
+                  <p className="text-sm font-bold text-neutral-800 dark:text-neutral-200">
+                    {locale === 'th' ? 'ไม่มีการแจ้งเตือน' : 'No notifications'}
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                    {locale === 'th' ? 'คุณได้รับข้อมูลอัปเดตครบถ้วนแล้ว' : 'You are all caught up!'}
                   </p>
                 </div>
               ) : (
-                announcements.map((item) => (
+                allNotifications.map((item) => (
                   <div
                     key={item.id}
-                    className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 space-y-1.5"
+                    onClick={() => {
+                      if (item.actionUrl) {
+                        setIsAnnounceModalOpen(false)
+                        router.push(item.actionUrl)
+                      } else {
+                        setSelectedNotification(item)
+                      }
+                    }}
+                    className={`group flex items-center justify-between gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      item.type === 'queue_ready'
+                        ? 'border-emerald-500/40 bg-emerald-50/40 dark:bg-emerald-950/20 hover:border-emerald-500/70'
+                        : item.type === 'due_tomorrow'
+                        ? 'border-amber-400/50 bg-amber-50/40 dark:bg-amber-950/20 hover:border-amber-400/80'
+                        : item.type === 'overdue'
+                        ? 'border-red-400/50 bg-red-50/40 dark:bg-red-950/20 hover:border-red-400/80'
+                        : 'border-neutral-200 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-900/40 hover:border-neutral-400 dark:hover:border-neutral-600'
+                    }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="font-bold text-sm text-neutral-900 dark:text-white">
-                        {locale === 'th' ? item.title : (item.title_en || item.title)}
-                      </h4>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 uppercase shrink-0">
-                        {item.type}
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <span
+                        className={`p-2 rounded-xl flex items-center justify-center shrink-0 ${
+                          item.type === 'queue_ready'
+                            ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300'
+                            : item.type === 'due_tomorrow'
+                            ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300'
+                            : item.type === 'overdue'
+                            ? 'bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-300'
+                            : 'bg-neutral-200/80 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
+                        }`}
+                      >
+                        {item.type === 'queue_ready' ? (
+                          <Sparkles size={16} />
+                        ) : item.type === 'due_tomorrow' ? (
+                          <Clock size={16} />
+                        ) : item.type === 'overdue' ? (
+                          <AlertTriangle size={16} />
+                        ) : (
+                          <Megaphone size={16} />
+                        )}
                       </span>
+
+                      {/* Headline Only */}
+                      <p className="font-semibold text-xs sm:text-sm text-neutral-900 dark:text-white truncate">
+                        {item.title}
+                      </p>
                     </div>
-                    <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                      {locale === 'th' ? item.body : (item.body_en || item.body)}
-                    </p>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedNotification(item)
+                        }}
+                        className="text-[11px] font-semibold text-neutral-500 hover:text-black dark:hover:text-white underline-offset-2 hover:underline cursor-pointer"
+                        title={locale === 'th' ? 'อ่านรายละเอียดทั้งหมด' : 'Read details'}
+                      >
+                        {locale === 'th' ? 'อ่านทั้งหมด' : 'Details'}
+                      </button>
+
+                      <span
+                        className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase ${
+                          item.type === 'queue_ready'
+                            ? 'bg-emerald-200/80 dark:bg-emerald-900/80 text-emerald-900 dark:text-emerald-200'
+                            : item.type === 'due_tomorrow'
+                            ? 'bg-amber-200/80 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200'
+                            : item.type === 'overdue'
+                            ? 'bg-red-200/80 dark:bg-red-900/80 text-red-900 dark:text-red-200'
+                            : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
+                        }`}
+                      >
+                        {item.tag}
+                      </span>
+
+                      {item.actionUrl && (
+                        <ArrowRight
+                          size={14}
+                          className="text-neutral-400 group-hover:text-black dark:group-hover:text-white group-hover:translate-x-0.5 transition-all"
+                        />
+                      )}
+                    </div>
                   </div>
                 ))
               )}
             </div>
+          </div>
+        </div>
+      )}
 
-            <div className="pt-2">
+      {/* ======================================================== */}
+      {/* 5.1 NOTIFICATION DETAIL READER MODAL ('อ่านทั้งหมด')      */}
+      {/* ======================================================== */}
+      {selectedNotification && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div
+            onClick={() => setSelectedNotification(null)}
+            className="fixed inset-0 bg-black/60 dark:bg-black/80 animate-fade-in"
+          />
+
+          <div className="relative w-full max-w-md bg-white dark:bg-[#161619] rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl p-5 sm:p-6 z-10 space-y-4 animate-scale-in">
+            {/* Top Bar */}
+            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
+                  {selectedNotification.type === 'queue_ready' ? (
+                    <Sparkles size={16} className="text-emerald-500" />
+                  ) : selectedNotification.type === 'due_tomorrow' ? (
+                    <Clock size={16} className="text-amber-500" />
+                  ) : selectedNotification.type === 'overdue' ? (
+                    <AlertTriangle size={16} className="text-rose-500" />
+                  ) : (
+                    <Megaphone size={16} />
+                  )}
+                </span>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                    {selectedNotification.tag}
+                  </span>
+                  {selectedNotification.createdAt && (
+                    <p className="text-[11px] text-neutral-400">
+                      {new Date(selectedNotification.createdAt).toLocaleDateString(
+                        locale === 'th' ? 'th-TH' : 'en-US',
+                        { day: 'numeric', month: 'short', year: 'numeric' }
+                      )}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <button
                 type="button"
-                onClick={() => setIsAnnounceModalOpen(false)}
-                className="w-full py-3 rounded-xl bg-black text-white dark:bg-white dark:text-black font-semibold text-xs tracking-wide hover:opacity-90 transition-all"
+                onClick={() => setSelectedNotification(null)}
+                className="p-1.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer"
               >
-                {locale === 'th' ? 'ปิดหน้าต่าง' : 'Close'}
+                <X size={17} />
               </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="space-y-2.5">
+              <h3 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white leading-snug">
+                {selectedNotification.title}
+              </h3>
+              <div className="max-h-[50vh] overflow-y-auto pr-1">
+                <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed whitespace-pre-line font-normal">
+                  {cleanAnnouncementBody(selectedNotification.body || '') || selectedNotification.title}
+                </p>
+              </div>
+            </div>
+
+            {/* Footer Action */}
+            <div className="pt-3 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedNotification(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                {locale === 'th' ? 'ปิด' : 'Close'}
+              </button>
+
+              {selectedNotification.actionUrl && (
+                <Link
+                  href={selectedNotification.actionUrl}
+                  onClick={() => {
+                    setSelectedNotification(null)
+                    setIsAnnounceModalOpen(false)
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  <span>
+                    {selectedNotification.actionLabel ||
+                      (locale === 'th' ? 'ไปยังหน้าดำเนินการ' : 'Go to action')}
+                  </span>
+                  <ArrowRight size={13} />
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -961,7 +1282,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             onClick={closeAlert}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+            className="fixed inset-0 bg-black/50 dark:bg-black/70 animate-fade-in"
           />
 
           <div className="relative w-full max-w-sm bg-white dark:bg-[#141416] rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl p-6 z-10 text-center animate-scale-in space-y-4">
