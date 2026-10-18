@@ -1,61 +1,170 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'crypto'
 import { createServiceClient } from '@/lib/supabase-server'
 import { requireAdmin } from '@/lib/admin-guard'
 import { inviteAdminSchema, validateInput } from '@/lib/validation'
+import {
+  MAX_ADMINS,
+  INVITE_TTL_HOURS,
+  generateToken,
+  inviteLink,
+  getAdmins,
+  getPendingInvitations,
+  saveInvitationRecord,
+  cancelInvitation,
+  friendlyDbError,
+  AdminInvitation,
+} from '@/lib/admin-invitations'
+import { sendAdminInviteEmail, sendAdminResignEmail } from '@/lib/resend'
 
+/**
+ * GET  — รายชื่อแอดมินปัจจุบัน + คำเชิญที่รอดำเนินการ
+ */
+export async function GET() {
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth.response
+
+  const supabase = createServiceClient()
+  try {
+    const [admins, pending] = await Promise.all([getAdmins(supabase), getPendingInvitations(supabase)])
+    return NextResponse.json({ admins, pending, maxAdmins: MAX_ADMINS })
+  } catch (e: any) {
+    return NextResponse.json({ error: friendlyDbError(e?.message || 'โหลดข้อมูลไม่สำเร็จ') }, { status: 500 })
+  }
+}
+
+/**
+ * POST — ส่งคำเชิญเป็นแอดมินทางอีเมล
+ *   - ถ้ามีแอดมิน < 2 คน: เชิญเพิ่มได้เลย
+ *   - ถ้ามีครบ 2 คน: ต้องระบุ replaceAdminId (แอดมินที่จะออก) → แอดมินเดิมต้องยืนยันทางอีเมลด้วย
+ */
 export async function POST(req: NextRequest) {
   const auth = await requireAdmin()
   if (!auth.ok) return auth.response
 
-  // ── Validate input ──
-  const body = await req.json()
+  const body = await req.json().catch(() => ({}))
   const parsed = validateInput(inviteAdminSchema, body)
   if (parsed.error) return parsed.error
-  const { email } = parsed.data
+  const { email, replaceAdminId } = parsed.data
 
   const supabase = createServiceClient()
 
-  // Find user by email
-  const { data: user, error: findError } = await supabase
-    .from('profiles')
-    .select('id, email, full_name, role')
-    .ilike('email', email)
-    .maybeSingle()
+  try {
+    const [admins, pending] = await Promise.all([getAdmins(supabase), getPendingInvitations(supabase)])
 
-  if (findError) {
-    return NextResponse.json({ error: findError.message }, { status: 500 })
+    if (pending.length > 0) {
+      return NextResponse.json(
+        { error: 'มีคำเชิญที่รอดำเนินการอยู่แล้ว กรุณายกเลิกคำเชิญเดิมก่อนส่งใหม่' },
+        { status: 409 }
+      )
+    }
+
+    if (admins.some((a) => a.email?.toLowerCase() === email.toLowerCase())) {
+      return NextResponse.json({ error: `${email} เป็นผู้ดูแลระบบอยู่แล้ว` }, { status: 400 })
+    }
+
+    const replaceAdmin = replaceAdminId ? admins.find((a) => a.id === replaceAdminId) : null
+    if (replaceAdminId && !replaceAdmin) {
+      return NextResponse.json({ error: 'ไม่พบผู้ดูแลที่ต้องการแทนที่' }, { status: 400 })
+    }
+    if (admins.length >= MAX_ADMINS && !replaceAdmin) {
+      return NextResponse.json(
+        { error: `ระบบมีผู้ดูแลครบ ${MAX_ADMINS} คนแล้ว กรุณาเลือกผู้ดูแลที่จะออกเพื่อแทนที่` },
+        { status: 400 }
+      )
+    }
+
+    // ข้อมูลผู้เชิญ (แสดงในอีเมล)
+    const inviter = admins.find((a) => a.id === auth.admin.id)
+    const inviterName = inviter?.full_name || inviter?.email || 'ผู้ดูแลระบบ'
+
+    const invite = generateToken()
+    const resign = replaceAdmin ? generateToken() : null
+    const expiresAt = new Date(Date.now() + INVITE_TTL_HOURS * 60 * 60 * 1000)
+    const generatedInviteLink = inviteLink(invite.token)
+    const generatedResignLink = resign ? inviteLink(resign.token) : null
+
+    const record: AdminInvitation = {
+      id: randomUUID(),
+      email,
+      token_hash: invite.hash,
+      invited_by: auth.admin.id,
+      replace_admin_id: replaceAdmin?.id ?? null,
+      resign_token_hash: resign?.hash ?? null,
+      accepted_at: null,
+      accepted_user_id: null,
+      resign_confirmed_at: null,
+      status: 'pending',
+      expires_at: expiresAt.toISOString(),
+      completed_at: null,
+      created_at: new Date().toISOString(),
+      invite_link: generatedInviteLink,
+      resign_link: generatedResignLink || undefined,
+    }
+
+    const saved = await saveInvitationRecord(supabase, record)
+
+    // ── ส่งอีเมล ──
+    const inviteRes = await sendAdminInviteEmail({
+      to: email,
+      inviterName,
+      replacingName: replaceAdmin ? replaceAdmin.full_name || replaceAdmin.email : null,
+      link: generatedInviteLink,
+      expiresAt,
+    })
+
+    let resignRes: { error?: any; wasRedirectedToTestEmail?: boolean } | null = null
+    if (replaceAdmin && resign && generatedResignLink) {
+      resignRes = await sendAdminResignEmail({
+        to: replaceAdmin.email,
+        name: replaceAdmin.full_name || replaceAdmin.email,
+        newAdminEmail: email,
+        inviterName,
+        link: generatedResignLink,
+        expiresAt,
+      })
+    }
+
+    if (inviteRes?.error || resignRes?.error) {
+      await cancelInvitation(supabase, saved.id)
+      const msg = (inviteRes?.error || resignRes?.error)?.message || 'ส่งอีเมลไม่สำเร็จ'
+      return NextResponse.json({ error: `ส่งอีเมลไม่สำเร็จ: ${msg}` }, { status: 502 })
+    }
+
+    const wasRedirected = Boolean(inviteRes?.wasRedirectedToTestEmail || resignRes?.wasRedirectedToTestEmail)
+
+    return NextResponse.json({
+      success: true,
+      message: replaceAdmin
+        ? `ส่งคำเชิญถึง ${email} และคำขอยืนยันถึง ${replaceAdmin.email} แล้ว`
+        : `ส่งคำเชิญถึง ${email} เรียบร้อยแล้ว`,
+      inviteLink: generatedInviteLink,
+      resignLink: generatedResignLink,
+      wasRedirectedToTestEmail: wasRedirected,
+      testEmail: process.env.RESEND_TEST_EMAIL || '6631501067@lamduan.mfu.ac.th',
+    })
+  } catch (e: any) {
+    return NextResponse.json({ error: friendlyDbError(e?.message || 'เกิดข้อผิดพลาด') }, { status: 500 })
+  }
+}
+
+/**
+ * DELETE ?id=<invitationId> — ยกเลิกคำเชิญที่รอดำเนินการ
+ */
+export async function DELETE(req: NextRequest) {
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth.response
+
+  const id = req.nextUrl.searchParams.get('id') || ''
+  if (!/^[0-9a-f-]{36}$/i.test(id)) {
+    return NextResponse.json({ error: 'รหัสคำเชิญไม่ถูกต้อง' }, { status: 400 })
   }
 
-  if (!user) {
-    return NextResponse.json(
-      {
-        error:
-          'ไม่พบบัญชีผู้ใช้นี้ในระบบ กรุณาให้ผู้ใช้เข้าสู่ระบบด้วย Google อย่างน้อย 1 ครั้ง เพื่อสร้างโปรไฟล์ก่อนแต่งตั้งเป็นผู้ดูแล',
-      },
-      { status: 404 }
-    )
+  const supabase = createServiceClient()
+  try {
+    await cancelInvitation(supabase, id)
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    return NextResponse.json({ error: friendlyDbError(err?.message || 'ยกเลิกไม่สำเร็จ') }, { status: 500 })
   }
-
-  if (user.role === 'admin') {
-    return NextResponse.json(
-      { error: `ผู้ใช้ ${user.email} มีบทบาทเป็นผู้ดูแลระบบ (Admin) อยู่แล้ว` },
-      { status: 400 }
-    )
-  }
-
-  // Update role to admin
-  const { error: updateError } = await supabase
-    .from('profiles')
-    .update({ role: 'admin' })
-    .eq('id', user.id)
-
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 })
-  }
-
-  return NextResponse.json({
-    success: true,
-    message: `แต่งตั้ง ${user.full_name || user.email} เป็นผู้ดูแลระบบสำเร็จแล้ว`,
-    user: { ...user, role: 'admin' },
-  })
 }

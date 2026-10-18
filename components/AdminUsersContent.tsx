@@ -1,73 +1,94 @@
 'use client'
+
 import { useState, useTransition, useEffect } from 'react'
-import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import {
-  ArrowLeft, Search, Users, ShieldAlert, ShieldCheck, ShieldX,
-  MailPlus, X, AlertCircle, Check
+  Search, Users, ShieldCheck, ShieldAlert, ShieldX,
+  MailPlus, AlertCircle, Check, Loader2, Clock, Trash2,
+  Copy, ExternalLink
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { th, enUS } from 'date-fns/locale'
 import { useApp } from '@/lib/app-context'
+import Modal, { ModalButton } from '@/components/ui/Modal'
 
-interface Props { users: any[] }
+interface Props {
+  users: any[]
+}
+
+interface PendingInvite {
+  id: string
+  email: string
+  replace_admin_id: string | null
+  accepted_at: string | null
+  resign_confirmed_at: string | null
+  expires_at: string
+  created_at: string
+  invite_link?: string
+  resign_link?: string
+}
 
 export default function AdminUsersContent({ users = [] }: Props) {
   const router = useRouter()
   const { locale, t } = useApp()
   const dateLocale = locale === 'th' ? th : enUS
-  const [isPending, startTransition] = useTransition()
+  const [, startTransition] = useTransition()
+
   const [search, setSearch] = useState('')
   const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'user' | 'blacklisted'>('all')
 
-  // Invite modal
+  // Current Admins & Pending Invitations
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([])
+  const [loadingInvites, setLoadingInvites] = useState(false)
+
+  // Invite Modal
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
+  const [replaceAdminId, setReplaceAdminId] = useState<string>('')
   const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [copiedSql, setCopiedSql] = useState(false)
+  const [createdInviteLinks, setCreatedInviteLinks] = useState<{
+    inviteLink: string
+    resignLink: string | null
+    wasRedirected: boolean
+    testEmail: string
+  } | null>(null)
+  const [copiedInviteLink, setCopiedInviteLink] = useState(false)
+  const [copiedResignLink, setCopiedResignLink] = useState(false)
+  const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null)
 
-  // Blacklist modal
+  // Blacklist Modal
   const [blacklistModalUser, setBlacklistModalUser] = useState<any | null>(null)
   const [blacklistReason, setBlacklistReason] = useState('')
   const [blacklistLoading, setBlacklistLoading] = useState(false)
   const [blacklistError, setBlacklistError] = useState<string | null>(null)
-  const [mounted, setMounted] = useState(false)
 
+  // Fetch pending invitations on mount
   useEffect(() => {
-    setMounted(true)
+    fetchPendingInvites()
   }, [])
 
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    const isAnyModalOpen = inviteModalOpen || !!blacklistModalUser
-    if (!isAnyModalOpen) return
-
-    const originalOverflow = document.body.style.overflow
-    const originalPaddingRight = document.body.style.paddingRight
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-
-    document.body.style.overflow = 'hidden'
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`
-    }
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setInviteModalOpen(false)
-        setBlacklistModalUser(null)
+  async function fetchPendingInvites() {
+    setLoadingInvites(true)
+    try {
+      const res = await fetch('/api/admin/users/invite')
+      if (res.ok) {
+        const data = await res.json()
+        setPendingInvites(data.pending || [])
       }
+    } catch (_) {
+      // ignore
+    } finally {
+      setLoadingInvites(false)
     }
-    window.addEventListener('keydown', handleKeyDown)
+  }
 
-    return () => {
-      document.body.style.overflow = originalOverflow
-      document.body.style.paddingRight = originalPaddingRight
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [inviteModalOpen, blacklistModalUser])
+  const admins = users.filter((u) => u.role === 'admin')
+  const maxAdmins = 2
+  const isFull = admins.length >= maxAdmins
 
-  const filtered = users.filter(u => {
+  const filtered = users.filter((u) => {
     const matchSearch =
       !search ||
       u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -82,10 +103,33 @@ export default function AdminUsersContent({ users = [] }: Props) {
     return matchSearch && matchRole
   })
 
-  // Handle Invite Admin
+  // Open invite modal and default replaceAdminId if full
+  function handleOpenInvite() {
+    setInviteEmail('')
+    setInviteMessage(null)
+    setCreatedInviteLinks(null)
+    setCopiedInviteLink(false)
+    setCopiedResignLink(false)
+    if (isFull && admins.length > 0) {
+      setReplaceAdminId(admins[0].id)
+    } else {
+      setReplaceAdminId('')
+    }
+    setInviteModalOpen(true)
+  }
+
+  // Handle Send Invite Admin
   async function handleInviteAdmin(e: React.FormEvent) {
     e.preventDefault()
     if (!inviteEmail.trim()) return
+
+    if (isFull && !replaceAdminId) {
+      setInviteMessage({
+        type: 'error',
+        text: locale === 'th' ? 'กรุณาเลือกผู้ดูแลที่จะสละสิทธิ์เพื่อส่งต่อตำแหน่ง' : 'Please select an admin to replace.',
+      })
+      return
+    }
 
     setInviteLoading(true)
     setInviteMessage(null)
@@ -94,36 +138,65 @@ export default function AdminUsersContent({ users = [] }: Props) {
       const res = await fetch('/api/admin/users/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail.trim() }),
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
+          replaceAdminId: replaceAdminId || null,
+        }),
       })
       const data = await res.json()
 
       if (!res.ok) {
-        setInviteMessage({ type: 'error', text: data.error || 'แต่งตั้งแอดมินไม่สำเร็จ' })
+        setInviteMessage({ type: 'error', text: data.error || (locale === 'th' ? 'ส่งคำเชิญไม่สำเร็จ' : 'Failed to send invite') })
       } else {
-        setInviteMessage({ type: 'success', text: `แต่งตั้ง ${inviteEmail} เป็นแอดมินเรียบร้อยแล้ว` })
+        setInviteMessage({
+          type: 'success',
+          text: data.message || (locale === 'th' ? 'ส่งคำเชิญเรียบร้อยแล้ว' : 'Invitation sent successfully'),
+        })
+        if (data.inviteLink) {
+          setCreatedInviteLinks({
+            inviteLink: data.inviteLink,
+            resignLink: data.resignLink || null,
+            wasRedirected: !!data.wasRedirectedToTestEmail,
+            testEmail: data.testEmail || '',
+          })
+        }
         setInviteEmail('')
+        fetchPendingInvites()
         startTransition(() => {
           router.refresh()
         })
-        setTimeout(() => {
-          setInviteModalOpen(false)
-          setInviteMessage(null)
-        }, 1500)
       }
     } catch (_) {
-      setInviteMessage({ type: 'error', text: 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว' })
+      setInviteMessage({ type: 'error', text: locale === 'th' ? 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว' : 'Connection failed' })
     } finally {
       setInviteLoading(false)
     }
   }
 
-  // Handle Blacklist User (With reason required)
+  // Cancel invitation
+  async function handleCancelInvite(id: string) {
+    if (!confirm(locale === 'th' ? 'ต้องการยกเลิกคำเชิญนี้ใช่หรือไม่?' : 'Cancel this invitation?')) return
+    try {
+      const res = await fetch(`/api/admin/users/invite?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        fetchPendingInvites()
+      } else {
+        const json = await res.json()
+        alert(json.error || 'Failed to cancel')
+      }
+    } catch {
+      alert('Error')
+    }
+  }
+
+  // Handle Confirm Blacklist
   async function handleConfirmBlacklist() {
     if (!blacklistModalUser) return
     const reason = blacklistReason.trim()
     if (!reason) {
-      setBlacklistError('กรุณากรอกเหตุผลในการขึ้นบัญชีดำ')
+      setBlacklistError(locale === 'th' ? 'กรุณากรอกเหตุผลในการขึ้นบัญชีดำ' : 'Reason is required')
       return
     }
 
@@ -142,7 +215,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
       const data = await res.json()
 
       if (!res.ok) {
-        setBlacklistError(data.error || 'ระงับสิทธิ์ไม่สำเร็จ')
+        setBlacklistError(data.error || (locale === 'th' ? 'ระงับสิทธิ์ไม่สำเร็จ' : 'Action failed'))
       } else {
         setBlacklistModalUser(null)
         setBlacklistReason('')
@@ -151,7 +224,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
         })
       }
     } catch (_) {
-      setBlacklistError('เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว')
+      setBlacklistError(locale === 'th' ? 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว' : 'Connection failed')
     } finally {
       setBlacklistLoading(false)
     }
@@ -159,9 +232,10 @@ export default function AdminUsersContent({ users = [] }: Props) {
 
   // Handle Un-blacklist User
   async function handleUnblacklist(user: any) {
-    const confirmMsg = locale === 'th'
-      ? `ต้องการปลดการระงับสิทธิ์ของ ${user.full_name || user.email} หรือไม่?`
-      : `Are you sure you want to unblacklist ${user.full_name || user.email}?`
+    const confirmMsg =
+      locale === 'th'
+        ? `ต้องการปลดการระงับสิทธิ์ของ ${user.full_name || user.email} หรือไม่?`
+        : `Are you sure you want to unblacklist ${user.full_name || user.email}?`
     if (!confirm(confirmMsg)) return
 
     try {
@@ -184,45 +258,152 @@ export default function AdminUsersContent({ users = [] }: Props) {
   }
 
   return (
-    <div className="w-full p-6 sm:p-8 lg:p-10 space-y-6 animate-fade-in max-w-7xl mx-auto">
+    <div className="w-full p-4 sm:p-6 lg:p-10 space-y-6 animate-fade-in max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">
             {t('adminUsersHeading')}
           </h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-            {users.length} {locale === 'th' ? 'คนทั้งหมดในระบบ' : 'total in system'}
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+            {users.length} {locale === 'th' ? 'สมาชิกทั้งหมดในระบบ' : 'total members in system'}
           </p>
         </div>
 
         <button
-          onClick={() => {
-            setInviteEmail('')
-            setInviteMessage(null)
-            setInviteModalOpen(true)
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black text-xs sm:text-sm font-semibold transition-all shadow-sm"
+          onClick={handleOpenInvite}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black text-xs sm:text-sm font-semibold transition-all shadow-xs active:scale-[0.98]"
         >
           <MailPlus size={16} />
-          {t('inviteAdminBtn')}
+          <span>{locale === 'th' ? 'เชิญผู้ดูแลระบบ' : 'Invite Admin'}</span>
         </button>
+      </div>
+
+      {/* Admin Slots Panel (Max 2 Admins) */}
+      <div className="p-4 sm:p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-[#121214] space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs font-bold text-neutral-900 dark:text-white">
+            <ShieldCheck size={16} />
+            <span>
+              {locale === 'th'
+                ? `โควตาผู้ดูแลระบบ (Admin) — ${admins.length}/${maxAdmins} คน`
+                : `Admin Slots — ${admins.length}/${maxAdmins}`}
+            </span>
+          </div>
+          <span className="text-[10px] text-neutral-500 font-medium">
+            {locale === 'th' ? 'ระบบจำกัดสูงสุด 2 คน' : 'Strict limit: 2 admins'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[0, 1].map((index) => {
+            const adminUser = admins[index]
+            return (
+              <div
+                key={index}
+                className="p-3.5 rounded-xl border border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-neutral-900 flex items-center justify-between gap-3 shadow-xs"
+              >
+                {adminUser ? (
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center shrink-0">
+                      {adminUser.avatar_url ? (
+                        <img src={adminUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Users size={14} className="text-neutral-400" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-neutral-900 dark:text-white truncate">
+                        {adminUser.full_name || adminUser.email}
+                      </p>
+                      <p className="text-[10px] text-neutral-400 truncate">{adminUser.email}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-neutral-400 text-xs">
+                    <div className="w-8 h-8 rounded-full border border-dashed border-neutral-300 dark:border-neutral-700 flex items-center justify-center shrink-0">
+                      <Users size={14} />
+                    </div>
+                    <span className="text-xs italic">
+                      {locale === 'th' ? `ช่องว่างที่ ${index + 1}` : `Slot ${index + 1} Available`}
+                    </span>
+                  </div>
+                )}
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                  {adminUser ? 'Active' : 'Empty'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Pending Invitation Alert */}
+        {pendingInvites.length > 0 && (
+          <div className="pt-2">
+            <div className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-neutral-900 dark:text-white">
+                <span className="flex items-center gap-1.5">
+                  <Clock size={14} className="text-neutral-500" />
+                  <span>{locale === 'th' ? 'คำเชิญที่รอดำเนินการ' : 'Pending Invitation'}</span>
+                </span>
+                <span className="text-[10px] text-neutral-400">
+                  {locale === 'th' ? 'หมดอายุใน 48 ชม.' : 'Expires in 48h'}
+                </span>
+              </div>
+
+              {pendingInvites.map((inv) => (
+                <div key={inv.id} className="flex items-center justify-between text-xs gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                  <div className="min-w-0">
+                    <span className="font-semibold text-neutral-800 dark:text-neutral-200">{inv.email}</span>
+                    {inv.replace_admin_id && (
+                      <span className="text-[10px] text-neutral-500 ml-1.5">
+                        ({locale === 'th' ? 'แทนที่แอดมินเดิม' : 'replacing admin'})
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {inv.invite_link && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(inv.invite_link!)
+                          setCopiedInviteId(inv.id)
+                          setTimeout(() => setCopiedInviteId(null), 2500)
+                        }}
+                        className="p-1 rounded text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                        title={locale === 'th' ? 'คัดลอกลิงก์คำเชิญ' : 'Copy invite link'}
+                      >
+                        {copiedInviteId === inv.id ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleCancelInvite(inv.id)}
+                      className="p-1 rounded text-neutral-400 hover:text-red-500 transition-colors"
+                      title={locale === 'th' ? 'ยกเลิกคำเชิญ' : 'Cancel invite'}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Search & Filter */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
           <input
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder={t('searchUsersPlaceholder')}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm outline-none focus:border-black dark:focus:border-white text-neutral-900 dark:text-white transition-colors"
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs sm:text-sm outline-none focus:border-black dark:focus:border-white text-neutral-900 dark:text-white transition-colors"
           />
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-x-auto scrollbar-none max-w-full">
-          {(['all', 'admin', 'user', 'blacklisted'] as const).map(f => (
+        <div className="flex items-center gap-1 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-x-auto scrollbar-none max-w-full">
+          {(['all', 'admin', 'user', 'blacklisted'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilterRole(f)}
@@ -241,121 +422,128 @@ export default function AdminUsersContent({ users = [] }: Props) {
         </div>
       </div>
 
-      {/* Table (Desktop: md+) */}
+      {/* Desktop Table (md+) */}
       <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-xs hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead>
               <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40">
-                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider">{t('colUser')}</th>
-                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider hidden md:table-cell">{t('colStudentId')}</th>
-                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider hidden lg:table-cell">{t('colRegisteredDate')}</th>
-                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-center">{t('colRole')}</th>
-                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-center">{t('colUserStatus')}</th>
-                <th className="px-5 py-3.5 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-right">{t('colActions')}</th>
+                <th className="px-5 py-3 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider">{t('colUser')}</th>
+                <th className="px-5 py-3 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider hidden md:table-cell">{t('colStudentId')}</th>
+                <th className="px-5 py-3 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider hidden lg:table-cell">{t('colRegisteredDate')}</th>
+                <th className="px-5 py-3 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-center">{t('colRole')}</th>
+                <th className="px-5 py-3 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-center">{t('colUserStatus')}</th>
+                <th className="px-5 py-3 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-right">{t('colActions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-16 text-neutral-400">
-                    <Users size={36} className="mx-auto mb-2 opacity-20" />
+                    <Users size={32} className="mx-auto mb-2 opacity-30" />
                     {t('noUsersFound')}
                   </td>
                 </tr>
-              ) : filtered.map(user => (
-                <tr key={user.id} className={`transition-colors ${
-                  user.is_blacklisted ? 'bg-rose-50/30 dark:bg-rose-950/20' : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/30'
-                }`}>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0 flex items-center justify-center">
-                        {user.avatar_url ? (
-                          <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Users size={14} className="text-neutral-400" />
-                        )}
+              ) : (
+                filtered.map((user) => (
+                  <tr
+                    key={user.id}
+                    className={`transition-colors ${
+                      user.is_blacklisted ? 'bg-neutral-50/60 dark:bg-neutral-800/40' : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/30'
+                    }`}
+                  >
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0 flex items-center justify-center">
+                          {user.avatar_url ? (
+                            <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <Users size={14} className="text-neutral-400" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-neutral-900 dark:text-white truncate max-w-[200px] text-xs sm:text-sm">
+                            {user.full_name || (locale === 'th' ? 'ไม่ระบุชื่อ' : 'Unknown')}
+                          </p>
+                          <p className="text-[11px] text-neutral-400 truncate max-w-[200px]">{user.email}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-neutral-900 dark:text-white truncate max-w-[200px]">
-                          {user.full_name || (locale === 'th' ? 'ไม่ระบุชื่อ' : 'Unknown')}
-                        </p>
-                        <p className="text-xs text-neutral-400 truncate max-w-[200px]">{user.email}</p>
-                      </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  <td className="px-5 py-4 text-neutral-600 dark:text-neutral-400 text-xs hidden md:table-cell font-mono">
-                    {user.student_id || '—'}
-                  </td>
+                    <td className="px-5 py-3.5 text-neutral-600 dark:text-neutral-400 text-xs hidden md:table-cell font-mono">
+                      {user.student_id || '—'}
+                    </td>
 
-                  <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400 text-xs hidden lg:table-cell">
-                    {user.created_at ? format(new Date(user.created_at), 'dd MMM yyyy', { locale: dateLocale }) : '—'}
-                  </td>
+                    <td className="px-5 py-3.5 text-neutral-500 dark:text-neutral-400 text-xs hidden lg:table-cell">
+                      {user.created_at ? format(new Date(user.created_at), 'dd MMM yyyy', { locale: dateLocale }) : '—'}
+                    </td>
 
-                  {/* Role */}
-                  <td className="px-5 py-4 text-center">
-                    {user.role === 'admin' ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-neutral-900 text-white dark:bg-white dark:text-black">
-                        <ShieldCheck size={13} />
-                        {t('roleAdminPill')}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700">
-                        {t('roleMemberPill')}
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-5 py-4 text-center">
-                    {user.is_blacklisted ? (
-                      <div className="inline-flex flex-col items-center">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-600 text-white">
-                          <ShieldAlert size={12} />
-                          {t('statusBlacklisted')}
+                    {/* Role */}
+                    <td className="px-5 py-3.5 text-center">
+                      {user.role === 'admin' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-900 text-white dark:bg-white dark:text-black">
+                          <ShieldCheck size={11} />
+                          {t('roleAdminPill')}
                         </span>
-                        {user.blacklist_reason && (
-                          <span className="text-[10px] text-rose-500 dark:text-rose-400 max-w-[140px] truncate mt-0.5" title={user.blacklist_reason}>
-                            {locale === 'th' ? 'เหตุผล: ' : 'Reason: '}{user.blacklist_reason}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                        {t('statusNormal')}
-                      </span>
-                    )}
-                  </td>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700">
+                          {t('roleMemberPill')}
+                        </span>
+                      )}
+                    </td>
 
-                  {/* Blacklist Actions */}
-                  <td className="px-5 py-4 text-right">
-                    {user.role === 'admin' ? (
-                      <span className="text-xs text-neutral-400 italic">{t('roleAdminPill')}</span>
-                    ) : user.is_blacklisted ? (
-                      <button
-                        onClick={() => handleUnblacklist(user)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                      >
-                        <ShieldCheck size={13} className="text-emerald-500" />
-                        {t('unblacklistBtn')}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setBlacklistModalUser(user)
-                          setBlacklistReason('')
-                          setBlacklistError(null)
-                        }}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
-                      >
-                        <ShieldX size={13} />
-                        {t('blacklistBtn')}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    {/* Status */}
+                    <td className="px-5 py-3.5 text-center">
+                      {user.is_blacklisted ? (
+                        <div className="inline-flex flex-col items-center">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white">
+                            <ShieldAlert size={11} />
+                            {t('statusBlacklisted')}
+                          </span>
+                          {user.blacklist_reason && (
+                            <span className="text-[10px] text-neutral-400 max-w-[140px] truncate mt-0.5" title={user.blacklist_reason}>
+                              {user.blacklist_reason}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold text-neutral-600 dark:text-neutral-400">
+                          {t('statusNormal')}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-5 py-3.5 text-right">
+                      {user.role === 'admin' ? (
+                        <span className="text-[11px] text-neutral-400 italic">
+                          {locale === 'th' ? 'ผู้ดูแลระบบ' : 'Admin'}
+                        </span>
+                      ) : user.is_blacklisted ? (
+                        <button
+                          onClick={() => handleUnblacklist(user)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                        >
+                          <ShieldCheck size={12} />
+                          {t('unblacklistBtn')}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setBlacklistModalUser(user)
+                            setBlacklistReason('')
+                            setBlacklistError(null)
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white hover:border-black dark:hover:border-white transition-colors"
+                        >
+                          <ShieldX size={12} />
+                          {t('blacklistBtn')}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -365,33 +553,33 @@ export default function AdminUsersContent({ users = [] }: Props) {
       <div className="md:hidden space-y-3">
         {filtered.length === 0 ? (
           <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-8 text-center text-neutral-400">
-            <Users size={36} className="mx-auto mb-2 opacity-20" />
-            <p className="text-sm">{t('noUsersFound')}</p>
+            <Users size={32} className="mx-auto mb-2 opacity-30" />
+            <p className="text-xs">{t('noUsersFound')}</p>
           </div>
         ) : (
-          filtered.map(user => (
+          filtered.map((user) => (
             <div
               key={user.id}
               className={`bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs space-y-3 ${
-                user.is_blacklisted ? 'border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10' : ''
+                user.is_blacklisted ? 'border-neutral-400 dark:border-neutral-600' : ''
               }`}
             >
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0 flex items-center justify-center">
                   {user.avatar_url ? (
                     <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <Users size={16} className="text-neutral-400" />
+                    <Users size={14} className="text-neutral-400" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-semibold text-neutral-900 dark:text-white truncate text-sm">
+                    <p className="font-semibold text-neutral-900 dark:text-white truncate text-xs sm:text-sm">
                       {user.full_name || (locale === 'th' ? 'ไม่ระบุชื่อ' : 'Unknown')}
                     </p>
                     {user.role === 'admin' ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-900 text-white dark:bg-white dark:text-black shrink-0">
-                        <ShieldCheck size={11} />
+                        <ShieldCheck size={10} />
                         {t('roleAdminPill')}
                       </span>
                     ) : (
@@ -400,7 +588,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-neutral-400 truncate mt-0.5">{user.email}</p>
+                  <p className="text-[11px] text-neutral-400 truncate mt-0.5">{user.email}</p>
                 </div>
               </div>
 
@@ -411,12 +599,12 @@ export default function AdminUsersContent({ users = [] }: Props) {
                 </div>
                 <div>
                   {user.is_blacklisted ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-neutral-300 dark:border-neutral-700">
                       <ShieldAlert size={10} />
                       {t('statusBlacklisted')}
                     </span>
                   ) : (
-                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold text-neutral-600 dark:text-neutral-400">
                       {t('statusNormal')}
                     </span>
                   )}
@@ -424,8 +612,9 @@ export default function AdminUsersContent({ users = [] }: Props) {
               </div>
 
               {user.is_blacklisted && user.blacklist_reason && (
-                <div className="text-[11px] p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50">
-                  <span className="font-semibold">{locale === 'th' ? 'เหตุผล: ' : 'Reason: '}</span>{user.blacklist_reason}
+                <div className="text-[11px] p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700">
+                  <span className="font-semibold">{locale === 'th' ? 'เหตุผล: ' : 'Reason: '}</span>
+                  {user.blacklist_reason}
                 </div>
               )}
 
@@ -434,9 +623,9 @@ export default function AdminUsersContent({ users = [] }: Props) {
                   {user.is_blacklisted ? (
                     <button
                       onClick={() => handleUnblacklist(user)}
-                      className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                      className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                     >
-                      <ShieldCheck size={14} className="text-emerald-500" />
+                      <ShieldCheck size={13} />
                       {t('unblacklistBtn')}
                     </button>
                   ) : (
@@ -446,9 +635,9 @@ export default function AdminUsersContent({ users = [] }: Props) {
                         setBlacklistReason('')
                         setBlacklistError(null)
                       }}
-                      className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
+                      className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white transition-colors"
                     >
-                      <ShieldX size={14} />
+                      <ShieldX size={13} />
                       {t('blacklistBtn')}
                     </button>
                   )}
@@ -459,107 +648,263 @@ export default function AdminUsersContent({ users = [] }: Props) {
         )}
       </div>
 
-      {/* Invite Modal */}
-      {mounted && inviteModalOpen && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed inset-0 w-screen h-[100dvh] z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-in"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setInviteModalOpen(false)
-          }}
-        >
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 w-[calc(100vw-24px)] sm:w-[min(480px,calc(100vw-32px))] max-h-[calc(100dvh-32px)] overflow-y-auto shadow-2xl relative animate-scale-in">
-            <button
-              onClick={() => setInviteModalOpen(false)}
-              className="absolute right-4 top-4 p-1.5 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+      {/* Invite Admin Modal (Single Close Mechanism via Footer Buttons) */}
+      <Modal
+        open={inviteModalOpen}
+        onClose={() => {
+          setInviteModalOpen(false)
+          setCreatedInviteLinks(null)
+          setInviteMessage(null)
+        }}
+        title={locale === 'th' ? 'เชิญผู้ดูแลระบบ (Admin)' : 'Invite Administrator'}
+        description={
+          createdInviteLinks
+            ? (locale === 'th'
+                ? 'คำเชิญถูกสร้างและส่งอีเมลเรียบร้อยแล้ว'
+                : 'Invitation created and email sent successfully')
+            : (locale === 'th'
+                ? 'ผู้ได้รับเชิญจะได้รับลิงก์ยืนยันทางอีเมล (หมดอายุ 48 ชม.)'
+                : 'Invitee will receive an email confirmation link (expires in 48h)')
+        }
+        icon={<MailPlus size={18} />}
+        footer={
+          createdInviteLinks ? (
+            <ModalButton
+              variant="primary"
+              onClick={() => {
+                setInviteModalOpen(false)
+                setCreatedInviteLinks(null)
+                setInviteMessage(null)
+              }}
             >
-              <X size={18} />
-            </button>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-900 dark:text-white shrink-0">
-                <MailPlus size={20} />
-              </div>
-              <div className="min-w-0 pr-6">
-                <h3 className="text-base font-bold text-neutral-900 dark:text-white truncate">{t('inviteAdminModalTitle')}</h3>
-                <p className="text-xs text-neutral-400 truncate">{t('inviteAdminModalDesc')}</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleInviteAdmin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
-                  {t('emailLabel')} *
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder={t('emailPlaceholder')}
-                  value={inviteEmail}
-                  onChange={e => setInviteEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-sm outline-none focus:border-black dark:focus:border-white text-neutral-900 dark:text-white"
-                />
-              </div>
-
-              {inviteMessage && (
-                <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-                  inviteMessage.type === 'success'
-                    ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                    : 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
-                }`}>
-                  {inviteMessage.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
-                  {inviteMessage.text}
-                </div>
-              )}
-
-              <div className="flex gap-2 justify-end pt-2 border-t border-neutral-100 dark:border-neutral-800">
-                <button
-                  type="button"
-                  onClick={() => setInviteModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                >
-                  {t('cancel')}
-                </button>
-                <button
-                  type="submit"
-                  disabled={inviteLoading || !inviteEmail.trim()}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black transition-all disabled:opacity-50"
-                >
-                  {inviteLoading ? t('appointingBtn') : t('appointBtn')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Blacklist Modal with Mandatory Reason */}
-      {mounted && blacklistModalUser && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed inset-0 w-screen h-[100dvh] z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-in"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setBlacklistModalUser(null)
-          }}
-        >
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 w-[calc(100vw-24px)] sm:w-[min(480px,calc(100vw-32px))] max-h-[calc(100dvh-32px)] overflow-y-auto shadow-2xl relative animate-scale-in">
-            <button
-              onClick={() => setBlacklistModalUser(null)}
-              className="absolute right-4 top-4 p-1.5 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-            >
-              <X size={18} />
-            </button>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
-                <ShieldAlert size={20} />
-              </div>
-              <div className="min-w-0 pr-6">
-                <h3 className="text-base font-bold text-neutral-900 dark:text-white truncate">{t('blacklistModalTitle')}</h3>
-                <p className="text-xs text-neutral-400 truncate">
-                  {locale === 'th' ? 'สมาชิกที่ถูกขึ้นบัญชีดำจะไม่สามารถยืมหนังสือได้' : 'Blacklisted members cannot borrow books'}
+              {locale === 'th' ? 'ปิดหน้าต่าง' : 'Done'}
+            </ModalButton>
+          ) : (
+            <>
+              <ModalButton
+                variant="secondary"
+                onClick={() => setInviteModalOpen(false)}
+                disabled={inviteLoading}
+              >
+                {t('cancel')}
+              </ModalButton>
+              <ModalButton
+                variant="primary"
+                onClick={handleInviteAdmin}
+                disabled={inviteLoading || !inviteEmail.trim() || (isFull && !replaceAdminId)}
+              >
+                {inviteLoading ? (
+                  <span className="flex items-center gap-1.5 justify-center">
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>{locale === 'th' ? 'กำลังส่งคำเชิญ...' : 'Sending...'}</span>
+                  </span>
+                ) : (
+                  locale === 'th' ? 'ส่งคำเชิญ' : 'Send Invite'
+                )}
+              </ModalButton>
+            </>
+          )
+        }
+      >
+        {createdInviteLinks ? (
+          <div className="space-y-4 pt-1">
+            <div className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-200 flex items-start gap-2.5">
+              <Check size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-bold">
+                  {locale === 'th' ? 'ส่งคำเชิญเรียบร้อยแล้ว' : 'Invitation Sent'}
+                </p>
+                <p className="text-[11px] leading-relaxed text-emerald-800 dark:text-emerald-300">
+                  {createdInviteLinks.wasRedirected
+                    ? (locale === 'th'
+                        ? `(⚙️ โหมดทดสอบก่อนขึ้น Production: ระบบส่งสำเนาเข้า ${createdInviteLinks.testEmail} และคุณสามารถคัดลอกลิงก์ด้านล่างเพื่อเปิดทดสอบยืนยันได้ทันที)`
+                        : `(⚙️ Sandbox mode: sent to ${createdInviteLinks.testEmail}. You can also test with the links below.)`)
+                    : (locale === 'th'
+                        ? 'ระบบได้ส่งอีเมลคำเชิญไปเรียบร้อยแล้ว หรือสามารถคัดลอกลิงก์ด้านล่างนี้ไปเปิดเพื่อยืนยันได้เช่นกัน'
+                        : 'Email sent successfully. You can also copy the direct link below.')}
                 </p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/60 mb-4 flex items-center gap-3">
+            {/* Invite link card */}
+            <div className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/60 space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                <span>{locale === 'th' ? 'ลิงก์สำหรับผู้ได้รับเชิญ (แอดมินใหม่)' : 'Link for New Admin (Invitee)'}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(createdInviteLinks.inviteLink)
+                    setCopiedInviteLink(true)
+                    setTimeout(() => setCopiedInviteLink(false), 2500)
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90 text-[11px] font-semibold transition-opacity"
+                >
+                  {copiedInviteLink ? <Check size={12} /> : <Copy size={12} />}
+                  <span>{copiedInviteLink ? (locale === 'th' ? 'คัดลอกแล้ว!' : 'Copied!') : (locale === 'th' ? 'คัดลอกลิงก์' : 'Copy Link')}</span>
+                </button>
+              </div>
+              <div className="p-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-[11px] font-mono text-neutral-600 dark:text-neutral-400 break-all select-all">
+                {createdInviteLinks.inviteLink}
+              </div>
+            </div>
+
+            {/* Resign link card (if replacing admin) */}
+            {createdInviteLinks.resignLink && (
+              <div className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/60 space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                  <span>{locale === 'th' ? 'ลิงก์ยืนยันสละสิทธิ์ (สำหรับแอดมินเดิม)' : 'Link for Outgoing Admin (Resign)'}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdInviteLinks.resignLink!)
+                      setCopiedResignLink(true)
+                      setTimeout(() => setCopiedResignLink(false), 2500)
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90 text-[11px] font-semibold transition-opacity"
+                  >
+                    {copiedResignLink ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copiedResignLink ? (locale === 'th' ? 'คัดลอกแล้ว!' : 'Copied!') : (locale === 'th' ? 'คัดลอกลิงก์' : 'Copy Link')}</span>
+                  </button>
+                </div>
+                <div className="p-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-[11px] font-mono text-neutral-600 dark:text-neutral-400 break-all select-all">
+                  {createdInviteLinks.resignLink}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <form onSubmit={handleInviteAdmin} className="space-y-4 pt-1">
+            <div>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
+                {t('emailLabel')} *
+              </label>
+              <input
+                type="email"
+                required
+                placeholder="example@lamduan.mfu.ac.th"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs sm:text-sm outline-none focus:border-black dark:focus:border-white text-neutral-900 dark:text-white"
+              />
+            </div>
+
+            {/* If 2 admins already exist, must choose one to replace */}
+            {isFull && (
+              <div>
+                <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
+                  {locale === 'th' ? 'ผู้ดูแลที่จะส่งมอบสิทธิ์แทนที่ *' : 'Admin to Replace *'}
+                </label>
+                <select
+                  value={replaceAdminId}
+                  onChange={(e) => setReplaceAdminId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs sm:text-sm outline-none focus:border-black dark:focus:border-white text-neutral-900 dark:text-white"
+                >
+                  {admins.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.full_name || a.email} ({a.email})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">
+                  {locale === 'th'
+                    ? 'ระบบจำกัดแอดมินไว้ 2 คน แอดมินเดิมจะต้องกดยืนยันการสละสิทธิ์ทางอีเมลด้วย'
+                    : 'System limit: 2 admins. Outgoing admin must confirm resignation via email.'}
+                </p>
+              </div>
+            )}
+
+            {inviteMessage && (
+              <div className="space-y-2">
+                <div
+                  className={`p-3 rounded-xl text-xs font-semibold flex items-start gap-2 border ${
+                    inviteMessage.type === 'success'
+                      ? 'border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white bg-neutral-50 dark:bg-neutral-800'
+                      : 'border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20'
+                  }`}
+                >
+                  {inviteMessage.type === 'success' ? <Check size={16} className="shrink-0 mt-0.5" /> : <AlertCircle size={16} className="shrink-0 mt-0.5" />}
+                  <div className="flex-1 leading-relaxed">{inviteMessage.text}</div>
+                </div>
+
+                {inviteMessage.type === 'error' && (inviteMessage.text.includes('admin_invitations') || inviteMessage.text.includes('schema cache')) && (
+                  <div className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/60 space-y-2 text-xs">
+                    <div className="font-semibold text-neutral-800 dark:text-neutral-200 flex items-center justify-between">
+                      <span>{locale === 'th' ? 'คำสั่ง SQL สำหรับตั้งค่าตาราง (รันครั้งเดียว)' : 'SQL Migration Script (Run once)'}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(ADMIN_INVITATION_SQL)
+                          setCopiedSql(true)
+                          setTimeout(() => setCopiedSql(false), 2500)
+                        }}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90 transition-opacity text-[11px] font-medium"
+                      >
+                        {copiedSql ? <Check size={12} /> : <Copy size={12} />}
+                        <span>{copiedSql ? (locale === 'th' ? 'คัดลอกแล้ว!' : 'Copied!') : (locale === 'th' ? 'คัดลอก SQL' : 'Copy SQL')}</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                      {locale === 'th'
+                        ? 'เปิด Supabase Dashboard → เข้า SQL Editor → วางคำสั่งแล้วกด Run จากนั้นลองส่งคำเชิญใหม่อีกครั้ง'
+                        : 'Go to Supabase Dashboard → SQL Editor → Paste & click Run, then retry inviting.'}
+                    </p>
+                    <a
+                      href="https://supabase.com/dashboard/project/trhqpnkxyhgzfvxjazrc/sql/new"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] text-neutral-900 dark:text-white font-medium underline underline-offset-2 hover:opacity-80 pt-0.5"
+                    >
+                      <span>{locale === 'th' ? 'เปิด Supabase SQL Editor ของโปรเจกต์นี้' : 'Open Supabase SQL Editor'}</span>
+                      <ExternalLink size={11} />
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+          </form>
+        )}
+      </Modal>
+
+      {/* Blacklist Modal (Single Close Mechanism via Footer Buttons) */}
+      <Modal
+        open={!!blacklistModalUser}
+        onClose={() => setBlacklistModalUser(null)}
+        title={t('blacklistModalTitle')}
+        description={
+          locale === 'th'
+            ? 'สมาชิกที่ถูกขึ้นบัญชีดำจะไม่สามารถยืมหนังสือได้'
+            : 'Blacklisted members cannot borrow books'
+        }
+        icon={<ShieldAlert size={18} />}
+        footer={
+          <>
+            <ModalButton
+              variant="secondary"
+              onClick={() => setBlacklistModalUser(null)}
+              disabled={blacklistLoading}
+            >
+              {t('cancel')}
+            </ModalButton>
+            <ModalButton
+              variant="danger"
+              onClick={handleConfirmBlacklist}
+              disabled={blacklistLoading || !blacklistReason.trim()}
+            >
+              {blacklistLoading ? (
+                <span className="flex items-center gap-1.5 justify-center">
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>{t('confirmingBtn')}</span>
+                </span>
+              ) : (
+                t('confirmBlacklistBtn')
+              )}
+            </ModalButton>
+          </>
+        }
+      >
+        <div className="space-y-4 pt-1">
+          {blacklistModalUser && (
+            <div className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/60 flex items-center gap-3">
               <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-200 dark:bg-neutral-700 shrink-0 flex items-center justify-center">
                 {blacklistModalUser.avatar_url ? (
                   <img src={blacklistModalUser.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -574,49 +919,113 @@ export default function AdminUsersContent({ users = [] }: Props) {
                 <p className="text-[11px] text-neutral-400 truncate">{blacklistModalUser.email}</p>
               </div>
             </div>
+          )}
 
-            <div className="space-y-2 mb-4">
-              <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-200">
-                {t('blacklistReasonLabel')} <span className="text-rose-500 font-bold">({locale === 'th' ? 'จำเป็นต้องระบุ *' : 'Required *'})</span>
-              </label>
-              <textarea
-                required
-                rows={3}
-                placeholder={t('blacklistReasonPlaceholder')}
-                value={blacklistReason}
-                onChange={e => setBlacklistReason(e.target.value)}
-                className="w-full p-3 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs outline-none focus:border-rose-500 text-neutral-900 dark:text-white resize-none"
-              />
-            </div>
-
-            {blacklistError && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 text-xs border border-rose-200 dark:border-rose-800 flex items-center gap-2">
-                <AlertCircle size={14} />
-                {blacklistError}
-              </div>
-            )}
-
-            <div className="flex gap-2 justify-end pt-2 border-t border-neutral-100 dark:border-neutral-800">
-              <button
-                type="button"
-                onClick={() => setBlacklistModalUser(null)}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-              >
-                {t('cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmBlacklist}
-                disabled={blacklistLoading || !blacklistReason.trim()}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition-all disabled:opacity-50"
-              >
-                {blacklistLoading ? t('confirmingBtn') : t('confirmBlacklistBtn')}
-              </button>
-            </div>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+              {t('blacklistReasonLabel')} *
+            </label>
+            <textarea
+              required
+              rows={3}
+              placeholder={t('blacklistReasonPlaceholder')}
+              value={blacklistReason}
+              onChange={(e) => setBlacklistReason(e.target.value)}
+              className="w-full p-3 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs outline-none focus:border-black dark:focus:border-white text-neutral-900 dark:text-white resize-none"
+            />
           </div>
-        </div>,
-        document.body
-      )}
+
+          {blacklistError && (
+            <div className="p-3 rounded-xl border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+              <AlertCircle size={14} />
+              <span>{blacklistError}</span>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   )
 }
+
+const ADMIN_INVITATION_SQL = `-- =============================================
+-- MIGRATION: Admin invitations (max 2 admins, email-confirmed)
+-- Run this once in Supabase SQL Editor
+-- =============================================
+
+-- 1. Invitation table
+create table if not exists admin_invitations (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  token_hash text not null unique,
+  invited_by uuid references profiles(id) on delete set null,
+  replace_admin_id uuid references profiles(id) on delete set null,
+  resign_token_hash text unique,
+  accepted_at timestamptz,
+  accepted_user_id uuid references profiles(id) on delete set null,
+  resign_confirmed_at timestamptz,
+  status text not null default 'pending' check (status in ('pending', 'completed', 'cancelled', 'expired')),
+  expires_at timestamptz not null default (now() + interval '48 hours'),
+  completed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists admin_invitations_status_idx on admin_invitations (status);
+alter table admin_invitations enable row level security;
+
+-- 2. Hard limit: never more than 2 admins (DB-level safety net)
+create or replace function enforce_max_admins()
+returns trigger
+language plpgsql
+as $$
+declare
+  admin_count int;
+begin
+  if NEW.role = 'admin' and (TG_OP = 'INSERT' or OLD.role is distinct from 'admin') then
+    select count(*) into admin_count from public.profiles where role = 'admin' and id <> NEW.id;
+    if admin_count >= 2 then
+      raise exception 'MAX_ADMINS_REACHED: ระบบอนุญาตผู้ดูแลได้สูงสุด 2 คน';
+    end if;
+  end if;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists profiles_max_admins on profiles;
+create trigger profiles_max_admins
+  before insert or update of role on profiles
+  for each row execute procedure enforce_max_admins();
+
+-- 3. Atomic finalize: demote old admin (if any) + promote new admin in one transaction
+create or replace function finalize_admin_invitation(p_invitation_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  inv admin_invitations%rowtype;
+begin
+  select * into inv from admin_invitations where id = p_invitation_id for update;
+
+  if not found then raise exception 'INVITATION_NOT_FOUND'; end if;
+  if inv.status <> 'pending' then raise exception 'INVITATION_NOT_PENDING'; end if;
+  if inv.accepted_user_id is null then raise exception 'INVITATION_NOT_ACCEPTED'; end if;
+  if inv.replace_admin_id is not null and inv.resign_confirmed_at is null then
+    raise exception 'RESIGN_NOT_CONFIRMED';
+  end if;
+
+  if inv.replace_admin_id is not null then
+    update profiles set role = 'user' where id = inv.replace_admin_id;
+  end if;
+
+  update profiles set role = 'admin' where id = inv.accepted_user_id;
+
+  update admin_invitations
+    set status = 'completed', completed_at = now()
+    where id = inv.id;
+end;
+$$;
+
+revoke all on function finalize_admin_invitation(uuid) from public, anon, authenticated;
+grant execute on function finalize_admin_invitation(uuid) to service_role;
+`

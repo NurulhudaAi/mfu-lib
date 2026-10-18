@@ -29,7 +29,6 @@ export async function POST(request: Request) {
 
   let cover_url: string | null = coverUrlParam || null
   const coverFile = formData.get('cover') as File | null
-  const coverUrlParam = formData.get('cover_url') as string | null
 
   if (coverFile && coverFile.size > 0) {
     // ── Validate file type & size ──

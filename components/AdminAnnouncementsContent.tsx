@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -30,9 +31,50 @@ import {
   SlidersHorizontal,
   Upload,
   Loader2,
+  Link2,
+  Globe,
+  BookOpen,
+  Bookmark,
+  MessageSquare,
+  Home,
+  RotateCcw,
+  Tag,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
+
+const CTA_PRESETS = [
+  {
+    id: 'books',
+    label: 'ค้นหาหนังสือ',
+    defaultText: 'ดูรายการหนังสือ',
+    url: '/books',
+  },
+  {
+    id: 'my-borrows',
+    label: 'ประวัติยืม-คืน',
+    defaultText: 'ตรวจสถานะการยืม',
+    url: '/my-borrows',
+  },
+  {
+    id: 'feedback',
+    label: 'ข้อเสนอแนะ',
+    defaultText: 'ส่งข้อเสนอแนะ',
+    url: '/feedback',
+  },
+  {
+    id: 'home',
+    label: 'หน้าหลัก',
+    defaultText: 'เข้าสู่หน้าหลัก',
+    url: '/',
+  },
+  {
+    id: 'external',
+    label: 'เว็บภายนอก',
+    defaultText: 'ไปยังเว็บไซต์',
+    url: 'https://',
+  },
+]
 import { useApp } from '@/lib/app-context'
 import {
   cleanAnnouncementBody,
@@ -57,19 +99,19 @@ export interface Announcement {
 
 const PRESET_IMAGES = [
   {
-    label: '🏛️ หอสมุด มฟล.',
+    label: 'หอสมุด มฟล.',
     url: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=1200&q=80',
   },
   {
-    label: '📚 ชั้นหนังสือคลาสสิก',
+    label: 'ชั้นหนังสือคลาสสิก',
     url: 'https://images.unsplash.com/photo-1507842229446-51f78713d334?auto=format&fit=crop&w=1200&q=80',
   },
   {
-    label: '✨ โมเดิร์น คลีน',
+    label: 'โมเดิร์น คลีน',
     url: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=1200&q=80',
   },
   {
-    label: '📖 บรรยากาศการอ่าน',
+    label: 'บรรยากาศการอ่าน',
     url: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&w=1200&q=80',
   },
 ]
@@ -79,28 +121,28 @@ const TARGET_OPTIONS: { id: AnnouncementTarget; labelTh: string; labelEn: string
     id: 'all',
     labelTh: 'สมาชิกทุกคน',
     labelEn: 'All Students',
-    icon: '👥',
+    icon: '',
     desc: 'แสดงให้ทุกคนที่เข้าสู่ระบบและผู้เยี่ยมชม',
   },
   {
     id: 'overdue',
     labelTh: 'ผู้มีหนังสือค้างส่ง',
     labelEn: 'Overdue Borrowers',
-    icon: '⚠️',
+    icon: '',
     desc: 'เจาะจงเฉพาะผู้ที่เกินกำหนดส่งหนังสือ',
   },
   {
     id: 'active_borrowers',
     labelTh: 'ผู้กำลังยืมหนังสือ',
     labelEn: 'Active Borrowers',
-    icon: '📚',
+    icon: '',
     desc: 'สมาชิกที่มียอดหนังสือค้างอยู่ในมือปัจจุบัน',
   },
   {
     id: 'new_members',
     labelTh: 'สมาชิกใหม่',
     labelEn: 'New Members',
-    icon: '🌟',
+    icon: '',
     desc: 'ผู้ใช้งานใหม่หรือยังไม่เคยมีประวัติการยืม',
   },
 ]
@@ -133,6 +175,7 @@ export default function AdminAnnouncementsContent({
 
   // Split-Screen Modal State
   const [showModal, setShowModal] = useState(false)
+  const [mobileEditorTab, setMobileEditorTab] = useState<'form' | 'preview'>('form')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
@@ -288,6 +331,7 @@ export default function AdminAnnouncementsContent({
       ctaUrl: '',
     })
     setPreviewViewMode('popup')
+    setMobileEditorTab('form')
     setShowModal(true)
   }
 
@@ -319,6 +363,7 @@ export default function AdminAnnouncementsContent({
       ctaUrl: cta?.url || '',
     })
     setPreviewViewMode(isPop ? 'popup' : 'carousel')
+    setMobileEditorTab('form')
     setShowModal(true)
   }
 
@@ -566,13 +611,6 @@ export default function AdminAnnouncementsContent({
       ───────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200/80 dark:border-neutral-800 pb-5">
         <div className="flex items-center gap-3.5">
-          <Link
-            href="/admin/dashboard"
-            className="p-2.5 rounded-2xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 transition-colors shadow-xs"
-            title="กลับสู่แดชบอร์ดหลัก"
-          >
-            <ArrowLeft size={18} />
-          </Link>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">
@@ -736,10 +774,10 @@ export default function AdminAnnouncementsContent({
             onChange={(e) => setTargetFilter(e.target.value as any)}
             className="px-3 py-1.5 rounded-xl text-xs font-medium bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 outline-none text-neutral-700 dark:text-neutral-300"
           >
-            <option value="all">🎯 เป้าหมาย: ทั้งหมด</option>
-            <option value="overdue">⚠️ ผู้มีหนังสือค้างส่ง (Overdue)</option>
-            <option value="active_borrowers">📚 ผู้กำลังยืม (Active)</option>
-            <option value="new_members">🌟 สมาชิกใหม่ (New Members)</option>
+            <option value="all">เป้าหมาย: ทั้งหมด</option>
+            <option value="overdue">ผู้มีหนังสือค้างส่ง (Overdue)</option>
+            <option value="active_borrowers">ผู้กำลังยืม (Active)</option>
+            <option value="new_members">สมาชิกใหม่ (New Members)</option>
           </select>
         </div>
       </div>
@@ -941,8 +979,8 @@ export default function AdminAnnouncementsContent({
       {/* ─────────────────────────────────────────────────────────────
           5. SPLIT-SCREEN CREATE / EDIT MODAL & LIVE PREVIEW
       ───────────────────────────────────────────────────────────── */}
-      {mounted && showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-2 sm:p-4 md:p-6 animate-fade-in overflow-hidden">
+      {mounted && showModal && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/75 p-2 sm:p-4 md:p-6 animate-fade-in overflow-hidden">
           <div className="bg-white dark:bg-[#121215] border border-neutral-200 dark:border-neutral-800 rounded-3xl w-full max-w-7xl h-[94vh] shadow-2xl flex flex-col overflow-hidden animate-scale-in">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200/80 dark:border-neutral-800 shrink-0 bg-neutral-50/50 dark:bg-neutral-900/40">
@@ -957,19 +995,39 @@ export default function AdminAnnouncementsContent({
                       Split-Screen Live Editor
                     </span>
                   </h2>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 hidden sm:block">
                     แก้ไขข้อมูลด้านซ้าย พร้อมดูตัวอย่างการแสดงผลจริงบนหน้าจอผู้ใช้แบบเรียลไทม์ด้านขวา
                   </p>
                 </div>
               </div>
 
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-2 rounded-full hover:bg-neutral-200/70 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
-                title="ปิด (Esc)"
-              >
-                <X size={20} />
-              </button>
+              {/* Mobile Tab Switcher & Close button */}
+              <div className="flex items-center gap-2">
+                <div className="lg:hidden flex items-center gap-1 p-1 rounded-xl bg-neutral-200/70 dark:bg-neutral-800 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setMobileEditorTab('form')}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                      mobileEditorTab === 'form'
+                        ? 'bg-white dark:bg-neutral-900 text-black dark:text-white shadow-xs'
+                        : 'text-neutral-500 dark:text-neutral-400'
+                    }`}
+                  >
+                    แบบฟอร์ม
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobileEditorTab('preview')}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                      mobileEditorTab === 'preview'
+                        ? 'bg-white dark:bg-neutral-900 text-black dark:text-white shadow-xs'
+                        : 'text-neutral-500 dark:text-neutral-400'
+                    }`}
+                  >
+                    ตัวอย่าง
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Split Screen Container */}
@@ -978,7 +1036,9 @@ export default function AdminAnnouncementsContent({
               <form
                 id="announcement-form"
                 onSubmit={handleSave}
-                className="lg:col-span-6 overflow-y-auto p-5 sm:p-7 space-y-5 border-r border-neutral-200/80 dark:border-neutral-800 min-h-0"
+                className={`lg:col-span-6 overflow-y-auto p-5 sm:p-7 space-y-5 border-r border-neutral-200/80 dark:border-neutral-800 min-h-0 ${
+                  mobileEditorTab === 'form' ? 'block' : 'hidden lg:block'
+                }`}
               >
                 {/* 1. Target Audience Selection */}
                 <div className="space-y-2">
@@ -1092,7 +1152,7 @@ export default function AdminAnnouncementsContent({
                           : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800'
                       }`}
                     >
-                      📢 ทั่วไป (Info)
+                      ทั่วไป (Info)
                     </button>
                     <button
                       type="button"
@@ -1103,7 +1163,7 @@ export default function AdminAnnouncementsContent({
                           : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800'
                       }`}
                     >
-                      ⚠️ แจ้งเตือน (Warning)
+                      แจ้งเตือน (Warning)
                     </button>
                     <button
                       type="button"
@@ -1114,7 +1174,7 @@ export default function AdminAnnouncementsContent({
                           : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800'
                       }`}
                     >
-                      ✨ พิเศษ (Featured)
+                      พิเศษ (Featured)
                     </button>
                   </div>
                 </div>
@@ -1328,27 +1388,144 @@ export default function AdminAnnouncementsContent({
                 </div>
 
                 {/* 8. Call To Action (CTA) Button */}
-                <div className="space-y-2 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800">
-                  <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center justify-between">
-                    <span>ปุ่มดำเนินการ (Call To Action - Optional)</span>
-                    <span className="text-[10px] font-normal text-neutral-400">แสดงบนการ์ดและป๊อปอัป</span>
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      placeholder="ข้อความปุ่ม เช่น ยืมหนังสือเลย"
-                      value={formData.ctaText}
-                      onChange={(e) => setFormData({ ...formData, ctaText: e.target.value })}
-                      className="px-3 py-2 rounded-xl text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white outline-none"
-                    />
-                    <input
-                      type="text"
-                      placeholder="ลิงก์ปลายทาง เช่น /books หรือ /my-borrows"
-                      value={formData.ctaUrl}
-                      onChange={(e) => setFormData({ ...formData, ctaUrl: e.target.value })}
-                      className="px-3 py-2 rounded-xl text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white outline-none"
-                    />
+                <div className="space-y-3 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                        <Link2 size={14} className="text-neutral-600 dark:text-neutral-300" />
+                        <span>ปุ่มดำเนินการ (Call To Action - ไม่บังคับ)</span>
+                      </label>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">
+                        เพิ่มปุ่มกดนำทางให้ผู้ใช้คลิกไปหน้าหนังสือ ยืม-คืน หรือเว็บไซต์
+                      </p>
+                    </div>
+
+                    {(formData.ctaText || formData.ctaUrl) && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, ctaText: '', ctaUrl: '' })}
+                        className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 flex items-center gap-1 hover:underline cursor-pointer"
+                        title="ลบปุ่มดำเนินการออก"
+                      >
+                        <RotateCcw size={11} />
+                        <span>ล้างค่า (ไม่ใส่ปุ่ม)</span>
+                      </button>
+                    )}
                   </div>
+
+                  {/* Quick-Pick Destination Presets */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                      ปุ่มลัดเลือกปลายทาง (คลิกเพื่อตั้งค่าอัตโนมัติ):
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {CTA_PRESETS.map((p) => {
+                        const isSelected =
+                          p.id === 'external'
+                            ? formData.ctaUrl.startsWith('http')
+                            : formData.ctaUrl === p.url
+
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              const isDefaultOrEmpty =
+                                !formData.ctaText.trim() ||
+                                CTA_PRESETS.some((prev) => prev.defaultText === formData.ctaText)
+
+                              setFormData({
+                                ...formData,
+                                ctaUrl: p.url,
+                                ctaText: isDefaultOrEmpty ? p.defaultText : formData.ctaText,
+                              })
+                            }}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 shadow-xs'
+                                : 'bg-white dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 hover:border-neutral-400'
+                            }`}
+                          >
+                            {p.id === 'books' && <BookOpen size={12} />}
+                            {p.id === 'my-borrows' && <Bookmark size={12} />}
+                            {p.id === 'feedback' && <MessageSquare size={12} />}
+                            {p.id === 'home' && <Home size={12} />}
+                            {p.id === 'external' && <Globe size={12} />}
+                            <span>{p.label}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Input Fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    <div className="space-y-1">
+                      <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 flex items-center gap-1">
+                        <Tag size={11} />
+                        <span>ข้อความบนปุ่ม (Button Label)</span>
+                      </span>
+                      <input
+                        type="text"
+                        placeholder="เช่น ดูรายการหนังสือ, ยืมเลย"
+                        value={formData.ctaText}
+                        onChange={(e) => setFormData({ ...formData, ctaText: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <Link2 size={11} />
+                          <span>ลิงก์ปลายทาง (Target URL)</span>
+                        </span>
+                        {formData.ctaUrl ? (
+                          formData.ctaUrl.startsWith('http') ? (
+                            <span className="text-[10px] text-blue-500 font-bold">🌐 เว็บภายนอก</span>
+                          ) : formData.ctaUrl.startsWith('/') ? (
+                            <span className="text-[10px] text-emerald-600 font-bold">🏠 ในระบบ</span>
+                          ) : null
+                        ) : null}
+                      </span>
+                      <input
+                        type="text"
+                        placeholder="เช่น /books หรือ https://..."
+                        value={formData.ctaUrl}
+                        onChange={(e) => setFormData({ ...formData, ctaUrl: e.target.value })}
+                        onBlur={() => {
+                          const val = formData.ctaUrl.trim()
+                          if (!val) return
+                          if (val.startsWith('www.')) {
+                            setFormData({ ...formData, ctaUrl: `https://${val}` })
+                          } else if (!val.startsWith('/') && !val.startsWith('http://') && !val.startsWith('https://')) {
+                            // If they typed just "books" or "my-borrows", prepend "/"
+                            setFormData({ ...formData, ctaUrl: `/${val}` })
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Live Mini Preview Bar */}
+                  {formData.ctaText.trim() && (
+                    <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-800 flex items-center justify-between text-xs">
+                      <span className="text-[11px] text-neutral-400">
+                        {formData.ctaUrl?.startsWith('http')
+                          ? 'จะเปิดหน้าต่างใหม่ (New Tab)'
+                          : `จะเปลี่ยนหน้าไปยัง: ${formData.ctaUrl || '/'}`}
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-black font-bold text-xs shadow-xs">
+                        <span>{formData.ctaText}</span>
+                        {formData.ctaUrl?.startsWith('http') ? (
+                          <ArrowUpRight size={12} />
+                        ) : (
+                          <ChevronRight size={12} />
+                        )}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* 9. Publish Status Switch */}
@@ -1374,7 +1551,9 @@ export default function AdminAnnouncementsContent({
               </form>
 
               {/* ───────────── RIGHT SIDE: DYNAMIC LIVE PREVIEW FRAME (Col 6) ───────────── */}
-              <div className="lg:col-span-6 bg-neutral-100/70 dark:bg-neutral-950 p-4 sm:p-6 flex flex-col justify-between overflow-y-auto min-h-0 border-t lg:border-t-0 border-neutral-200 dark:border-neutral-800">
+              <div className={`lg:col-span-6 bg-neutral-100/70 dark:bg-neutral-950 p-4 sm:p-6 flex flex-col justify-between overflow-y-auto min-h-0 border-t lg:border-t-0 border-neutral-200 dark:border-neutral-800 ${
+                mobileEditorTab === 'preview' ? 'flex' : 'hidden lg:flex'
+              }`}>
                 {/* Preview Toolbar */}
                 <div className="flex items-center justify-between gap-2 pb-4 shrink-0">
                   <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 text-xs shadow-xs">
@@ -1475,13 +1654,13 @@ export default function AdminAnnouncementsContent({
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/20 backdrop-blur-md border border-white/25">
                               {formData.type === 'warning'
-                                ? '⚠️ แจ้งเตือน'
+                                ? 'แจ้งเตือน'
                                 : formData.type === 'success'
-                                ? '✨ แนะนำ'
-                                : '📢 ประชาสัมพันธ์'}
+                                ? 'แนะนำ'
+                                : 'ประชาสัมพันธ์'}
                             </span>
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/40 backdrop-blur-md border border-white/10 text-neutral-200">
-                              {activeTargetObj.icon} {activeTargetObj.labelTh}
+                              {activeTargetObj.labelTh}
                             </span>
                             {formData.expiresAt && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/20 text-amber-200 border border-amber-400/30">
@@ -1492,22 +1671,32 @@ export default function AdminAnnouncementsContent({
                         </div>
 
                         {/* Middle Content */}
-                        <div className="relative z-10 my-auto py-3 space-y-1.5">
+                        <div className="relative z-10 my-auto py-3 space-y-2">
                           <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-snug drop-shadow-sm">
                             {formData.title || 'พิมพ์หัวข้อประกาศของคุณที่ช่องซ้าย'}
                           </h3>
-                          <p className="text-xs sm:text-sm text-neutral-200/90 leading-relaxed line-clamp-3">
-                            {formData.body || 'เนื้อหาประกาศจะแสดงผลตรงนี้แบบเรียลไทม์...'}
-                          </p>
+                          {(!formData.body || (formData.body.length <= 70 && !formData.body.includes('\n'))) && (
+                            <p className="text-xs sm:text-sm text-neutral-200/90 leading-relaxed">
+                              {formData.body || 'เนื้อหาประกาศจะแสดงผลตรงนี้แบบเรียลไทม์...'}
+                            </p>
+                          )}
 
-                          {formData.ctaText && (
-                            <div className="pt-2">
+                          <div className="flex items-center gap-2 pt-1 flex-wrap">
+                            {formData.ctaText && (
                               <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white text-neutral-950 text-xs font-bold shadow-md">
                                 <span>{formData.ctaText}</span>
                                 <ChevronRight size={13} />
                               </span>
-                            </div>
-                          )}
+                            )}
+
+                            {formData.body && (formData.body.length > 70 || formData.body.includes('\n')) && (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 text-white backdrop-blur-md border border-white/25 text-xs font-semibold shadow-xs">
+                                <BookOpen size={13} className="text-white/80" />
+                                <span>อ่านรายละเอียดเพิ่มเติม</span>
+                                <ChevronRight size={13} />
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Bottom Slide controls simulation */}
@@ -1542,13 +1731,13 @@ export default function AdminAnnouncementsContent({
                             <div className="absolute top-3 left-3 flex items-center gap-1.5">
                               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/90 text-neutral-950 backdrop-blur-md">
                                 {formData.type === 'warning'
-                                  ? '⚠️ ข้อควรระวัง'
+                                  ? 'ข้อควรระวัง'
                                   : formData.type === 'success'
-                                  ? '✨ ข่าวพิเศษ'
-                                  : '📢 ประกาศสำคัญ'}
+                                  ? 'ข่าวพิเศษ'
+                                  : 'ประกาศสำคัญ'}
                               </span>
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 text-white backdrop-blur-md border border-white/20">
-                                {activeTargetObj.icon} {activeTargetObj.labelTh}
+                                {activeTargetObj.labelTh}
                               </span>
                             </div>
                             <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center">
@@ -1559,10 +1748,10 @@ export default function AdminAnnouncementsContent({
                           <div className="p-4 pb-0 flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-1.5">
                               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
-                                {formData.type === 'warning' ? '⚠️ แจ้งเตือน' : '📢 ประกาศ'}
+                                {formData.type === 'warning' ? 'แจ้งเตือน' : 'ประกาศ'}
                               </span>
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300">
-                                {activeTargetObj.icon} {activeTargetObj.labelTh}
+                                {activeTargetObj.labelTh}
                               </span>
                             </div>
                             <div className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-400">
@@ -1622,8 +1811,8 @@ export default function AdminAnnouncementsContent({
                             <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
                             <span>
                               {formData.target === 'overdue'
-                                ? '⚠️ สำหรับผู้ที่มีหนังสือค้างส่ง โปรดนำหนังสือมาคืน ณ จุดคืนหนังสือโดยเร็ว'
-                                : '💡 สมาชิกสามารถยืมหนังสือได้ครั้งละ 1 เล่ม นานสูงสุด 14 วัน'}
+                                ? 'สำหรับผู้ที่มีหนังสือค้างส่ง โปรดนำหนังสือมาคืน ณ จุดคืนหนังสือโดยเร็ว'
+                                : 'สมาชิกสามารถยืมหนังสือได้ครั้งละ 1 เล่ม นานสูงสุด 14 วัน'}
                             </span>
                           </div>
                         </div>
@@ -1651,34 +1840,35 @@ export default function AdminAnnouncementsContent({
                     )}
                   </div>
                 </div>
+              </div>
+            </div>
 
-                {/* Modal Footer Controls */}
-                <div className="pt-4 border-t border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between gap-3 shrink-0">
-                  <span className="text-[11px] text-neutral-400 hidden sm:inline">
-                    * ข้อมูลจะถูกบันทึกและแสดงผลทันทีตามเงื่อนไขที่กำหนด
-                  </span>
-                  <div className="flex items-center gap-2.5 ml-auto">
-                    <button
-                      type="button"
-                      onClick={() => setShowModal(false)}
-                      className="px-5 py-2.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
-                    >
-                      ยกเลิก
-                    </button>
-                    <button
-                      type="submit"
-                      form="announcement-form"
-                      disabled={saving}
-                      className="px-6 py-2.5 rounded-xl text-xs font-bold bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 transition-all active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
-                    >
-                      {saving ? 'กำลังบันทึก...' : editingId ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างประกาศ'}
-                    </button>
-                  </div>
-                </div>
+            {/* Pinned Global Modal Footer (Always visible & accessible across all screen sizes) */}
+            <div className="px-6 py-3.5 border-t border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-[#121215] flex items-center justify-between gap-3 shrink-0">
+              <span className="text-[11px] text-neutral-400 hidden sm:inline">
+                * ข้อมูลจะถูกบันทึกและแสดงผลทันทีตามเงื่อนไขที่กำหนด
+              </span>
+              <div className="flex items-center gap-2.5 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-5 py-2.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  form="announcement-form"
+                  disabled={saving}
+                  className="px-6 py-2.5 rounded-xl text-xs font-bold bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 transition-all active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
+                >
+                  {saving ? 'กำลังบันทึก...' : editingId ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างประกาศ'}
+                </button>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

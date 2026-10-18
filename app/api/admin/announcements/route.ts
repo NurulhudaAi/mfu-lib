@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase-server'
 import { requireAdmin } from '@/lib/admin-guard'
 import { createAnnouncementSchema, validateInput } from '@/lib/validation'
@@ -13,10 +14,19 @@ export async function POST(req: NextRequest) {
   if (parsed.error) return parsed.error
 
   const supabase = createServiceClient()
-  const { error } = await supabase.from('announcements').insert({
-    ...parsed.data,
-    created_by: auth.admin.id,
-  })
+  const { data: newAnn, error } = await supabase
+    .from('announcements')
+    .insert({
+      ...parsed.data,
+      created_by: auth.admin.id,
+    })
+    .select()
+    .single()
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ success: true })
+
+  revalidatePath('/')
+  revalidatePath('/admin/announcements')
+
+  return NextResponse.json({ success: true, data: newAnn })
 }

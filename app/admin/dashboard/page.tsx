@@ -31,7 +31,7 @@ async function getData() {
       .select('id, full_name, email, student_id, avatar_url, role, is_blacklisted, blacklist_reason, created_at')
       .order('created_at', { ascending: false }),
     supabase.from('queue')
-      .select('id, position, created_at, profiles(id, full_name, email, avatar_url), books(id, title, author, cover_url)')
+      .select('id, book_id, user_id, position, notified, notified_at, created_at, profiles(id, full_name, email, avatar_url), books(id, title, author, cover_url, available_copies)')
       .order('book_id', { ascending: true })
       .order('position', { ascending: true }),
   ])

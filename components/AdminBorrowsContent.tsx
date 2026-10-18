@@ -210,7 +210,7 @@ export default function AdminBorrowsContent({ borrows, queues }: Props) {
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">{fmt(borrow.borrowed_at)}</td>
                       <td className={`px-4 py-3 whitespace-nowrap font-medium ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
                         {fmt(borrow.due_date)}
-                        {isOverdue && <span className="ml-1">⚠️</span>}
+                        {isOverdue && <AlertTriangle size={13} className="text-rose-500 inline shrink-0 ml-1.5" />}
                       </td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
                         {borrow.returned_at ? fmt(borrow.returned_at) : <span className="text-gray-300 dark:text-gray-600">{t('notReturnedYet')}</span>}
@@ -321,7 +321,7 @@ export default function AdminBorrowsContent({ borrows, queues }: Props) {
                           isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-neutral-700 dark:text-neutral-300'
                         }`}>
                           {fmt(borrow.due_date)}
-                          {isOverdue && <span>⚠️</span>}
+                          {isOverdue && <AlertTriangle size={13} className="text-rose-500 shrink-0" />}
                         </span>
                       </div>
                       {borrow.returned_at && (
@@ -504,7 +504,7 @@ export default function AdminBorrowsContent({ borrows, queues }: Props) {
           {/* Full-screen Backdrop blur */}
           <div
             onClick={() => setProofModal(null)}
-            className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/50 dark:bg-black/70 transition-opacity"
             aria-hidden="true"
           />
 
@@ -663,17 +663,6 @@ export default function AdminBorrowsContent({ borrows, queues }: Props) {
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 sm:p-5 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/70 dark:bg-[#141416] flex items-center justify-end gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => setProofModal(null)}
-                className="w-full sm:w-auto py-2.5 px-6 rounded-xl bg-black text-white dark:bg-white dark:text-black font-semibold text-xs hover:opacity-90 transition-opacity shadow-sm"
-              >
-                {t('close')}
-              </button>
             </div>
           </div>
         </div>,

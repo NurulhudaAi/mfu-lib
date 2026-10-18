@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { BookOpen, Plus, Trash2, Star, ArrowLeft, Search, Pencil, X, Upload, ToggleLeft, ToggleRight, Tag } from 'lucide-react'
 
 import { useApp } from '@/lib/app-context'
+import { getCategoryLabel } from '@/lib/i18n'
 
 interface Props {
   books: any[]
@@ -338,7 +339,7 @@ export default function AdminBooksContent({ books, categories: initialCategories
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     {book.category && (
                       <span className="text-[11px] px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
-                        {book.category}
+                        {getCategoryLabel(book.category, locale)}
                       </span>
                     )}
                     <span className={`text-[11px] px-2 py-0.5 rounded-md font-semibold border ${
@@ -393,7 +394,7 @@ export default function AdminBooksContent({ books, categories: initialCategories
 
       {/* ── Category Manager Modal ── */}
       {showCatManager && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 px-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
               <h2 className="text-base font-bold text-gray-900 dark:text-white">{t('categoryManagerTitle')}</h2>
@@ -453,13 +454,10 @@ export default function AdminBooksContent({ books, categories: initialCategories
 
       {/* ── Edit Modal ── */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 px-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
               <h2 className="text-base font-bold text-gray-900 dark:text-white">{t('editBookModalTitle')}</h2>
-              <button onClick={closeEdit} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500">
-                <X size={18} />
-              </button>
             </div>
 
             <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
