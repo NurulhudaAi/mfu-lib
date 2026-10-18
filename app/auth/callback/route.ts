@@ -2,12 +2,14 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { toSessionCookieOptions } from '@/lib/session-cookie'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const redirectParam = searchParams.get('redirect') || '/'
-  const targetUrl = redirectParam.startsWith('/') ? `${origin}${redirectParam}` : `${origin}/`
+  const isSafePath = redirectParam.startsWith('/') && !redirectParam.startsWith('//')
+  const targetUrl = isSafePath ? `${origin}${redirectParam}` : `${origin}/`
 
   if (code) {
     const cookieStore = await cookies()
@@ -22,7 +24,7 @@ export async function GET(request: Request) {
           },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, toSessionCookieOptions(value, options))
             )
           },
         },

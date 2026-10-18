@@ -39,3 +39,11 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ success: true })
 }
+
+export async function DELETE() {
+  // Feedback cannot be deleted by admins to preserve user feedback integrity & audit compliance
+  return NextResponse.json(
+    { error: 'Feedback cannot be deleted to preserve audit and feedback integrity' },
+    { status: 405 }
+  )
+}

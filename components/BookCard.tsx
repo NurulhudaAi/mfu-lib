@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { BookOpen, Sparkles, Check, Lock, Edit3, Trash2 } from 'lucide-react'
 import { useApp } from '@/lib/app-context'
+import { getCategoryLabel } from '@/lib/i18n'
 
 interface Book {
   id: string
@@ -294,7 +295,7 @@ export default function BookCard({
             </span>
           ) : book.category ? (
             <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200/60 dark:border-neutral-700/60">
-              {book.category}
+              {getCategoryLabel(book.category, locale)}
             </span>
           ) : (
             !isAvailable && (

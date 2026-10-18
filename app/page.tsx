@@ -1,6 +1,7 @@
 import { createServiceClient, createSessionClient } from '@/lib/supabase-server'
-import Navbar from '@/components/Navbar'
 import HomeContent from '@/components/HomeContent'
+
+export const dynamic = 'force-dynamic'
 
 async function getData() {
   const supabase = createServiceClient()

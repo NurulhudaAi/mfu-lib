@@ -221,7 +221,7 @@ export default function BorrowButton({
           </span>
         </div>
         <Link
-          href={`/return/${currentBorrow.id}`}
+          href={`/my-borrows?return=${currentBorrow.id}`}
           className="flex items-center justify-center gap-2 w-full py-3.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-2xl font-semibold transition-all shadow-sm active:scale-98"
         >
           <RotateCcw size={17} />

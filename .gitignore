@@ -17,3 +17,5 @@ node_modules/
 Thumbs.db
 
 *.tsbuildinfo
+data/
+.agents/

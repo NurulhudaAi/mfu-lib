@@ -9,9 +9,10 @@ import { th, enUS } from 'date-fns/locale'
 import {
   BookOpen, Lock, Sparkles, Check, CheckCircle2,
   Pencil, Upload, X, MessageSquare, ArrowRight,
-  ShieldCheck, AlertCircle, Camera, Scan, Search, Loader2, ImageIcon
+  ShieldCheck, AlertCircle, Camera, Scan, Search, Loader2, ImageIcon, Calendar
 } from 'lucide-react'
 import { useApp } from '@/lib/app-context'
+import { getCategoryLabel } from '@/lib/i18n'
 import BorrowButton from './BorrowButton'
 import BookCard from './BookCard'
 
@@ -404,7 +405,7 @@ export default function BookDetailContent({
               href={`/books?category=${encodeURIComponent(book.category)}`}
               className="hover:text-gray-700 dark:text-gray-300 transition-colors"
             >
-              {book.category}
+              {getCategoryLabel(book.category, locale)}
             </Link>
           </>
         )}
@@ -735,9 +736,9 @@ export default function BookDetailContent({
 
           {/* Active borrow due date */}
           {activeBorrow && !userIsAdmin && (
-            <div className="bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 mb-5 text-sm text-neutral-900 dark:text-neutral-100 font-semibold">
-              📅 {t('dueDate')}:{' '}
-              {format(new Date(activeBorrow.due_date), 'dd MMM yyyy', { locale: dateLocale })}
+            <div className="bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 mb-5 text-sm text-neutral-900 dark:text-neutral-100 font-semibold flex items-center gap-1.5">
+              <Calendar size={15} className="text-neutral-500 shrink-0" />
+              <span>{t('dueDate')}: {format(new Date(activeBorrow.due_date), 'dd MMM yyyy', { locale: dateLocale })}</span>
             </div>
           )}
 
@@ -783,7 +784,7 @@ export default function BookDetailContent({
                   href={`/books?category=${encodeURIComponent(book.category)}`}
                   className="px-4 py-1.5 rounded-full border border-neutral-300 dark:border-neutral-700 text-sm text-neutral-700 dark:text-neutral-300 hover:border-black dark:hover:border-white transition-colors"
                 >
-                  {book.category}
+                  {getCategoryLabel(book.category, locale)}
                 </Link>
               )}
               {Array.isArray(book.tags) &&
@@ -873,8 +874,8 @@ export default function BookDetailContent({
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                 {book.category
                   ? locale === 'th'
-                    ? `หนังสือหมวดหมู่เดียวกัน "${book.category}" และเนื้อหาใกล้เคียง`
-                    : `Books in "${book.category}" category and related titles`
+                    ? `หนังสือหมวดหมู่เดียวกัน "${getCategoryLabel(book.category, locale)}" และเนื้อหาใกล้เคียง`
+                    : `Books in "${getCategoryLabel(book.category, locale)}" category and related titles`
                   : locale === 'th'
                   ? 'หนังสือแนะนำเพิ่มเติมที่คุณอาจสนใจ'
                   : 'More books you might be interested in'}
@@ -902,7 +903,7 @@ export default function BookDetailContent({
       {/* ── ADMIN EDIT BOOK MODAL (PORTAL TO DOCUMENT.BODY) ── */}
       {mounted && isEditModalOpen && createPortal(
         <div
-          className="fixed inset-0 w-screen h-[100dvh] z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-fade-in"
+          className="fixed inset-0 w-screen h-[100dvh] z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/50 dark:bg-black/70 animate-fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsEditModalOpen(false)
           }}

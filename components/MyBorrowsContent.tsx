@@ -4,7 +4,8 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/lib/app-context'
-import { format } from 'date-fns'
+import { getCategoryLabel } from '@/lib/i18n'
+import { format, differenceInCalendarDays } from 'date-fns'
 import { th, enUS } from 'date-fns/locale'
 import {
   BookOpen,
@@ -125,6 +126,21 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [returnBorrow, isSubmittingReturn, proofBorrow])
+
+  // Auto-open return modal if redirected with ?return=borrowId
+  useEffect(() => {
+    if (typeof window !== 'undefined' && borrows.length > 0) {
+      const params = new URLSearchParams(window.location.search)
+      const returnId = params.get('return')
+      if (returnId) {
+        const target = borrows.find((b) => b.id === returnId && b.status === 'active')
+        if (target) {
+          setTab('active')
+          setReturnBorrow(target)
+        }
+      }
+    }
+  }, [borrows])
 
   // ✅ Contextual search and category filtering helper
   const isMatch = (itemBook: any) => {
@@ -345,7 +361,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
           {selectedCategory !== 'all' && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-[#151518] text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 font-medium shadow-xs">
               <span className="text-neutral-400">{locale === 'th' ? 'หมวดหมู่:' : 'Category:'}</span>
-              <span className="font-semibold">{selectedCategory}</span>
+              <span className="font-semibold">{getCategoryLabel(selectedCategory, locale)}</span>
               <button
                 type="button"
                 onClick={() => setSelectedCategory('all')}
@@ -468,65 +484,119 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
               }}
             />
           ) : (
-            filteredQueues.map((queue) => (
-              <div
-                key={queue.id}
-                className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 sm:p-5 flex items-center gap-4 shadow-xs transition-all hover:border-neutral-300 dark:hover:border-neutral-700"
-              >
-                <div className="w-14 h-20 bg-neutral-100 dark:bg-neutral-800 rounded-xl overflow-hidden shrink-0 border border-neutral-200 dark:border-neutral-700">
-                  {queue.books?.cover_url ? (
-                    <img
-                      src={queue.books.cover_url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <BookOpen size={20} className="text-neutral-400" />
+            filteredQueues.map((queue) => {
+              const isNotified = Boolean(queue.notified)
+              return (
+                <div
+                  key={queue.id}
+                  className={`bg-white dark:bg-neutral-900 rounded-2xl border p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 shadow-xs transition-all ${
+                    isNotified
+                      ? 'border-emerald-500/60 dark:border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/20 ring-1 ring-emerald-500/30'
+                      : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-4 w-full sm:w-auto">
+                    <div className="w-14 h-20 bg-neutral-100 dark:bg-neutral-800 rounded-xl overflow-hidden shrink-0 border border-neutral-200 dark:border-neutral-700 shadow-xs">
+                      {queue.books?.cover_url ? (
+                        <img
+                          src={queue.books.cover_url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <BookOpen size={20} className="text-neutral-400" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/books/${queue.books?.id}`}
-                    className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white hover:text-black dark:hover:text-neutral-200 truncate block transition-colors"
-                  >
-                    {queue.books?.title}
-                  </Link>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    {queue.books?.author && (
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                        {queue.books.author}
-                      </p>
-                    )}
-                    {queue.books?.category && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
-                        {queue.books.category}
-                      </span>
-                    )}
+
+                    <div className="flex-1 min-w-0 sm:hidden">
+                      <Link
+                        href={`/books/${queue.books?.id}`}
+                        className="font-bold text-sm text-neutral-900 dark:text-white truncate block"
+                      >
+                        {queue.books?.title}
+                      </Link>
+                      {queue.books?.author && (
+                        <p className="text-xs text-neutral-500 truncate mt-0.5">
+                          {queue.books.author}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 mt-3">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-800 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 px-3 py-1 rounded-full">
-                      <Bell size={12} />
-                      {t('queuePosition')} {queue.position}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        confirmCancelQueue(
-                          queue.id,
-                          queue.books?.title || 'หนังสือ',
-                          queue.books?.id
-                        )
-                      }
-                      className="text-xs font-semibold text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:underline transition-colors"
-                    >
-                      {locale === 'th' ? 'ยกเลิกการจอง' : 'Leave queue'}
-                    </button>
+
+                  <div className="flex-1 min-w-0 w-full">
+                    <div className="hidden sm:block">
+                      <Link
+                        href={`/books/${queue.books?.id}`}
+                        className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white hover:text-black dark:hover:text-neutral-200 truncate block transition-colors"
+                      >
+                        {queue.books?.title}
+                      </Link>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {queue.books?.author && (
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                            {queue.books.author}
+                          </p>
+                        )}
+                        {queue.books?.category && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
+                            {queue.books.category}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {isNotified && (
+                      <div className="mt-2.5 px-3.5 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                          <span>
+                            {locale === 'th'
+                              ? '🎉 ถึงคิวคุณแล้ว! หนังสือถูกคืนแล้วและพร้อมให้คุณยืม (สิทธิ์ 24 ชม.)'
+                              : '🎉 It’s your turn! Book is returned and ready to borrow (24h reservation)'}
+                          </span>
+                        </div>
+                        <Link
+                          href={`/books/${queue.books?.id}`}
+                          className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-xl text-xs font-bold transition-all shadow-xs shrink-0"
+                        >
+                          <span>{locale === 'th' ? 'ยืมหนังสือทันที' : 'Borrow Now'}</span>
+                          <ExternalLink size={12} />
+                        </Link>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-3 mt-3">
+                      {isNotified ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-full">
+                          <Bell size={12} />
+                          {locale === 'th' ? 'ถึงคิวแล้ว (ลำดับที่ 1)' : 'Turn Ready (#1)'}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-800 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 px-3 py-1 rounded-full">
+                          <Bell size={12} />
+                          {t('queuePosition')} {queue.position}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          confirmCancelQueue(
+                            queue.id,
+                            queue.books?.title || 'หนังสือ',
+                            queue.books?.id
+                          )
+                        }
+                        className="text-xs font-semibold text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:underline transition-colors"
+                      >
+                        {locale === 'th' ? 'ยกเลิกการจอง' : 'Leave queue'}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       )}
@@ -543,7 +613,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
           {/* Full-screen Backdrop blur */}
           <div
             onClick={() => !isSubmittingReturn && closeReturnModal()}
-            className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/50 dark:bg-black/70 transition-opacity"
             aria-hidden="true"
           />
 
@@ -564,15 +634,6 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                disabled={isSubmittingReturn}
-                onClick={closeReturnModal}
-                className="p-2 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                title="ปิด"
-              >
-                <X size={18} />
-              </button>
             </div>
 
             {/* Modal Scrollable Body */}
@@ -785,7 +846,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
           {/* Full-screen Backdrop blur */}
           <div
             onClick={() => setProofBorrow(null)}
-            className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/50 dark:bg-black/70 transition-opacity"
             aria-hidden="true"
           />
 
@@ -943,17 +1004,6 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                 )}
               </div>
             </div>
-
-            {/* Footer */}
-            <div className="p-4 sm:p-5 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/70 dark:bg-[#141416] flex items-center justify-end gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => setProofBorrow(null)}
-                className="w-full sm:w-auto py-2.5 px-6 rounded-xl bg-black text-white dark:bg-white dark:text-black font-semibold text-xs hover:opacity-90 transition-opacity shadow-sm"
-              >
-                ปิดหน้าต่าง
-              </button>
-            </div>
           </div>
         </div>,
         document.body
@@ -979,8 +1029,22 @@ function BorrowCard({
   const status = statusConfig[borrow.status as keyof typeof statusConfig] || statusConfig.active
   const StatusIcon = status.icon
 
+  const dueDate = new Date(borrow.due_date)
+  const now = new Date()
+  const calDays = differenceInCalendarDays(dueDate, now)
+  const isDueTomorrow = borrow.status === 'active' && calDays === 1
+  const isOverdue = borrow.status === 'active' && (calDays < 0 || dueDate < now)
+
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 sm:p-5 shadow-xs transition-all hover:border-neutral-300 dark:hover:border-neutral-700">
+    <div
+      className={`bg-white dark:bg-neutral-900 rounded-2xl border p-4 sm:p-5 shadow-xs transition-all ${
+        isDueTomorrow
+          ? 'border-amber-400/80 dark:border-amber-500/60 bg-amber-50/15 dark:bg-amber-950/15'
+          : isOverdue
+          ? 'border-red-400/80 dark:border-red-500/60 bg-red-50/15 dark:bg-red-950/15'
+          : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+      }`}
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Book cover & details */}
         <div className="flex gap-4 min-w-0 flex-1">
@@ -1017,7 +1081,7 @@ function BorrowCard({
               <span>{t('borrowedAt')}: <strong className="text-neutral-700 dark:text-neutral-300 font-medium">{formatDate(borrow.borrowed_at)}</strong></span>
               {borrow.status === 'active' && (
                 <span className={`font-semibold ${
-                  new Date(borrow.due_date) < new Date() ? 'text-neutral-900 dark:text-white underline' : 'text-neutral-700 dark:text-neutral-300'
+                  isOverdue ? 'text-red-600 dark:text-red-400 font-bold' : isDueTomorrow ? 'text-amber-700 dark:text-amber-400 font-bold' : 'text-neutral-700 dark:text-neutral-300'
                 }`}>
                   {t('dueDate')}: {formatDate(borrow.due_date)}
                 </span>
@@ -1026,6 +1090,30 @@ function BorrowCard({
                 <span>{t('returnedAt')}: <strong className="text-neutral-700 dark:text-neutral-300 font-medium">{formatDate(borrow.returned_at)}</strong></span>
               )}
             </div>
+
+            {/* 1 Day Before Due Date Warning Banner */}
+            {isDueTomorrow && (
+              <div className="mt-2.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center gap-2 text-xs font-semibold text-amber-800 dark:text-amber-300">
+                <Clock size={13} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                <span>
+                  {locale === 'th'
+                    ? '⏰ ครบกำหนดส่งคืนในวันพรุ่งนี้ (แจ้งเตือนล่วงหน้า 1 วัน)'
+                    : '⏰ Due tomorrow! (1-day reminder)'}
+                </span>
+              </div>
+            )}
+
+            {/* Overdue Warning Banner */}
+            {isOverdue && (
+              <div className="mt-2.5 px-3 py-1.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 flex items-center gap-2 text-xs font-semibold text-red-800 dark:text-red-300">
+                <AlertTriangle size={13} className="shrink-0 text-red-600 dark:text-red-400" />
+                <span>
+                  {locale === 'th'
+                    ? '⚠️ เกินกำหนดส่งคืนแล้ว กรุณาดำเนินการคืนหนังสือโดยเร็ว'
+                    : '⚠️ Overdue! Please return as soon as possible'}
+                </span>
+              </div>
+            )}
 
             {/* Notes display if available */}
             {borrow.notes && (
@@ -1050,10 +1138,20 @@ function BorrowCard({
             <button
               type="button"
               onClick={onReturnClick}
-              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-xl text-xs font-bold transition-all shadow-xs active:scale-[0.98]"
+              className={`w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs active:scale-[0.98] ${
+                isDueTomorrow
+                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                  : isOverdue
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black'
+              }`}
             >
               <RotateCcw size={13} />
-              <span>{t('returnBook')}</span>
+              <span>
+                {isDueTomorrow
+                  ? (locale === 'th' ? 'คืนหนังสือเลย (ครบกำหนดพรุ่งนี้)' : 'Return (Due Tomorrow)')
+                  : t('returnBook')}
+              </span>
             </button>
           )}
 

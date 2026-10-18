@@ -33,7 +33,7 @@ async function getData() {
   const { data: borrows } = await supabase
     .from('borrows')
     .select(`
-      id, status, borrowed_at, due_date, returned_at, return_proof_url, notes,
+      id, status, borrowed_at, due_date, returned_at, return_proof_url, notes, reminder_sent, overdue_notified,
       books (id, title, author, cover_url, category)
     `)
     .eq('user_id', user.id)
@@ -42,7 +42,7 @@ async function getData() {
   const { data: queues } = await supabase
     .from('queue')
     .select(`
-      id, position, created_at,
+      id, position, notified, notified_at, created_at,
       books (id, title, author, cover_url, category)
     `)
     .eq('user_id', user.id)
