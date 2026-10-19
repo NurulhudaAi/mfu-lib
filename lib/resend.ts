@@ -179,7 +179,7 @@ export async function sendBorrowConfirmEmail({
     ${btn(`${APP_URL}/my-borrows`, 'ดูประวัติการยืม')}
   `)
 
-  return resend.emails.send({
+  return safeSendEmail({
     from: FROM,
     to,
     subject: `ยืนยันการยืม: ${bookTitle}`,
@@ -219,7 +219,7 @@ export async function sendReminderEmail({
     ${btn(`${APP_URL}/my-borrows`, 'คืนหนังสือเลย', '#d97706')}
   `)
 
-  return resend.emails.send({
+  return safeSendEmail({
     from: FROM,
     to,
     subject: `แจ้งเตือน: พรุ่งนี้ครบกำหนดคืน "${bookTitle}"`,
@@ -265,7 +265,7 @@ export async function sendOverdueEmail({
     ${btn(`${APP_URL}/my-borrows`, 'คืนหนังสือทันที', '#dc2626')}
   `)
 
-  return resend.emails.send({
+  return safeSendEmail({
     from: FROM,
     to,
     subject: `เกินกำหนดคืน ${daysOverdue} วัน: "${bookTitle}"`,
@@ -302,7 +302,7 @@ export async function sendQueueNotifyEmail({
     ${btn(`${APP_URL}/books/${bookId}`, 'ยืมหนังสือเลย')}
   `)
 
-  return resend.emails.send({
+  return safeSendEmail({
     from: FROM,
     to,
     subject: `หนังสือที่คุณรอว่างแล้ว: "${bookTitle}"`,
@@ -342,7 +342,7 @@ export async function sendReturnConfirmEmail({
     ${btn(`${APP_URL}/books`, 'ดูหนังสือเพิ่มเติม')}
   `)
 
-  return resend.emails.send({
+  return safeSendEmail({
     from: FROM,
     to,
     subject: `คืนหนังสือสำเร็จ: "${bookTitle}"`,
