@@ -141,6 +141,3 @@ npm run start
 
 ---
 
-## Maintainers
-
-Maintained by the Mae Fah Luang University Muslim Club development team.
