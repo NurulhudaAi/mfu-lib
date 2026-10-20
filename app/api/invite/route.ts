@@ -9,6 +9,7 @@ import {
   getAdmins,
   friendlyDbError,
 } from '@/lib/admin-invitations'
+import { sendAdminResignEmail, sendAdminTransferSuccessEmail } from '@/lib/resend'
 
 async function currentUser() {
   const session = await createSessionClient()
@@ -127,6 +128,43 @@ export async function POST(req: NextRequest) {
         await updateInvitationRecord(supabase, inv.id, { accepted_at: now, accepted_user_id: user.id })
         next = { ...next, accepted_at: now, accepted_user_id: user.id }
       }
+
+      // ถ้าผู้เชิญเลือกแทนที่ "ตัวเอง" (invited_by === replace_admin_id)
+      // ถือว่าผู้เชิญยินยอมสละตำแหน่งให้คนใหม่อยู่แล้ว จึง auto-confirm ให้ทันที
+      if (next.replace_admin_id && next.replace_admin_id === next.invited_by && !next.resign_confirmed_at) {
+        await updateInvitationRecord(supabase, inv.id, { resign_confirmed_at: now })
+        next = { ...next, resign_confirmed_at: now }
+      }
+
+      // ถ้าแทนที่แอดมินคนอื่น และแอดมินคนนั้นยังไม่ได้ยืนยันสละสิทธิ์
+      // ให้ส่งอีเมลแจ้งเตือนพร้อมลิงก์สละสิทธิ์ไปหาแอดมินคนเดิมทันที!
+      if (next.replace_admin_id && !next.resign_confirmed_at) {
+        const { data: replaceAdmin } = await supabase
+          .from('profiles')
+          .select('id, email, full_name')
+          .eq('id', next.replace_admin_id)
+          .maybeSingle()
+
+        const { data: inviterAdmin } = next.invited_by
+          ? await supabase.from('profiles').select('id, email, full_name').eq('id', next.invited_by).maybeSingle()
+          : { data: null }
+
+        if (replaceAdmin?.email && inv.resign_link) {
+          try {
+            await sendAdminResignEmail({
+              to: replaceAdmin.email,
+              name: replaceAdmin.full_name || replaceAdmin.email,
+              newAdminEmail: inv.email,
+              inviterName: inviterAdmin?.full_name || inviterAdmin?.email || 'ผู้ดูแลระบบ',
+              link: inv.resign_link,
+              expiresAt: new Date(inv.expires_at),
+            })
+            console.log(`[Admin Invite] Resignation email sent to ${replaceAdmin.email}`)
+          } catch (mailErr) {
+            console.error('[Admin Invite] Failed to send resign email:', mailErr)
+          }
+        }
+      }
     } else {
       if (user.id !== inv.replace_admin_id) {
         return NextResponse.json({ error: 'ลิงก์นี้สำหรับผู้ดูแลที่ถูกแทนที่เท่านั้น' }, { status: 403 })
@@ -139,8 +177,14 @@ export async function POST(req: NextRequest) {
 
     const ready = !!next.accepted_user_id && (!next.replace_admin_id || !!next.resign_confirmed_at)
     if (!ready) {
+      const { data: replaceAdmin } = next.replace_admin_id
+        ? await supabase.from('profiles').select('email, full_name').eq('id', next.replace_admin_id).maybeSingle()
+        : { data: null }
+
       return NextResponse.json({
         status: kind === 'accept' ? 'waiting_resign' : 'waiting_accept',
+        replaceAdminEmail: replaceAdmin?.email || null,
+        replaceAdminName: replaceAdmin?.full_name || replaceAdmin?.email || null,
       })
     }
 
@@ -154,6 +198,36 @@ export async function POST(req: NextRequest) {
 
     // สลับตำแหน่งแอดมิน
     await finalizeAdminTransfer(supabase, inv.id)
+
+    // ส่งอีเมลแจ้งผลสำเร็จให้ทั้งสองฝ่าย
+    try {
+      const ids = [next.accepted_user_id, next.replace_admin_id].filter(Boolean)
+      const { data: people } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .in('id', ids)
+
+      const newAdmin = people?.find((p: any) => p.id === next.accepted_user_id)
+      const oldAdmin = people?.find((p: any) => p.id === next.replace_admin_id)
+
+      if (newAdmin?.email) {
+        await sendAdminTransferSuccessEmail({
+          to: newAdmin.email,
+          name: newAdmin.full_name || newAdmin.email,
+          roleType: 'new_admin',
+        })
+      }
+      if (oldAdmin?.email) {
+        await sendAdminTransferSuccessEmail({
+          to: oldAdmin.email,
+          name: oldAdmin.full_name || oldAdmin.email,
+          roleType: 'resigned_admin',
+          newAdminEmail: newAdmin?.email || inv.email,
+        })
+      }
+    } catch (e) {
+      console.error('[Transfer Success Email] Error:', e)
+    }
 
     return NextResponse.json({ status: 'completed' })
   } catch (e: any) {

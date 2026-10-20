@@ -36,6 +36,15 @@ export default function AdminBorrowsContent({ borrows, queues }: Props) {
 
   useEffect(() => {
     setMounted(true)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tabParam = params.get('tab')
+      if (tabParam === 'queues') setTab('queues')
+      const filterParam = params.get('filter')
+      if (filterParam === 'active' || filterParam === 'overdue' || filterParam === 'returned') {
+        setFilter(filterParam)
+      }
+    }
   }, [])
 
   // Prevent background scrolling and avoid layout shift
@@ -100,6 +109,95 @@ export default function AdminBorrowsContent({ borrows, queues }: Props) {
         <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
           {borrows.length} {locale === 'th' ? 'รายการทั้งหมด' : 'total records'}
         </p>
+      </div>
+
+      {/* ── Interactive KPI Stat Chips (Fluid responsive grid) ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
+        {/* Total Borrows */}
+        <button
+          type="button"
+          onClick={() => { setTab('borrows'); setFilter('all'); }}
+          className={`p-3 rounded-2xl border text-left transition-all ${
+            tab === 'borrows' && filter === 'all'
+              ? 'bg-neutral-900 text-white dark:bg-white dark:text-black border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400'
+          }`}
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+            {t('totalBorrowsCount')}
+          </span>
+          <p className="text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight">{counts.all}</p>
+        </button>
+
+        {/* Active */}
+        <button
+          type="button"
+          onClick={() => { setTab('borrows'); setFilter('active'); }}
+          className={`p-3 rounded-2xl border text-left transition-all ${
+            tab === 'borrows' && filter === 'active'
+              ? 'bg-emerald-600 text-white border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-emerald-500'
+          }`}
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+            {t('activeBorrowsCount')}
+          </span>
+          <p className={`text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight ${tab === 'borrows' && filter === 'active' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {counts.active}
+          </p>
+        </button>
+
+        {/* Overdue */}
+        <button
+          type="button"
+          onClick={() => { setTab('borrows'); setFilter('overdue'); }}
+          className={`p-3 rounded-2xl border text-left transition-all ${
+            tab === 'borrows' && filter === 'overdue'
+              ? 'bg-rose-600 text-white border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-rose-500'
+          }`}
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+            {t('overdueBorrowsCount')}
+          </span>
+          <p className={`text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight ${tab === 'borrows' && filter === 'overdue' ? 'text-white' : (counts.overdue > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-neutral-900 dark:text-white')}`}>
+            {counts.overdue}
+          </p>
+        </button>
+
+        {/* Returned */}
+        <button
+          type="button"
+          onClick={() => { setTab('borrows'); setFilter('returned'); }}
+          className={`p-3 rounded-2xl border text-left transition-all ${
+            tab === 'borrows' && filter === 'returned'
+              ? 'bg-neutral-900 text-white dark:bg-white dark:text-black border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400'
+          }`}
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+            {t('returnedBorrowsCount')}
+          </span>
+          <p className="text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight">{counts.returned}</p>
+        </button>
+
+        {/* Queues */}
+        <button
+          type="button"
+          onClick={() => setTab('queues')}
+          className={`p-3 rounded-2xl border text-left transition-all col-span-2 sm:col-span-1 ${
+            tab === 'queues'
+              ? 'bg-rose-600 text-white border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-rose-400'
+          }`}
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+            {t('tabQueues')}
+          </span>
+          <p className={`text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight ${tab === 'queues' ? 'text-white' : 'text-neutral-900 dark:text-white'}`}>
+            {queues.length}
+          </p>
+        </button>
       </div>
 
       {/* Main tabs */}

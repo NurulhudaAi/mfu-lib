@@ -46,32 +46,42 @@ import { th } from 'date-fns/locale'
 const CTA_PRESETS = [
   {
     id: 'books',
-    label: 'ค้นหาหนังสือ',
-    defaultText: 'ดูรายการหนังสือ',
+    labelTh: 'ค้นหาหนังสือ',
+    labelEn: 'Browse Books',
+    defaultTextTh: 'ดูรายการหนังสือ',
+    defaultTextEn: 'View Books',
     url: '/books',
   },
   {
     id: 'my-borrows',
-    label: 'ประวัติยืม-คืน',
-    defaultText: 'ตรวจสถานะการยืม',
+    labelTh: 'ประวัติยืม-คืน',
+    labelEn: 'My Borrows',
+    defaultTextTh: 'ตรวจสถานะการยืม',
+    defaultTextEn: 'Check Borrow Status',
     url: '/my-borrows',
   },
   {
     id: 'feedback',
-    label: 'ข้อเสนอแนะ',
-    defaultText: 'ส่งข้อเสนอแนะ',
+    labelTh: 'ข้อเสนอแนะ',
+    labelEn: 'Feedback',
+    defaultTextTh: 'ส่งข้อเสนอแนะ',
+    defaultTextEn: 'Send Feedback',
     url: '/feedback',
   },
   {
     id: 'home',
-    label: 'หน้าหลัก',
-    defaultText: 'เข้าสู่หน้าหลัก',
+    labelTh: 'หน้าหลัก',
+    labelEn: 'Home',
+    defaultTextTh: 'เข้าสู่หน้าหลัก',
+    defaultTextEn: 'Go to Home',
     url: '/',
   },
   {
     id: 'external',
-    label: 'เว็บภายนอก',
-    defaultText: 'ไปยังเว็บไซต์',
+    labelTh: 'เว็บภายนอก',
+    labelEn: 'External URL',
+    defaultTextTh: 'ไปยังเว็บไซต์',
+    defaultTextEn: 'Visit Website',
     url: 'https://',
   },
 ]
@@ -99,51 +109,59 @@ export interface Announcement {
 
 const PRESET_IMAGES = [
   {
-    label: 'หอสมุด มฟล.',
+    labelTh: 'หอสมุด มฟล.',
+    labelEn: 'MFU Library',
     url: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=1200&q=80',
   },
   {
-    label: 'ชั้นหนังสือคลาสสิก',
+    labelTh: 'ชั้นหนังสือคลาสสิก',
+    labelEn: 'Classic Bookshelf',
     url: 'https://images.unsplash.com/photo-1507842229446-51f78713d334?auto=format&fit=crop&w=1200&q=80',
   },
   {
-    label: 'โมเดิร์น คลีน',
+    labelTh: 'โมเดิร์น คลีน',
+    labelEn: 'Modern Clean',
     url: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=1200&q=80',
   },
   {
-    label: 'บรรยากาศการอ่าน',
+    labelTh: 'บรรยากาศการอ่าน',
+    labelEn: 'Reading Ambience',
     url: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&w=1200&q=80',
   },
 ]
 
-const TARGET_OPTIONS: { id: AnnouncementTarget; labelTh: string; labelEn: string; icon: string; desc: string }[] = [
+const TARGET_OPTIONS: { id: AnnouncementTarget; labelTh: string; labelEn: string; icon: string; descTh: string; descEn: string }[] = [
   {
     id: 'all',
     labelTh: 'สมาชิกทุกคน',
     labelEn: 'All Students',
     icon: '',
-    desc: 'แสดงให้ทุกคนที่เข้าสู่ระบบและผู้เยี่ยมชม',
+    descTh: 'แสดงให้ทุกคนที่เข้าสู่ระบบและผู้เยี่ยมชม',
+    descEn: 'Display to all visitors and logged-in users',
   },
   {
     id: 'overdue',
     labelTh: 'ผู้มีหนังสือค้างส่ง',
     labelEn: 'Overdue Borrowers',
     icon: '',
-    desc: 'เจาะจงเฉพาะผู้ที่เกินกำหนดส่งหนังสือ',
+    descTh: 'เจาะจงเฉพาะผู้ที่เกินกำหนดส่งหนังสือ',
+    descEn: 'Targeted to users with overdue books',
   },
   {
     id: 'active_borrowers',
     labelTh: 'ผู้กำลังยืมหนังสือ',
     labelEn: 'Active Borrowers',
     icon: '',
-    desc: 'สมาชิกที่มียอดหนังสือค้างอยู่ในมือปัจจุบัน',
+    descTh: 'สมาชิกที่มียอดหนังสือค้างอยู่ในมือปัจจุบัน',
+    descEn: 'Members who currently hold borrowed books',
   },
   {
     id: 'new_members',
     labelTh: 'สมาชิกใหม่',
     labelEn: 'New Members',
     icon: '',
-    desc: 'ผู้ใช้งานใหม่หรือยังไม่เคยมีประวัติการยืม',
+    descTh: 'ผู้ใช้งานใหม่หรือยังไม่เคยมีประวัติการยืม',
+    descEn: 'New users or those with no borrow history',
   },
 ]
 
@@ -153,7 +171,7 @@ export default function AdminAnnouncementsContent({
   announcements: Announcement[]
 }) {
   const router = useRouter()
-  const { showAlert, showConfirm } = useApp()
+  const { locale, showAlert, showConfirm, t } = useApp()
 
   // Prevent SSR Hydration mismatches for dates/time
   const [mounted, setMounted] = useState(false)
@@ -209,12 +227,20 @@ export default function AdminAnnouncementsContent({
     if (!file) return
 
     if (!file.type.startsWith('image/')) {
-      showAlert({ type: 'warning', title: 'ไฟล์ไม่ถูกต้อง', message: 'กรุณาเลือกไฟล์รูปภาพ (JPG, PNG, WebP, GIF)' })
+      showAlert({
+        type: 'warning',
+        title: locale === 'th' ? 'ไฟล์ไม่ถูกต้อง' : 'Invalid File',
+        message: locale === 'th' ? 'กรุณาเลือกไฟล์รูปภาพ (JPG, PNG, WebP, GIF)' : 'Please select an image file (JPG, PNG, WebP, GIF)',
+      })
       return
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      showAlert({ type: 'warning', title: 'ขนาดไฟล์เกิน', message: 'ขนาดรูปภาพต้องไม่เกิน 10 MB' })
+      showAlert({
+        type: 'warning',
+        title: locale === 'th' ? 'ขนาดไฟล์เกิน' : 'File Too Large',
+        message: locale === 'th' ? 'ขนาดรูปภาพต้องไม่เกิน 10 MB' : 'Image size must not exceed 10 MB',
+      })
       return
     }
 
@@ -413,7 +439,7 @@ export default function AdminAnnouncementsContent({
         body: JSON.stringify({ is_active: nextActive }),
       })
       if (!res.ok) {
-        throw new Error('บันทึกสถานะไม่สำเร็จ')
+        throw new Error(locale === 'th' ? 'บันทึกสถานะไม่สำเร็จ' : 'Failed to save status')
       }
     } catch (err: any) {
       // Revert on failure
@@ -422,8 +448,8 @@ export default function AdminAnnouncementsContent({
       )
       showAlert({
         type: 'error',
-        title: 'เกิดข้อผิดพลาด',
-        message: err.message || 'ไม่สามารถเปลี่ยนสถานะได้',
+        title: locale === 'th' ? 'เกิดข้อผิดพลาด' : 'Error Occurred',
+        message: err.message || (locale === 'th' ? 'ไม่สามารถเปลี่ยนสถานะได้' : 'Failed to change status'),
       })
     } finally {
       setTogglingId(null)
@@ -434,22 +460,24 @@ export default function AdminAnnouncementsContent({
   function handleDelete(ann: Announcement) {
     showConfirm({
       type: 'warning',
-      title: 'ยืนยันการลบประกาศ',
-      message: `คุณต้องการลบ "${ann.title}" ออกจากระบบถาวรหรือไม่?`,
-      confirmText: 'ลบประกาศ',
-      cancelText: 'ยกเลิก',
+      title: locale === 'th' ? 'ยืนยันการลบประกาศ' : 'Confirm Delete Announcement',
+      message: locale === 'th'
+        ? `คุณต้องการลบ "${ann.title}" ออกจากระบบถาวรหรือไม่?`
+        : `Are you sure you want to permanently delete "${ann.title_en || ann.title}"?`,
+      confirmText: locale === 'th' ? 'ลบประกาศ' : 'Delete',
+      cancelText: locale === 'th' ? 'ยกเลิก' : 'Cancel',
       onConfirm: async () => {
         setDeletingId(ann.id)
         try {
           const res = await fetch(`/api/admin/announcements/${ann.id}`, { method: 'DELETE' })
-          if (!res.ok) throw new Error('ลบไม่สำเร็จ')
+          if (!res.ok) throw new Error(locale === 'th' ? 'ลบไม่สำเร็จ' : 'Failed to delete')
           setItems((prev) => prev.filter((item) => item.id !== ann.id))
           router.refresh()
         } catch (err: any) {
           showAlert({
             type: 'error',
-            title: 'ผิดพลาด',
-            message: err.message || 'ไม่สามารถลบประกาศได้',
+            title: locale === 'th' ? 'ผิดพลาด' : 'Error',
+            message: err.message || (locale === 'th' ? 'ไม่สามารถลบประกาศได้' : 'Could not delete announcement'),
           })
         } finally {
           setDeletingId(null)
@@ -462,11 +490,19 @@ export default function AdminAnnouncementsContent({
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!formData.title.trim()) {
-      showAlert({ type: 'warning', title: 'ข้อมูลไม่ครบถ้วน', message: 'กรุณาระบุหัวข้อประกาศ' })
+      showAlert({
+        type: 'warning',
+        title: locale === 'th' ? 'ข้อมูลไม่ครบถ้วน' : 'Missing Information',
+        message: locale === 'th' ? 'กรุณาระบุหัวข้อประกาศ' : 'Please provide announcement title',
+      })
       return
     }
     if (!formData.body.trim()) {
-      showAlert({ type: 'warning', title: 'ข้อมูลไม่ครบถ้วน', message: 'กรุณาระบุเนื้อหาประกาศ' })
+      showAlert({
+        type: 'warning',
+        title: locale === 'th' ? 'ข้อมูลไม่ครบถ้วน' : 'Missing Information',
+        message: locale === 'th' ? 'กรุณาระบุเนื้อหาประกาศ' : 'Please provide announcement content',
+      })
       return
     }
 
@@ -518,7 +554,7 @@ export default function AdminAnnouncementsContent({
           body: JSON.stringify(payload),
         })
         const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'บันทึกไม่สำเร็จ')
+        if (!res.ok) throw new Error(data.error || (locale === 'th' ? 'บันทึกไม่สำเร็จ' : 'Failed to save'))
 
         setItems((prev) =>
           prev.map((item) =>
@@ -539,7 +575,7 @@ export default function AdminAnnouncementsContent({
           body: JSON.stringify(payload),
         })
         const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'สร้างประกาศไม่สำเร็จ')
+        if (!res.ok) throw new Error(data.error || (locale === 'th' ? 'สร้างประกาศไม่สำเร็จ' : 'Failed to create announcement'))
       }
 
       setShowModal(false)
@@ -547,8 +583,8 @@ export default function AdminAnnouncementsContent({
     } catch (err: any) {
       showAlert({
         type: 'error',
-        title: 'เกิดข้อผิดพลาด',
-        message: err.message || 'ไม่สามารถบันทึกข้อมูลได้',
+        title: locale === 'th' ? 'เกิดข้อผิดพลาด' : 'Error Occurred',
+        message: err.message || (locale === 'th' ? 'ไม่สามารถบันทึกข้อมูลได้' : 'Failed to save announcement data'),
       })
     } finally {
       setSaving(false)
@@ -575,7 +611,7 @@ export default function AdminAnnouncementsContent({
     try {
       const d = new Date(exp)
       if (!isNaN(d.getTime())) {
-        formattedDate = format(d, 'dd MMM yy HH:mm', { locale: th })
+        formattedDate = format(d, 'dd MMM yy HH:mm', { locale: locale === 'th' ? th : undefined })
         if (mounted) {
           isExpired = d.getTime() < Date.now()
         }
@@ -595,7 +631,9 @@ export default function AdminAnnouncementsContent({
       >
         <Clock size={10} />
         <span suppressHydrationWarning>
-          {mounted && isExpired ? 'หมดอายุแล้ว' : `สิ้นสุด: ${formattedDate}`}
+          {mounted && isExpired
+            ? (locale === 'th' ? 'หมดอายุแล้ว' : 'Expired')
+            : (locale === 'th' ? `สิ้นสุด: ${formattedDate}` : `Expires: ${formattedDate}`)}
         </span>
       </span>
     )
@@ -614,14 +652,16 @@ export default function AdminAnnouncementsContent({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">
-                จัดการประกาศ & แบนเนอร์
+                {locale === 'th' ? 'จัดการประกาศ & แบนเนอร์' : 'Announcements & Banners'}
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
                 Admin Panel
               </span>
             </div>
             <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-              ควบคุมการแสดงผล Carousel สไลด์หน้าแรก และ Pop-up หน้าต่างแจ้งเตือนผู้ใช้งานระบบยืมหนังสือ
+              {locale === 'th'
+                ? 'ควบคุมการแสดงผล Carousel สไลด์หน้าแรก และ Pop-up หน้าต่างแจ้งเตือนผู้ใช้งานระบบยืมหนังสือ'
+                : 'Manage home screen carousel slides and pop-up notifications for library members.'}
             </p>
           </div>
         </div>
@@ -631,7 +671,7 @@ export default function AdminAnnouncementsContent({
           className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 font-semibold text-xs sm:text-sm shadow-sm hover:shadow transition-all active:scale-95 cursor-pointer"
         >
           <Plus size={16} className="stroke-[2.5]" />
-          <span>สร้างประกาศใหม่</span>
+          <span>{locale === 'th' ? 'สร้างประกาศใหม่' : 'New Announcement'}</span>
         </button>
       </div>
 
@@ -641,46 +681,46 @@ export default function AdminAnnouncementsContent({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/70 dark:border-neutral-800 shadow-xs space-y-1">
           <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-xs font-medium">ประกาศทั้งหมด</span>
+            <span className="text-xs font-medium">{locale === 'th' ? 'ประกาศทั้งหมด' : 'Total Announcements'}</span>
             <Megaphone size={16} />
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
             {stats.total}
           </p>
-          <p className="text-[11px] text-neutral-400">รายการในฐานข้อมูล</p>
+          <p className="text-[11px] text-neutral-400">{locale === 'th' ? 'รายการในฐานข้อมูล' : 'Items in database'}</p>
         </div>
 
         <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/70 dark:border-neutral-800 shadow-xs space-y-1">
           <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-xs font-medium">Carousel กำลังแสดงผล</span>
+            <span className="text-xs font-medium">{locale === 'th' ? 'Carousel กำลังแสดงผล' : 'Active Carousels'}</span>
             <Layers size={16} />
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold tracking-tight text-indigo-600 dark:text-indigo-400">
             {stats.activeCarousels}
           </p>
-          <p className="text-[11px] text-neutral-400">สไลด์บนหน้าแรก</p>
+          <p className="text-[11px] text-neutral-400">{locale === 'th' ? 'สไลด์บนหน้าแรก' : 'Slides on home page'}</p>
         </div>
 
         <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/70 dark:border-neutral-800 shadow-xs space-y-1">
           <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-xs font-medium">Pop-up เปิดใช้งาน</span>
+            <span className="text-xs font-medium">{locale === 'th' ? 'Pop-up เปิดใช้งาน' : 'Active Pop-ups'}</span>
             <Bell size={16} />
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400">
             {stats.activePopups}
           </p>
-          <p className="text-[11px] text-neutral-400">แจ้งเตือนผู้ใช้เมื่อเข้าเว็บ</p>
+          <p className="text-[11px] text-neutral-400">{locale === 'th' ? 'แจ้งเตือนผู้ใช้เมื่อเข้าเว็บ' : 'Prompts shown on entry'}</p>
         </div>
 
         <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/70 dark:border-neutral-800 shadow-xs space-y-1">
           <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-xs font-medium">เจาะจงกลุ่มค้างส่ง</span>
+            <span className="text-xs font-medium">{locale === 'th' ? 'เจาะจงกลุ่มค้างส่ง' : 'Targeted Overdue'}</span>
             <AlertTriangle size={16} className="text-amber-500" />
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold tracking-tight text-amber-600 dark:text-amber-400">
             {stats.overdueTargeted}
           </p>
-          <p className="text-[11px] text-neutral-400">กลุ่ม Overdue Borrowers</p>
+          <p className="text-[11px] text-neutral-400">{locale === 'th' ? 'กลุ่ม Overdue Borrowers' : 'Overdue borrowers'}</p>
         </div>
       </div>
 
@@ -692,7 +732,7 @@ export default function AdminAnnouncementsContent({
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
           <input
             type="text"
-            placeholder="ค้นหาตามหัวข้อ หรือเนื้อหาประกาศ..."
+            placeholder={locale === 'th' ? 'ค้นหาตามหัวข้อ หรือเนื้อหาประกาศ...' : 'Search by title or content...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3.5 py-2 rounded-xl text-xs sm:text-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 outline-none focus:border-neutral-900 dark:focus:border-white transition-colors"
@@ -710,7 +750,7 @@ export default function AdminAnnouncementsContent({
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
               }`}
             >
-              ทุกช่องทาง
+              {locale === 'th' ? 'ทุกช่องทาง' : 'All Channels'}
             </button>
             <button
               onClick={() => setChannelFilter('carousel')}
@@ -744,7 +784,7 @@ export default function AdminAnnouncementsContent({
                   : 'text-neutral-600 dark:text-neutral-400'
               }`}
             >
-              สถานะทั้งหมด
+              {locale === 'th' ? 'สถานะทั้งหมด' : 'All Status'}
             </button>
             <button
               onClick={() => setStatusFilter('active')}
@@ -774,10 +814,10 @@ export default function AdminAnnouncementsContent({
             onChange={(e) => setTargetFilter(e.target.value as any)}
             className="px-3 py-1.5 rounded-xl text-xs font-medium bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 outline-none text-neutral-700 dark:text-neutral-300"
           >
-            <option value="all">เป้าหมาย: ทั้งหมด</option>
-            <option value="overdue">ผู้มีหนังสือค้างส่ง (Overdue)</option>
-            <option value="active_borrowers">ผู้กำลังยืม (Active)</option>
-            <option value="new_members">สมาชิกใหม่ (New Members)</option>
+            <option value="all">{locale === 'th' ? 'เป้าหมาย: ทั้งหมด' : 'Target: All'}</option>
+            <option value="overdue">{locale === 'th' ? 'ผู้มีหนังสือค้างส่ง (Overdue)' : 'Overdue Borrowers'}</option>
+            <option value="active_borrowers">{locale === 'th' ? 'ผู้กำลังยืม (Active)' : 'Active Borrowers'}</option>
+            <option value="new_members">{locale === 'th' ? 'สมาชิกใหม่ (New Members)' : 'New Members'}</option>
           </select>
         </div>
       </div>
@@ -789,15 +829,17 @@ export default function AdminAnnouncementsContent({
         <div className="text-center py-20 bg-white dark:bg-neutral-900/50 rounded-3xl border border-dashed border-neutral-200 dark:border-neutral-800">
           <Megaphone size={40} className="mx-auto mb-3 opacity-20" />
           <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
-            ไม่พบรายการประกาศที่ตรงกับเงื่อนไข
+            {locale === 'th' ? 'ไม่พบรายการประกาศที่ตรงกับเงื่อนไข' : 'No announcements found matching criteria'}
           </p>
-          <p className="text-xs text-neutral-400 mt-1">ลองเปลี่ยนคำค้นหาหรือตัวกรองด้านบน</p>
+          <p className="text-xs text-neutral-400 mt-1">
+            {locale === 'th' ? 'ลองเปลี่ยนคำค้นหาหรือตัวกรองด้านบน' : 'Try adjusting your search terms or filters above.'}
+          </p>
           <button
             onClick={handleOpenCreate}
             className="mt-4 px-4 py-2 rounded-xl text-xs font-semibold bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 inline-flex items-center gap-1.5 cursor-pointer"
           >
             <Plus size={14} />
-            <span>สร้างประกาศแรกเลย</span>
+            <span>{locale === 'th' ? 'สร้างประกาศแรกเลย' : 'Create First Announcement'}</span>
           </button>
         </div>
       ) : (
@@ -810,6 +852,7 @@ export default function AdminAnnouncementsContent({
             const target = extractAnnouncementTarget(ann)
             const cta = extractAnnouncementCta(ann)
             const cleanBody = cleanAnnouncementBody(ann.body || '')
+            const cleanBodyEn = cleanAnnouncementBody(ann.body_en || '')
             const isActive = ann.is_active !== false
 
             // Target definition
@@ -839,7 +882,7 @@ export default function AdminAnnouncementsContent({
                   ) : (
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl shrink-0 flex flex-col items-center justify-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-400">
                       <Megaphone size={20} className="opacity-40" />
-                      <span className="text-[10px] mt-1 font-semibold">ไม่มีรูป</span>
+                      <span className="text-[10px] mt-1 font-semibold">{locale === 'th' ? 'ไม่มีรูป' : 'No image'}</span>
                     </div>
                   )}
 
@@ -880,7 +923,7 @@ export default function AdminAnnouncementsContent({
 
                       {/* Target audience */}
                       <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700">
-                        {targetDef.icon} {targetDef.labelTh}
+                        {targetDef.icon} {locale === 'th' ? targetDef.labelTh : targetDef.labelEn}
                       </span>
 
                       {/* Expiration Tag */}
@@ -890,25 +933,25 @@ export default function AdminAnnouncementsContent({
                     {/* Title */}
                     <div className="flex items-baseline gap-2">
                       <h3 className="font-bold text-neutral-900 dark:text-white text-base truncate">
-                        {ann.title}
+                        {(locale === 'en' && ann.title_en) ? ann.title_en : ann.title}
                       </h3>
-                      {ann.title_en && (
+                      {((locale === 'en' && ann.title_en) ? ann.title : ann.title_en) && (
                         <span className="text-xs text-neutral-400 hidden sm:inline truncate">
-                          ({ann.title_en})
+                          ({(locale === 'en' && ann.title_en) ? ann.title : ann.title_en})
                         </span>
                       )}
                     </div>
 
                     {/* Body preview */}
                     <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed">
-                      {cleanBody}
+                      {(locale === 'en' && cleanBodyEn) ? cleanBodyEn : cleanBody}
                     </p>
 
                     {/* CTA link indicator */}
                     {cta && (
                       <p className="text-[11px] text-neutral-500 font-medium inline-flex items-center gap-1 pt-0.5">
                         <ArrowUpRight size={11} className="text-neutral-400" />
-                        <span>ปุ่ม CTA: &quot;{cta.text}&quot;</span>
+                        <span>{locale === 'th' ? `ปุ่ม CTA: "${cta.text}"` : `CTA Button: "${cta.text}"`}</span>
                       </p>
                     )}
                   </div>
@@ -919,7 +962,7 @@ export default function AdminAnnouncementsContent({
                   {/* Inline Active/Inactive Toggle Switch */}
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-neutral-500 font-medium hidden sm:inline">
-                      {isActive ? 'เปิดแสดง' : 'ปิดซ่อน'}
+                      {isActive ? (locale === 'th' ? 'เปิดแสดง' : 'Active') : (locale === 'th' ? 'ปิดซ่อน' : 'Hidden')}
                     </span>
                     <button
                       type="button"
@@ -928,7 +971,11 @@ export default function AdminAnnouncementsContent({
                       className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
                         isActive ? 'bg-neutral-900 dark:bg-white' : 'bg-neutral-200 dark:bg-neutral-700'
                       }`}
-                      title={isActive ? 'คลิกเพื่อปิดการแสดงผล' : 'คลิกเพื่อเปิดการแสดงผล'}
+                      title={
+                        isActive
+                          ? (locale === 'th' ? 'คลิกเพื่อปิดการแสดงผล' : 'Click to deactivate')
+                          : (locale === 'th' ? 'คลิกเพื่อเปิดการแสดงผล' : 'Click to activate')
+                      }
                     >
                       <span
                         className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-950 shadow-md ring-0 transition duration-200 ease-in-out ${
@@ -946,7 +993,7 @@ export default function AdminAnnouncementsContent({
                     <button
                       onClick={() => handleDuplicate(ann)}
                       className="p-2 rounded-xl text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors cursor-pointer"
-                      title="คัดลอกร่างประกาศ"
+                      title={locale === 'th' ? 'คัดลอกร่างประกาศ' : 'Duplicate draft'}
                     >
                       <Copy size={15} />
                     </button>
@@ -956,7 +1003,7 @@ export default function AdminAnnouncementsContent({
                       onClick={() => handleOpenEdit(ann)}
                       className="px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
                     >
-                      แก้ไข
+                      {locale === 'th' ? 'แก้ไข' : 'Edit'}
                     </button>
 
                     {/* Delete button */}
@@ -964,7 +1011,7 @@ export default function AdminAnnouncementsContent({
                       onClick={() => handleDelete(ann)}
                       disabled={deletingId === ann.id}
                       className="p-2 rounded-xl text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                      title="ลบประกาศ"
+                      title={locale === 'th' ? 'ลบประกาศ' : 'Delete announcement'}
                     >
                       <Trash2 size={15} />
                     </button>
@@ -990,13 +1037,15 @@ export default function AdminAnnouncementsContent({
                 </span>
                 <div>
                   <h2 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                    <span>{editingId ? 'แก้ไขประกาศ' : 'สร้างประกาศใหม่'}</span>
+                    <span>{editingId ? (locale === 'th' ? 'แก้ไขประกาศ' : 'Edit Announcement') : (locale === 'th' ? 'สร้างประกาศใหม่' : 'New Announcement')}</span>
                     <span className="text-[11px] font-medium text-neutral-400 bg-neutral-200/60 dark:bg-neutral-800 px-2 py-0.5 rounded-full">
                       Split-Screen Live Editor
                     </span>
                   </h2>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 hidden sm:block">
-                    แก้ไขข้อมูลด้านซ้าย พร้อมดูตัวอย่างการแสดงผลจริงบนหน้าจอผู้ใช้แบบเรียลไทม์ด้านขวา
+                    {locale === 'th'
+                      ? 'แก้ไขข้อมูลด้านซ้าย พร้อมดูตัวอย่างการแสดงผลจริงบนหน้าจอผู้ใช้แบบเรียลไทม์ด้านขวา'
+                      : 'Edit content on the left with instant real-time user preview on the right.'}
                   </p>
                 </div>
               </div>
@@ -1013,7 +1062,7 @@ export default function AdminAnnouncementsContent({
                         : 'text-neutral-500 dark:text-neutral-400'
                     }`}
                   >
-                    แบบฟอร์ม
+                    {locale === 'th' ? 'แบบฟอร์ม' : 'Form'}
                   </button>
                   <button
                     type="button"
@@ -1024,7 +1073,7 @@ export default function AdminAnnouncementsContent({
                         : 'text-neutral-500 dark:text-neutral-400'
                     }`}
                   >
-                    ตัวอย่าง
+                    {locale === 'th' ? 'ตัวอย่าง' : 'Preview'}
                   </button>
                 </div>
               </div>
@@ -1045,10 +1094,10 @@ export default function AdminAnnouncementsContent({
                   <label className="text-xs font-bold text-neutral-900 dark:text-white flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <Users size={14} />
-                      <span>กลุ่มเป้าหมาย (Target Audience) *</span>
+                      <span>{locale === 'th' ? 'กลุ่มเป้าหมาย (Target Audience) *' : 'Target Audience *'}</span>
                     </span>
                     <span className="text-[11px] font-normal text-neutral-400">
-                      แสดงเฉพาะผู้ที่มีเงื่อนไขตรงกัน
+                      {locale === 'th' ? 'แสดงเฉพาะผู้ที่มีเงื่อนไขตรงกัน' : 'Display only to matching users'}
                     </span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -1065,7 +1114,7 @@ export default function AdminAnnouncementsContent({
                       >
                         <div className="flex items-center gap-1.5 text-xs font-bold">
                           <span>{item.icon}</span>
-                          <span>{item.labelTh}</span>
+                          <span>{locale === 'th' ? item.labelTh : item.labelEn}</span>
                         </div>
                         <p
                           className={`text-[10px] mt-1 line-clamp-1 ${
@@ -1074,7 +1123,7 @@ export default function AdminAnnouncementsContent({
                               : 'text-neutral-400'
                           }`}
                         >
-                          {item.desc}
+                          {locale === 'th' ? item.descTh : item.descEn}
                         </p>
                       </button>
                     ))}
@@ -1084,7 +1133,7 @@ export default function AdminAnnouncementsContent({
                 {/* 2. Display Channel Selector (Carousel vs Pop-up) */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-neutral-900 dark:text-white">
-                    ช่องทางแสดงผล (Display Channels) *
+                    {locale === 'th' ? 'ช่องทางแสดงผล (Display Channels) *' : 'Display Channels *'}
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -1107,7 +1156,9 @@ export default function AdminAnnouncementsContent({
                       </div>
                       <div>
                         <p className="text-xs font-bold">Carousel Slide</p>
-                        <p className="text-[10px] opacity-75">แบนเนอร์ภาพสไลด์บนหน้าแรก</p>
+                        <p className="text-[10px] opacity-75">
+                          {locale === 'th' ? 'แบนเนอร์ภาพสไลด์บนหน้าแรก' : 'Hero banner on home page'}
+                        </p>
                       </div>
                     </button>
 
@@ -1131,7 +1182,9 @@ export default function AdminAnnouncementsContent({
                       </div>
                       <div>
                         <p className="text-xs font-bold">Pop-up Modal</p>
-                        <p className="text-[10px] opacity-75">หน้าต่างเด้งแจ้งเตือน</p>
+                        <p className="text-[10px] opacity-75">
+                          {locale === 'th' ? 'หน้าต่างเด้งแจ้งเตือน' : 'Modal popup notification'}
+                        </p>
                       </div>
                     </button>
                   </div>
@@ -1140,7 +1193,7 @@ export default function AdminAnnouncementsContent({
                 {/* 3. Type / Severity Category */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-neutral-900 dark:text-white">
-                    ระดับความสำคัญ (Category)
+                    {locale === 'th' ? 'ระดับความสำคัญ (Category)' : 'Priority Category'}
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     <button
@@ -1152,7 +1205,7 @@ export default function AdminAnnouncementsContent({
                           : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800'
                       }`}
                     >
-                      ทั่วไป (Info)
+                      {locale === 'th' ? 'ทั่วไป (Info)' : 'Info'}
                     </button>
                     <button
                       type="button"
@@ -1163,7 +1216,7 @@ export default function AdminAnnouncementsContent({
                           : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800'
                       }`}
                     >
-                      แจ้งเตือน (Warning)
+                      {locale === 'th' ? 'แจ้งเตือน (Warning)' : 'Warning'}
                     </button>
                     <button
                       type="button"
@@ -1174,7 +1227,7 @@ export default function AdminAnnouncementsContent({
                           : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800'
                       }`}
                     >
-                      พิเศษ (Featured)
+                      {locale === 'th' ? 'พิเศษ (Featured)' : 'Featured'}
                     </button>
                   </div>
                 </div>
@@ -1183,20 +1236,20 @@ export default function AdminAnnouncementsContent({
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                      หัวข้อประกาศ (ภาษาไทย) *
+                      {locale === 'th' ? 'หัวข้อประกาศ (ภาษาไทย) *' : 'Announcement Title (Thai) *'}
                     </label>
                     <input
                       required
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      placeholder="เช่น ระเบียบการยืม-คืนหนังสือ ชมรมมุสลิม มฟล."
+                      placeholder={locale === 'th' ? 'เช่น ระเบียบการยืม-คืนหนังสือ ชมรมมุสลิม มฟล.' : 'e.g. MFU Muslim Club Library Guidelines'}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-neutral-900 dark:focus:border-white transition-colors"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                      Title (English - Optional)
+                      {locale === 'th' ? 'หัวข้อประกาศ (English - ไม่บังคับ)' : 'Title (English - Optional)'}
                     </label>
                     <input
                       value={formData.title_en}
@@ -1212,7 +1265,7 @@ export default function AdminAnnouncementsContent({
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
                       <Clock size={13} className="text-neutral-500" />
-                      <span>กำหนดเวลาสิ้นสุดการแสดงผล (Schedule Expiry)</span>
+                      <span>{locale === 'th' ? 'กำหนดเวลาสิ้นสุดการแสดงผล (Schedule Expiry)' : 'Schedule Expiry (Optional)'}</span>
                     </label>
                     {formData.expiresAt && (
                       <button
@@ -1220,7 +1273,7 @@ export default function AdminAnnouncementsContent({
                         onClick={() => applyExpiryPreset(null)}
                         className="text-[10px] text-neutral-400 hover:text-neutral-700 underline cursor-pointer"
                       >
-                        ล้างวันหมดอายุ
+                        {locale === 'th' ? 'ล้างวันหมดอายุ' : 'Clear Expiry'}
                       </button>
                     )}
                   </div>
@@ -1232,34 +1285,34 @@ export default function AdminAnnouncementsContent({
                   />
                   {/* Preset quick buttons */}
                   <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                    <span className="text-[11px] text-neutral-400">ตั้งด่วน:</span>
+                    <span className="text-[11px] text-neutral-400">{locale === 'th' ? 'ตั้งด่วน:' : 'Quick:'}</span>
                     <button
                       type="button"
                       onClick={() => applyExpiryPreset(3)}
                       className="text-[11px] px-2 py-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 cursor-pointer"
                     >
-                      +3 วัน
+                      {locale === 'th' ? '+3 วัน' : '+3 Days'}
                     </button>
                     <button
                       type="button"
                       onClick={() => applyExpiryPreset(7)}
                       className="text-[11px] px-2 py-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 cursor-pointer"
                     >
-                      +7 วัน
+                      {locale === 'th' ? '+7 วัน' : '+7 Days'}
                     </button>
                     <button
                       type="button"
                       onClick={() => applyExpiryPreset(14)}
                       className="text-[11px] px-2 py-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 cursor-pointer"
                     >
-                      +14 วัน
+                      {locale === 'th' ? '+14 วัน' : '+14 Days'}
                     </button>
                     <button
                       type="button"
                       onClick={() => applyExpiryPreset(30)}
                       className="text-[11px] px-2 py-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 cursor-pointer"
                     >
-                      +1 เดือน
+                      {locale === 'th' ? '+1 เดือน' : '+1 Month'}
                     </button>
                   </div>
                 </div>
@@ -1269,7 +1322,7 @@ export default function AdminAnnouncementsContent({
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
                       <ImageIcon size={14} />
-                      <span>รูปภาพแบนเนอร์ / ภาพประกอบ</span>
+                      <span>{locale === 'th' ? 'รูปภาพแบนเนอร์ / ภาพประกอบ' : 'Banner / Cover Image'}</span>
                     </label>
                     {formData.imageUrl && (
                       <button
@@ -1277,7 +1330,7 @@ export default function AdminAnnouncementsContent({
                         onClick={() => setFormData({ ...formData, imageUrl: '' })}
                         className="text-[11px] text-rose-500 hover:text-rose-600 font-medium underline cursor-pointer"
                       >
-                        ลบภาพ
+                        {locale === 'th' ? 'ลบภาพ' : 'Remove Image'}
                       </button>
                     )}
                   </div>
@@ -1289,7 +1342,7 @@ export default function AdminAnnouncementsContent({
                       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <label className="px-3 py-1.5 rounded-xl bg-white text-black text-xs font-bold cursor-pointer hover:bg-neutral-100 transition-colors shadow-sm inline-flex items-center gap-1.5">
                           <Upload size={13} />
-                          <span>เปลี่ยนรูป</span>
+                          <span>{locale === 'th' ? 'เปลี่ยนรูป' : 'Change Image'}</span>
                           <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp,image/gif"
@@ -1302,13 +1355,13 @@ export default function AdminAnnouncementsContent({
                           onClick={() => setFormData({ ...formData, imageUrl: '' })}
                           className="px-3 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-colors shadow-sm cursor-pointer"
                         >
-                          ลบรูป
+                          {locale === 'th' ? 'ลบรูป' : 'Delete Image'}
                         </button>
                       </div>
                       {uploadingImage && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white gap-2">
                           <Loader2 size={18} className="animate-spin" />
-                          <span className="text-xs font-medium">กำลังอัปโหลด...</span>
+                          <span className="text-xs font-medium">{locale === 'th' ? 'กำลังอัปโหลด...' : 'Uploading...'}</span>
                         </div>
                       )}
                     </div>
@@ -1324,20 +1377,24 @@ export default function AdminAnnouncementsContent({
                         <Upload size={18} />
                       </div>
                       <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                        {uploadingImage ? 'กำลังอัปโหลดรูปภาพ...' : 'คลิกเพื่อเลือกรูปภาพจากเครื่อง'}
+                        {uploadingImage
+                          ? (locale === 'th' ? 'กำลังอัปโหลดรูปภาพ...' : 'Uploading image...')
+                          : (locale === 'th' ? 'คลิกเพื่อเลือกรูปภาพจากเครื่อง' : 'Click or drop image to upload')}
                       </p>
                       <p className="text-[11px] text-neutral-400 mt-0.5">
-                        รองรับ JPG, PNG, WebP (สูงสุด 10 MB)
+                        {locale === 'th' ? 'รองรับ JPG, PNG, WebP (สูงสุด 10 MB)' : 'Supports JPG, PNG, WebP (Max 10 MB)'}
                       </p>
                     </label>
                   )}
 
                   {/* Presets */}
                   <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                    <span className="text-[11px] text-neutral-400">หรือเลือกภาพสำเร็จรูป:</span>
+                    <span className="text-[11px] text-neutral-400">
+                      {locale === 'th' ? 'หรือเลือกภาพสำเร็จรูป:' : 'Or choose preset photo:'}
+                    </span>
                     {PRESET_IMAGES.map((preset) => (
                       <button
-                        key={preset.label}
+                        key={preset.url}
                         type="button"
                         onClick={() => setFormData({ ...formData, imageUrl: preset.url })}
                         className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors cursor-pointer ${
@@ -1346,7 +1403,7 @@ export default function AdminAnnouncementsContent({
                             : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200'
                         }`}
                       >
-                        {preset.label}
+                        {locale === 'th' ? preset.labelTh : preset.labelEn}
                       </button>
                     ))}
                   </div>
@@ -1357,10 +1414,10 @@ export default function AdminAnnouncementsContent({
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                        เนื้อหาประกาศ (ภาษาไทย) *
+                        {locale === 'th' ? 'เนื้อหาประกาศ (ภาษาไทย) *' : 'Announcement Body (Thai) *'}
                       </label>
                       <span className="text-[10px] text-neutral-400">
-                        ใส่ 1. 2. 3. เพื่อสร้างรายการกฎระเบียบ
+                        {locale === 'th' ? 'ใส่ 1. 2. 3. เพื่อสร้างรายการกฎระเบียบ' : 'Use 1. 2. 3. to format list items'}
                       </span>
                     </div>
                     <textarea
@@ -1368,14 +1425,14 @@ export default function AdminAnnouncementsContent({
                       rows={4}
                       value={formData.body}
                       onChange={(e) => setFormData({ ...formData, body: e.target.value })}
-                      placeholder={'1. สมาชิกสามารถยืมหนังสือได้ครั้งละ 1 เล่ม\n2. กรุณาส่งคืนหนังสือตรงตามกำหนด\n3. แนบรูปถ่ายหน้าปก ณ จุดคืนหนังสือ'}
+                      placeholder={locale === 'th' ? '1. สมาชิกสามารถยืมหนังสือได้ครั้งละ 1 เล่ม\n2. กรุณาส่งคืนหนังสือตรงตามกำหนด\n3. แนบรูปถ่ายหน้าปก ณ จุดคืนหนังสือ' : '1. Members may borrow 1 book at a time\n2. Please return books on schedule\n3. Upload photo at the return station'}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-neutral-900 dark:focus:border-white transition-colors resize-y leading-relaxed"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                      Body Content (English - Optional)
+                      {locale === 'th' ? 'เนื้อหาประกาศ (English - ไม่บังคับ)' : 'Body Content (English - Optional)'}
                     </label>
                     <textarea
                       rows={3}
@@ -1393,10 +1450,12 @@ export default function AdminAnnouncementsContent({
                     <div>
                       <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
                         <Link2 size={14} className="text-neutral-600 dark:text-neutral-300" />
-                        <span>ปุ่มดำเนินการ (Call To Action - ไม่บังคับ)</span>
+                        <span>{locale === 'th' ? 'ปุ่มดำเนินการ (Call To Action - ไม่บังคับ)' : 'Call To Action (Optional Button)'}</span>
                       </label>
                       <p className="text-[11px] text-neutral-400 mt-0.5">
-                        เพิ่มปุ่มกดนำทางให้ผู้ใช้คลิกไปหน้าหนังสือ ยืม-คืน หรือเว็บไซต์
+                        {locale === 'th'
+                          ? 'เพิ่มปุ่มกดนำทางให้ผู้ใช้คลิกไปหน้าหนังสือ ยืม-คืน หรือเว็บไซต์'
+                          : 'Add an action button directing users to books, borrows, or external links.'}
                       </p>
                     </div>
 
@@ -1405,10 +1464,10 @@ export default function AdminAnnouncementsContent({
                         type="button"
                         onClick={() => setFormData({ ...formData, ctaText: '', ctaUrl: '' })}
                         className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 flex items-center gap-1 hover:underline cursor-pointer"
-                        title="ลบปุ่มดำเนินการออก"
+                        title={locale === 'th' ? 'ลบปุ่มดำเนินการออก' : 'Clear Button'}
                       >
                         <RotateCcw size={11} />
-                        <span>ล้างค่า (ไม่ใส่ปุ่ม)</span>
+                        <span>{locale === 'th' ? 'ล้างค่า (ไม่ใส่ปุ่ม)' : 'Clear Button'}</span>
                       </button>
                     )}
                   </div>
@@ -1416,7 +1475,7 @@ export default function AdminAnnouncementsContent({
                   {/* Quick-Pick Destination Presets */}
                   <div className="space-y-1.5">
                     <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                      ปุ่มลัดเลือกปลายทาง (คลิกเพื่อตั้งค่าอัตโนมัติ):
+                      {locale === 'th' ? 'ปุ่มลัดเลือกปลายทาง (คลิกเพื่อตั้งค่าอัตโนมัติ):' : 'Quick destination presets:'}
                     </span>
                     <div className="flex flex-wrap gap-1.5">
                       {CTA_PRESETS.map((p) => {
@@ -1432,12 +1491,18 @@ export default function AdminAnnouncementsContent({
                             onClick={() => {
                               const isDefaultOrEmpty =
                                 !formData.ctaText.trim() ||
-                                CTA_PRESETS.some((prev) => prev.defaultText === formData.ctaText)
+                                CTA_PRESETS.some(
+                                  (prev) =>
+                                    prev.defaultTextTh === formData.ctaText ||
+                                    prev.defaultTextEn === formData.ctaText
+                                )
+
+                              const nextDefaultText = locale === 'th' ? p.defaultTextTh : p.defaultTextEn
 
                               setFormData({
                                 ...formData,
                                 ctaUrl: p.url,
-                                ctaText: isDefaultOrEmpty ? p.defaultText : formData.ctaText,
+                                ctaText: isDefaultOrEmpty ? nextDefaultText : formData.ctaText,
                               })
                             }}
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
@@ -1451,7 +1516,7 @@ export default function AdminAnnouncementsContent({
                             {p.id === 'feedback' && <MessageSquare size={12} />}
                             {p.id === 'home' && <Home size={12} />}
                             {p.id === 'external' && <Globe size={12} />}
-                            <span>{p.label}</span>
+                            <span>{locale === 'th' ? p.labelTh : p.labelEn}</span>
                           </button>
                         )
                       })}
@@ -1463,11 +1528,11 @@ export default function AdminAnnouncementsContent({
                     <div className="space-y-1">
                       <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 flex items-center gap-1">
                         <Tag size={11} />
-                        <span>ข้อความบนปุ่ม (Button Label)</span>
+                        <span>{locale === 'th' ? 'ข้อความบนปุ่ม (Button Label)' : 'Button Label'}</span>
                       </span>
                       <input
                         type="text"
-                        placeholder="เช่น ดูรายการหนังสือ, ยืมเลย"
+                        placeholder={locale === 'th' ? 'เช่น ดูรายการหนังสือ, ยืมเลย' : 'e.g. View Books, Borrow Now'}
                         value={formData.ctaText}
                         onChange={(e) => setFormData({ ...formData, ctaText: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
@@ -1478,19 +1543,23 @@ export default function AdminAnnouncementsContent({
                       <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 flex items-center justify-between">
                         <span className="flex items-center gap-1">
                           <Link2 size={11} />
-                          <span>ลิงก์ปลายทาง (Target URL)</span>
+                          <span>{locale === 'th' ? 'ลิงก์ปลายทาง (Target URL)' : 'Target URL'}</span>
                         </span>
                         {formData.ctaUrl ? (
                           formData.ctaUrl.startsWith('http') ? (
-                            <span className="text-[10px] text-blue-500 font-bold">🌐 เว็บภายนอก</span>
+                            <span className="text-[10px] text-blue-500 font-bold">
+                              {locale === 'th' ? 'เว็บภายนอก' : 'External URL'}
+                            </span>
                           ) : formData.ctaUrl.startsWith('/') ? (
-                            <span className="text-[10px] text-emerald-600 font-bold">🏠 ในระบบ</span>
+                            <span className="text-[10px] text-emerald-600 font-bold">
+                              {locale === 'th' ? 'ในระบบ' : 'Internal'}
+                            </span>
                           ) : null
                         ) : null}
                       </span>
                       <input
                         type="text"
-                        placeholder="เช่น /books หรือ https://..."
+                        placeholder="e.g. /books or https://..."
                         value={formData.ctaUrl}
                         onChange={(e) => setFormData({ ...formData, ctaUrl: e.target.value })}
                         onBlur={() => {
@@ -1513,8 +1582,8 @@ export default function AdminAnnouncementsContent({
                     <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-800 flex items-center justify-between text-xs">
                       <span className="text-[11px] text-neutral-400">
                         {formData.ctaUrl?.startsWith('http')
-                          ? 'จะเปิดหน้าต่างใหม่ (New Tab)'
-                          : `จะเปลี่ยนหน้าไปยัง: ${formData.ctaUrl || '/'}`}
+                          ? (locale === 'th' ? 'จะเปิดหน้าต่างใหม่ (New Tab)' : 'Opens in a new tab')
+                          : (locale === 'th' ? `จะเปลี่ยนหน้าไปยัง: ${formData.ctaUrl || '/'}` : `Navigates to: ${formData.ctaUrl || '/'}`)}
                       </span>
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-black font-bold text-xs shadow-xs">
                         <span>{formData.ctaText}</span>
@@ -1531,8 +1600,12 @@ export default function AdminAnnouncementsContent({
                 {/* 9. Publish Status Switch */}
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800">
                   <div>
-                    <p className="text-xs font-bold text-neutral-900 dark:text-white">สถานะการแสดงผลทันที</p>
-                    <p className="text-[11px] text-neutral-400">เปิดให้แสดงผลทันทีเมื่อกดบันทึก</p>
+                    <p className="text-xs font-bold text-neutral-900 dark:text-white">
+                      {locale === 'th' ? 'สถานะการแสดงผลทันที' : 'Publish Immediately'}
+                    </p>
+                    <p className="text-[11px] text-neutral-400">
+                      {locale === 'th' ? 'เปิดให้แสดงผลทันทีเมื่อกดบันทึก' : 'Activate and display as soon as saved'}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -1628,7 +1701,10 @@ export default function AdminAnnouncementsContent({
                         </span>
                       </div>
                       <span>
-                        เป้าหมาย: <strong className="text-neutral-700 dark:text-neutral-200">{activeTargetObj.labelTh}</strong>
+                        {locale === 'th' ? 'เป้าหมาย: ' : 'Target: '}
+                        <strong className="text-neutral-700 dark:text-neutral-200">
+                          {locale === 'th' ? activeTargetObj.labelTh : activeTargetObj.labelEn}
+                        </strong>
                       </span>
                     </div>
 
@@ -1654,17 +1730,17 @@ export default function AdminAnnouncementsContent({
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/20 backdrop-blur-md border border-white/25">
                               {formData.type === 'warning'
-                                ? 'แจ้งเตือน'
+                                ? (locale === 'th' ? 'แจ้งเตือน' : 'Warning')
                                 : formData.type === 'success'
-                                ? 'แนะนำ'
-                                : 'ประชาสัมพันธ์'}
+                                ? (locale === 'th' ? 'แนะนำ' : 'Featured')
+                                : (locale === 'th' ? 'ประชาสัมพันธ์' : 'Info')}
                             </span>
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/40 backdrop-blur-md border border-white/10 text-neutral-200">
-                              {activeTargetObj.labelTh}
+                              {locale === 'th' ? activeTargetObj.labelTh : activeTargetObj.labelEn}
                             </span>
                             {formData.expiresAt && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/20 text-amber-200 border border-amber-400/30">
-                                สิ้นสุด {formData.expiresAt.replace('T', ' ')}
+                                {locale === 'th' ? 'สิ้นสุด' : 'Expires'} {formData.expiresAt.replace('T', ' ')}
                               </span>
                             )}
                           </div>
@@ -1673,11 +1749,13 @@ export default function AdminAnnouncementsContent({
                         {/* Middle Content */}
                         <div className="relative z-10 my-auto py-3 space-y-2">
                           <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-snug drop-shadow-sm">
-                            {formData.title || 'พิมพ์หัวข้อประกาศของคุณที่ช่องซ้าย'}
+                            {((locale === 'en' && formData.title_en) ? formData.title_en : formData.title) ||
+                              (locale === 'th' ? 'พิมพ์หัวข้อประกาศของคุณที่ช่องซ้าย' : 'Type your announcement title on the left')}
                           </h3>
                           {(!formData.body || (formData.body.length <= 70 && !formData.body.includes('\n'))) && (
                             <p className="text-xs sm:text-sm text-neutral-200/90 leading-relaxed">
-                              {formData.body || 'เนื้อหาประกาศจะแสดงผลตรงนี้แบบเรียลไทม์...'}
+                              {((locale === 'en' && formData.body_en) ? formData.body_en : formData.body) ||
+                                (locale === 'th' ? 'เนื้อหาประกาศจะแสดงผลตรงนี้แบบเรียลไทม์...' : 'Announcement content will appear here in real-time...')}
                             </p>
                           )}
 
@@ -1692,7 +1770,7 @@ export default function AdminAnnouncementsContent({
                             {formData.body && (formData.body.length > 70 || formData.body.includes('\n')) && (
                               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 text-white backdrop-blur-md border border-white/25 text-xs font-semibold shadow-xs">
                                 <BookOpen size={13} className="text-white/80" />
-                                <span>อ่านรายละเอียดเพิ่มเติม</span>
+                                <span>{locale === 'th' ? 'อ่านรายละเอียดเพิ่มเติม' : 'Read details'}</span>
                                 <ChevronRight size={13} />
                               </span>
                             )}
@@ -1731,13 +1809,13 @@ export default function AdminAnnouncementsContent({
                             <div className="absolute top-3 left-3 flex items-center gap-1.5">
                               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/90 text-neutral-950 backdrop-blur-md">
                                 {formData.type === 'warning'
-                                  ? 'ข้อควรระวัง'
+                                  ? (locale === 'th' ? 'ข้อควรระวัง' : 'Warning')
                                   : formData.type === 'success'
-                                  ? 'ข่าวพิเศษ'
-                                  : 'ประกาศสำคัญ'}
+                                  ? (locale === 'th' ? 'ข่าวพิเศษ' : 'Featured')
+                                  : (locale === 'th' ? 'ประกาศสำคัญ' : 'Notice')}
                               </span>
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 text-white backdrop-blur-md border border-white/20">
-                                {activeTargetObj.labelTh}
+                                {locale === 'th' ? activeTargetObj.labelTh : activeTargetObj.labelEn}
                               </span>
                             </div>
                             <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center">
@@ -1748,10 +1826,10 @@ export default function AdminAnnouncementsContent({
                           <div className="p-4 pb-0 flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-1.5">
                               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
-                                {formData.type === 'warning' ? 'แจ้งเตือน' : 'ประกาศ'}
+                                {formData.type === 'warning' ? (locale === 'th' ? 'แจ้งเตือน' : 'Warning') : (locale === 'th' ? 'ประกาศ' : 'Notice')}
                               </span>
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300">
-                                {activeTargetObj.labelTh}
+                                {locale === 'th' ? activeTargetObj.labelTh : activeTargetObj.labelEn}
                               </span>
                             </div>
                             <div className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-400">
@@ -1764,17 +1842,18 @@ export default function AdminAnnouncementsContent({
                         <div className="p-5 overflow-y-auto space-y-3 flex-1 min-h-0">
                           <div>
                             <h3 className="font-extrabold text-neutral-900 dark:text-white text-base leading-snug">
-                              {formData.title || 'หัวข้อประกาศจำลอง'}
+                              {((locale === 'en' && formData.title_en) ? formData.title_en : formData.title) ||
+                                (locale === 'th' ? 'หัวข้อประกาศจำลอง' : 'Sample Announcement Title')}
                             </h3>
                             <p className="text-[11px] text-neutral-400 mt-0.5">
-                              MFU Muslim Club Library • ระบบยืม-คืนหนังสือ
+                              {locale === 'th' ? 'MFU Muslim Club Library • ระบบยืม-คืนหนังสือ' : 'MFU Muslim Club Library • Library System'}
                             </p>
                           </div>
 
                           {/* Render numbered items if format detected */}
                           {formData.body.split('\n').filter(Boolean).length > 0 ? (
                             <div className="space-y-1.5 text-xs text-neutral-700 dark:text-neutral-300">
-                              {formData.body
+                              {((locale === 'en' && formData.body_en) ? formData.body_en : formData.body)
                                 .split('\n')
                                 .map((line) => line.trim())
                                 .filter(Boolean)
@@ -1802,7 +1881,7 @@ export default function AdminAnnouncementsContent({
                             </div>
                           ) : (
                             <p className="text-xs text-neutral-400 italic">
-                              ยังไม่ได้พิมพ์เนื้อหาประกาศ...
+                              {locale === 'th' ? 'ยังไม่ได้พิมพ์เนื้อหาประกาศ...' : 'No announcement content entered yet...'}
                             </p>
                           )}
 
@@ -1811,8 +1890,12 @@ export default function AdminAnnouncementsContent({
                             <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
                             <span>
                               {formData.target === 'overdue'
-                                ? 'สำหรับผู้ที่มีหนังสือค้างส่ง โปรดนำหนังสือมาคืน ณ จุดคืนหนังสือโดยเร็ว'
-                                : 'สมาชิกสามารถยืมหนังสือได้ครั้งละ 1 เล่ม นานสูงสุด 14 วัน'}
+                                ? (locale === 'th'
+                                    ? 'สำหรับผู้ที่มีหนังสือค้างส่ง โปรดนำหนังสือมาคืน ณ จุดคืนหนังสือโดยเร็ว'
+                                    : 'Overdue borrowers please return books to the drop point promptly.')
+                                : (locale === 'th'
+                                    ? 'สมาชิกสามารถยืมหนังสือได้ครั้งละ 1 เล่ม นานสูงสุด 14 วัน'
+                                    : 'Members may borrow 1 book at a time for up to 14 days.')}
                             </span>
                           </div>
                         </div>
@@ -1826,14 +1909,14 @@ export default function AdminAnnouncementsContent({
                               onChange={(e) => setDontShowTodayPreview(e.target.checked)}
                               className="rounded border-neutral-300 dark:border-neutral-700 text-neutral-900 cursor-pointer"
                             />
-                            <span>ไม่ต้องแสดงวันนี้อีก</span>
+                            <span>{locale === 'th' ? 'ไม่ต้องแสดงวันนี้อีก' : 'Do not show again today'}</span>
                           </label>
 
                           <button
                             type="button"
                             className="px-4 py-2 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-black text-xs font-bold shadow-sm cursor-pointer"
                           >
-                            {formData.ctaText || 'รับทราบและเข้าใจ'}
+                            {formData.ctaText || (locale === 'th' ? 'รับทราบและเข้าใจ' : 'Acknowledge & Dismiss')}
                           </button>
                         </div>
                       </div>
@@ -1846,7 +1929,9 @@ export default function AdminAnnouncementsContent({
             {/* Pinned Global Modal Footer (Always visible & accessible across all screen sizes) */}
             <div className="px-6 py-3.5 border-t border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-[#121215] flex items-center justify-between gap-3 shrink-0">
               <span className="text-[11px] text-neutral-400 hidden sm:inline">
-                * ข้อมูลจะถูกบันทึกและแสดงผลทันทีตามเงื่อนไขที่กำหนด
+                {locale === 'th'
+                  ? '* ข้อมูลจะถูกบันทึกและแสดงผลทันทีตามเงื่อนไขที่กำหนด'
+                  : '* Settings will take effect immediately upon saving.'}
               </span>
               <div className="flex items-center gap-2.5 ml-auto">
                 <button
@@ -1854,7 +1939,7 @@ export default function AdminAnnouncementsContent({
                   onClick={() => setShowModal(false)}
                   className="px-5 py-2.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
                 >
-                  ยกเลิก
+                  {locale === 'th' ? 'ยกเลิก' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
@@ -1862,7 +1947,11 @@ export default function AdminAnnouncementsContent({
                   disabled={saving}
                   className="px-6 py-2.5 rounded-xl text-xs font-bold bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 transition-all active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
                 >
-                  {saving ? 'กำลังบันทึก...' : editingId ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างประกาศ'}
+                  {saving
+                    ? (locale === 'th' ? 'กำลังบันทึก...' : 'Saving...')
+                    : editingId
+                    ? (locale === 'th' ? 'บันทึกการแก้ไข' : 'Save Changes')
+                    : (locale === 'th' ? 'ยืนยันสร้างประกาศ' : 'Create Announcement')}
                 </button>
               </div>
             </div>

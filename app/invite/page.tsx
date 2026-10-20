@@ -96,8 +96,8 @@ function InviteContent() {
         } else if (json.status === 'waiting_resign') {
           setActionSuccess(
             isThai
-              ? 'คุณยอมรับคำเชิญแล้ว! ระบบกำลังรอให้ผู้ดูแลคนเดิมยืนยันการสละสิทธิ์'
-              : 'You accepted the invitation! Waiting for current admin to confirm resignation.'
+              ? `คุณยอมรับคำเชิญแล้ว! ระบบได้ส่งอีเมลยืนยันการสละสิทธิ์ไปที่ ${json.replaceAdminEmail || 'ผู้ดูแลคนเดิม'} เรียบร้อยแล้ว เมื่อผู้ดูแลคนเดิมกดยืนยัน บัญชีของคุณจะปรับเป็น Admin ทันที`
+              : `You accepted the invitation! A resignation confirmation email has been sent to ${json.replaceAdminEmail || 'the current admin'}. Your role will be upgraded to Admin once confirmed.`
           )
         } else if (json.status === 'waiting_accept') {
           setActionSuccess(

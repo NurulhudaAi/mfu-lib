@@ -9,10 +9,10 @@ import { getCategoryLabel } from '@/lib/i18n'
 
 interface Props {
   books: any[]
-  categories: string[]  // ✅ รับ categories จาก DB ผ่าน props
+  categories: string[] // Categories retrieved from database via props
 }
 
-// ✅ ลบ DEFAULT_CATEGORIES และ STORAGE_KEY ออก ไม่ใช้ localStorage แล้ว
+// Custom hook to manage category state
 function useCategories(initialCategories: string[]) {
   const [categories, setCategories] = useState<string[]>(initialCategories)
 
@@ -32,6 +32,8 @@ function useCategories(initialCategories: string[]) {
 
 export default function AdminBooksContent({ books, categories: initialCategories }: Props) {
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'out_of_stock' | 'featured' | 'inactive'>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [deleting, setDeleting] = useState<string | null>(null)
   const [editing, setEditing] = useState<any | null>(null)
   const [saving, setSaving] = useState(false)
@@ -43,15 +45,32 @@ export default function AdminBooksContent({ books, categories: initialCategories
   const { searchQuery, selectedCategory, locale, t } = useApp()
   const router = useRouter()
 
+  const bookStats = {
+    total: books.length,
+    available: books.filter(b => (b.available_copies ?? 0) > 0).length,
+    outOfStock: books.filter(b => (b.available_copies ?? 0) === 0).length,
+    featured: books.filter(b => !!b.is_featured).length,
+    inactive: books.filter(b => b.is_active === false).length,
+  }
+
   const effectiveSearch = search || searchQuery
   const filtered = books.filter(b => {
     const matchSearch =
       !effectiveSearch ||
       b.title?.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
-      b.author?.toLowerCase().includes(effectiveSearch.toLowerCase())
-    const matchCat =
-      selectedCategory === 'all' || b.category === selectedCategory
-    return matchSearch && matchCat
+      b.author?.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+      b.isbn?.toLowerCase().includes(effectiveSearch.toLowerCase())
+
+    const activeCat = categoryFilter !== 'all' ? categoryFilter : selectedCategory
+    const matchCat = activeCat === 'all' || b.category === activeCat
+
+    let matchStatus = true
+    if (statusFilter === 'available') matchStatus = (b.available_copies ?? 0) > 0
+    else if (statusFilter === 'out_of_stock') matchStatus = (b.available_copies ?? 0) === 0
+    else if (statusFilter === 'featured') matchStatus = !!b.is_featured
+    else if (statusFilter === 'inactive') matchStatus = b.is_active === false
+
+    return matchSearch && matchCat && matchStatus
   })
 
   function openEdit(book: any) {
@@ -97,7 +116,7 @@ export default function AdminBooksContent({ books, categories: initialCategories
     const data = await res.json()
     console.log('toggleActive response:', res.status, data)
     if (res.ok) router.refresh()
-    else alert('เปลี่ยนสถานะไม่สำเร็จ')
+    else alert(locale === 'th' ? 'เปลี่ยนสถานะไม่สำเร็จ' : 'Failed to update status')
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -113,7 +132,7 @@ export default function AdminBooksContent({ books, categories: initialCategories
         fd.append('cover', coverFile)
         const res = await fetch(`/api/admin/books/${editing.id}`, { method: 'PUT', body: fd })
         if (res.ok) { closeEdit(); router.refresh() }
-        else { const d = await res.json().catch(() => ({})); alert(d.error || 'บันทึกไม่สำเร็จ') }
+        else { const d = await res.json().catch(() => ({})); alert(d.error || (locale === 'th' ? 'บันทึกไม่สำเร็จ' : 'Failed to save')) }
       } else {
         const res = await fetch(`/api/admin/books/${editing.id}`, {
           method: 'PUT',
@@ -126,7 +145,7 @@ export default function AdminBooksContent({ books, categories: initialCategories
           }),
         })
         if (res.ok) { closeEdit(); router.refresh() }
-        else { const d = await res.json().catch(() => ({})); alert(d.error || 'บันทึกไม่สำเร็จ') }
+        else { const d = await res.json().catch(() => ({})); alert(d.error || (locale === 'th' ? 'บันทึกไม่สำเร็จ' : 'Failed to save')) }
       }
     } finally {
       setSaving(false)
@@ -164,15 +183,140 @@ export default function AdminBooksContent({ books, categories: initialCategories
         </Link>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-5">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder={t('searchAdminBooksPlaceholder')}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm focus:border-green-500 outline-none"
-        />
+      {/* ── Quick KPI / Status Filter Chips (Fluid responsive grid) ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
+        {/* All */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter('all')}
+          className={`p-3 rounded-2xl border text-left transition-all ${
+            statusFilter === 'all'
+              ? 'bg-neutral-900 text-white dark:bg-white dark:text-black border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400'
+          }`}
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+            {locale === 'th' ? 'ทั้งหมด' : 'All Books'}
+          </span>
+          <p className="text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight">{bookStats.total}</p>
+        </button>
+
+        {/* Available */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'available' ? 'all' : 'available')}
+          className={`p-3 rounded-2xl border text-left transition-all ${
+            statusFilter === 'available'
+              ? 'bg-emerald-600 text-white border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-emerald-500'
+          }`}
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+            {locale === 'th' ? 'พร้อมยืม' : 'Available'}
+          </span>
+          <p className={`text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight ${statusFilter === 'available' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {bookStats.available}
+          </p>
+        </button>
+
+        {/* Out of Stock */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'out_of_stock' ? 'all' : 'out_of_stock')}
+          className={`p-3 rounded-2xl border text-left transition-all ${
+            statusFilter === 'out_of_stock'
+              ? 'bg-rose-600 text-white border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-rose-500'
+          }`}
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+            {locale === 'th' ? 'ยืมหมดแล้ว' : 'Out of Stock'}
+          </span>
+          <p className={`text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight ${statusFilter === 'out_of_stock' ? 'text-white' : (bookStats.outOfStock > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-neutral-900 dark:text-white')}`}>
+            {bookStats.outOfStock}
+          </p>
+        </button>
+
+        {/* Featured */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'featured' ? 'all' : 'featured')}
+          className={`p-3 rounded-2xl border text-left transition-all ${
+            statusFilter === 'featured'
+              ? 'bg-neutral-900 text-white dark:bg-white dark:text-black border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400'
+          }`}
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+            {locale === 'th' ? 'หนังสือแนะนำ' : 'Featured'}
+          </span>
+          <p className="text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight">{bookStats.featured}</p>
+        </button>
+
+        {/* Inactive / Hidden */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'inactive' ? 'all' : 'inactive')}
+          className={`p-3 rounded-2xl border text-left transition-all col-span-2 sm:col-span-1 ${
+            statusFilter === 'inactive'
+              ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-black border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400'
+          }`}
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+            {locale === 'th' ? 'ซ่อนจากระบบ' : 'Inactive'}
+          </span>
+          <p className="text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight">{bookStats.inactive}</p>
+        </button>
+      </div>
+
+      {/* ── Search & Filter Toolbar ── */}
+      <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={t('searchAdminBooksPlaceholder')}
+            className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white text-xs sm:text-sm focus:border-black dark:focus:border-white outline-none shadow-2xs"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black dark:hover:text-white"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Category selector */}
+        <div className="flex items-center gap-2">
+          <select
+            value={categoryFilter}
+            onChange={e => setCategoryFilter(e.target.value)}
+            className="px-3 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 text-xs sm:text-sm outline-none focus:border-black dark:focus:border-white cursor-pointer shadow-2xs shrink-0"
+          >
+            <option value="all">{locale === 'th' ? 'ทุกหมวดหมู่' : 'All Categories'}</option>
+            {categories.map(c => (
+              <option key={c} value={c}>{getCategoryLabel(c, locale)}</option>
+            ))}
+          </select>
+
+          {/* Reset Filters button if any active */}
+          {(statusFilter !== 'all' || categoryFilter !== 'all' || search) && (
+            <button
+              onClick={() => {
+                setStatusFilter('all')
+                setCategoryFilter('all')
+                setSearch('')
+              }}
+              className="px-3 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-500 hover:text-black dark:hover:text-white text-xs font-semibold whitespace-nowrap transition-colors shadow-2xs"
+            >
+              {locale === 'th' ? 'ล้างตัวกรอง' : 'Reset'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table (Desktop: md+) */}
@@ -192,9 +336,24 @@ export default function AdminBooksContent({ books, categories: initialCategories
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-neutral-400">
-                    <BookOpen size={36} className="mx-auto mb-2 opacity-20" />
-                    {t('noBooksFound')}
+                  <td colSpan={6} className="text-center py-16 text-neutral-400">
+                    <BookOpen size={40} className="mx-auto mb-3 opacity-20" />
+                    <p className="text-sm font-medium">{t('noBooksFound')}</p>
+                    <p className="text-xs text-neutral-400 mt-1">
+                      {locale === 'th' ? 'ลองปรับเปลี่ยนคำค้นหาหรือตัวกรองด้านบน' : 'Try adjusting your search or filters'}
+                    </p>
+                    {(statusFilter !== 'all' || categoryFilter !== 'all' || search) && (
+                      <button
+                        onClick={() => {
+                          setStatusFilter('all')
+                          setCategoryFilter('all')
+                          setSearch('')
+                        }}
+                        className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                      >
+                        {locale === 'th' ? 'ล้างตัวกรองทั้งหมด' : 'Clear all filters'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ) : filtered.map(book => (
@@ -218,19 +377,21 @@ export default function AdminBooksContent({ books, categories: initialCategories
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-medium text-gray-900 dark:text-white truncate max-w-[200px]">{book.title}</p>
-                        {book.author && <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{book.author}</p>}
+                        <p className="font-semibold text-neutral-900 dark:text-white truncate max-w-[220px]">{book.title}</p>
+                        {book.author && <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate max-w-[220px]">{book.author}</p>}
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400 hidden md:table-cell">
-                    {book.category || '—'}
+                    <span className="text-xs px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
+                      {getCategoryLabel(book.category, locale)}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${
                       book.available_copies > 0
-                        ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 border-transparent'
-                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-700'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                        : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
                     }`}>
                       {book.available_copies}/{book.total_copies}
                     </span>
@@ -294,7 +455,22 @@ export default function AdminBooksContent({ books, categories: initialCategories
         {filtered.length === 0 ? (
           <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-8 text-center text-neutral-400">
             <BookOpen size={36} className="mx-auto mb-2 opacity-20" />
-            <p className="text-sm">{t('noBooksFound')}</p>
+            <p className="text-sm font-medium">{t('noBooksFound')}</p>
+            <p className="text-xs text-neutral-400 mt-1">
+              {locale === 'th' ? 'ไม่พบหนังสือที่ตรงกับเงื่อนไข' : 'No books matching the selected filters'}
+            </p>
+            {(statusFilter !== 'all' || categoryFilter !== 'all' || search) && (
+              <button
+                onClick={() => {
+                  setStatusFilter('all')
+                  setCategoryFilter('all')
+                  setSearch('')
+                }}
+                className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              >
+                {locale === 'th' ? 'ล้างตัวกรองทั้งหมด' : 'Clear all filters'}
+              </button>
+            )}
           </div>
         ) : (
           filtered.map(book => (
@@ -344,8 +520,8 @@ export default function AdminBooksContent({ books, categories: initialCategories
                     )}
                     <span className={`text-[11px] px-2 py-0.5 rounded-md font-semibold border ${
                       book.available_copies > 0
-                        ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 border-transparent'
-                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border-neutral-200 dark:border-neutral-700'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                        : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
                     }`}>
                       {locale === 'th' ? 'พร้อมยืม' : 'Available'} {book.available_copies}/{book.total_copies}
                     </span>

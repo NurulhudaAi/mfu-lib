@@ -381,7 +381,7 @@ export default function AdminFeedbackContent({ feedback: initialFeedback }: Prop
                       ? 'bg-neutral-100 dark:bg-neutral-800/80 ring-2 ring-neutral-900 dark:ring-white'
                       : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
                   }`}
-                  title={`กรองดู ${star} ดาว`}
+                  title={locale === 'th' ? `กรองดู ${star} ดาว` : `Filter ${star} stars`}
                 >
                   {/* Star Label */}
                   <div className="flex items-center gap-1 w-14 shrink-0 font-bold text-xs text-neutral-700 dark:text-neutral-300">

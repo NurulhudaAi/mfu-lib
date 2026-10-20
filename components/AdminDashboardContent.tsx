@@ -172,133 +172,324 @@ export default function AdminDashboardContent({
         </div>
       </div>
 
-      {/* ── Key Stat Counters (7 Responsive Cards) ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3.5">
-        <Link
-          href="/books"
-          className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all"
-        >
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">{t('adminBooksHeading')}</span>
-            <BookOpen size={17} className="group-hover:scale-110 transition-transform" />
-          </div>
-          <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.totalBooks}</p>
-          <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>{t('totalBooksCount')}</span>
-            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-          </p>
-        </Link>
+      {/* ── Key Stat Counters (Balanced 2-Tier Responsive Hierarchy: 4 Core + 3 Operational) ── */}
+      <div className="space-y-3.5">
+        {/* Tier 1: 4 Core Metrics (2 cols on mobile, 4 on desktop) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* 1. Total Books */}
+          <Link
+            href="/books"
+            className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 sm:p-5 shadow-xs hover:border-black dark:hover:border-white transition-all hover:shadow-sm"
+          >
+            <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider">{t('adminBooksHeading')}</span>
+              <div className="w-8 h-8 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 group-hover:scale-110 transition-transform">
+                <BookOpen size={16} />
+              </div>
+            </div>
+            <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight">{stats.totalBooks}</p>
+            <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
+              <span>{t('totalBooksCount')}</span>
+              <ArrowRight size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-neutral-600 dark:text-neutral-300" />
+            </p>
+          </Link>
 
-        <Link
-          href="/admin/users"
-          className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all"
-        >
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">{t('totalUsersCount')}</span>
-            <Users size={17} className="group-hover:scale-110 transition-transform" />
-          </div>
-          <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.totalUsers}</p>
-          <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>{locale === 'th' ? 'สมาชิก & แอดมิน' : 'Members & Admins'}</span>
-            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-          </p>
-        </Link>
+          {/* 2. Total Users */}
+          <Link
+            href="/admin/users"
+            className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 sm:p-5 shadow-xs hover:border-black dark:hover:border-white transition-all hover:shadow-sm"
+          >
+            <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider">{t('totalUsersCount')}</span>
+              <div className="w-8 h-8 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 group-hover:scale-110 transition-transform">
+                <Users size={16} />
+              </div>
+            </div>
+            <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight">{stats.totalUsers}</p>
+            <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
+              <span>{locale === 'th' ? 'สมาชิก & ผู้ดูแลระบบ' : 'Members & Admins'}</span>
+              <ArrowRight size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-neutral-600 dark:text-neutral-300" />
+            </p>
+          </Link>
 
-        <Link
-          href="/admin/borrows"
-          className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all"
-        >
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">{t('totalBorrowsCount')}</span>
-            <TrendingUp size={17} className="group-hover:scale-110 transition-transform" />
-          </div>
-          <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.totalBorrows}</p>
-          <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>{locale === 'th' ? 'ประวัติรายการสะสม' : 'Cumulative history'}</span>
-            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-          </p>
-        </Link>
+          {/* 3. Active Borrows */}
+          <Link
+            href="/admin/borrows"
+            className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 sm:p-5 shadow-xs hover:border-emerald-500/80 dark:hover:border-emerald-500/80 transition-all hover:shadow-sm"
+          >
+            <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider">{t('activeBorrowsCount')}</span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                <Clock size={16} />
+              </div>
+            </div>
+            <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight">{stats.activeBorrows}</p>
+            <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
+              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {locale === 'th' ? 'กำลังยืมอ่าน' : 'Currently reading'}
+              </span>
+              <ArrowRight size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-emerald-600 dark:text-emerald-400" />
+            </p>
+          </Link>
 
-        <Link
-          href="/admin/borrows"
-          className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-emerald-500 transition-all"
-        >
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">{t('activeBorrowsCount')}</span>
-            <Clock size={17} className="text-emerald-500 group-hover:scale-110 transition-transform" />
-          </div>
-          <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.activeBorrows}</p>
-          <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>{locale === 'th' ? 'อยู่ระหว่างการอ่าน' : 'Currently reading'}</span>
-            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-          </p>
-        </Link>
+          {/* 4. Overdue Borrows */}
+          <Link
+            href="/admin/borrows"
+            className={`group bg-white dark:bg-neutral-900 rounded-2xl border p-4 sm:p-5 shadow-xs transition-all hover:shadow-sm ${
+              stats.overdueBorrows > 0
+                ? 'border-rose-300 dark:border-rose-900/70 hover:border-rose-500'
+                : 'border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white'
+            }`}
+          >
+            <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider">{t('overdueBorrowsCount')}</span>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform ${
+                stats.overdueBorrows > 0
+                  ? 'bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400'
+                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500'
+              }`}>
+                <AlertTriangle size={16} />
+              </div>
+            </div>
+            <p className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${
+              stats.overdueBorrows > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-neutral-900 dark:text-white'
+            }`}>
+              {stats.overdueBorrows}
+            </p>
+            <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
+              <span className={stats.overdueBorrows > 0 ? 'text-rose-600 dark:text-rose-400 font-semibold' : ''}>
+                {stats.overdueBorrows > 0
+                  ? (locale === 'th' ? 'ต้องติดตามส่งคืน' : 'Requires follow-up')
+                  : (locale === 'th' ? 'ไม่มีรายการค้าง' : 'None overdue')}
+              </span>
+              <ArrowRight size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-rose-600 dark:text-rose-400" />
+            </p>
+          </Link>
+        </div>
 
-        <Link
-          href="/admin/borrows"
-          className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-rose-500 transition-all"
-        >
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">{t('overdueBorrowsCount')}</span>
-            <AlertTriangle size={17} className="text-rose-500 group-hover:scale-110 transition-transform" />
-          </div>
-          <p className="text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400">{stats.overdueBorrows}</p>
-          <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>{locale === 'th' ? 'ต้องติดตามการคืน' : 'Requires follow-up'}</span>
-            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-          </p>
-        </Link>
+        {/* Tier 2: 3 Operational Metrics (1 col on mobile, 3 on tablet/desktop) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          {/* 5. Cumulative Total Borrows */}
+          <Link
+            href="/admin/borrows"
+            className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all flex items-center justify-between"
+          >
+            <div>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 block mb-0.5">
+                {t('totalBorrowsCount')}
+              </span>
+              <p className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white">
+                {stats.totalBorrows}
+              </p>
+              <p className="text-[11px] text-neutral-400">
+                {locale === 'th' ? 'ประวัติรายการสะสม' : 'Cumulative history'}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 group-hover:scale-110 transition-transform shrink-0">
+              <TrendingUp size={18} />
+            </div>
+          </Link>
 
-        <Link
-          href="/admin/borrows"
-          className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all"
-        >
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">{t('returnedBorrowsCount')}</span>
-            <CheckCircle2 size={17} className="text-emerald-500 group-hover:scale-110 transition-transform" />
-          </div>
-          <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{stats.returnedBorrows}</p>
-          <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>{locale === 'th' ? 'ส่งคืนสำเร็จ' : 'Returned successfully'}</span>
-            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-          </p>
-        </Link>
+          {/* 6. Returned Borrows */}
+          <Link
+            href="/admin/borrows"
+            className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all flex items-center justify-between"
+          >
+            <div>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 block mb-0.5">
+                {t('returnedBorrowsCount')}
+              </span>
+              <p className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white">
+                {stats.returnedBorrows}
+              </p>
+              <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                {locale === 'th' ? 'ส่งคืนชั้นวางสำเร็จ' : 'Returned successfully'}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform shrink-0">
+              <CheckCircle2 size={18} />
+            </div>
+          </Link>
 
-        {/* Queues Stat Card */}
-        <a
-          href="#book-queues-section"
-          className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all cursor-pointer"
-        >
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">{t('tabQueues')}</span>
-            <BookMarked size={17} className="text-rose-500 group-hover:scale-110 transition-transform" />
+          {/* 7. Book Queues */}
+          <a
+            href="#book-queues-section"
+            className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-xs hover:border-black dark:hover:border-white transition-all flex items-center justify-between cursor-pointer"
+          >
+            <div>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 block mb-0.5">
+                {t('tabQueues')}
+              </span>
+              <p className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white">
+                {queuesList.length}
+              </p>
+              <p className="text-[11px] text-neutral-400">
+                {locale === 'th' ? 'สมาชิกรอรับหนังสือ' : 'Members in queue'}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/50 dark:border-rose-900/40 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform shrink-0">
+              <BookMarked size={18} />
+            </div>
+          </a>
+        </div>
+      </div>
+
+      {/* ── Admin Quick Operations Hub ── */}
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-neutral-100 dark:border-neutral-800 pb-3">
+          <div>
+            <h2 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-neutral-900 dark:bg-white" />
+              {locale === 'th' ? 'ศูนย์สั่งการด่วน' : 'Quick Operations'}
+            </h2>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              {locale === 'th'
+                ? 'ทางลัดสำหรับการบริหารจัดการระบบห้องสมุดประจำวัน'
+                : 'Essential shortcuts for everyday library management'}
+            </p>
           </div>
-          <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{queuesList.length}</p>
-          <p className="text-[11px] text-neutral-400 mt-1 flex items-center justify-between">
-            <span>{locale === 'th' ? 'รอรับหนังสือ' : 'Waiting in line'}</span>
-            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-          </p>
-        </a>
+          <span className="text-[11px] text-neutral-400 hidden sm:inline">
+            {locale === 'th' ? 'คลิกเพื่อเข้าสู่หน้าจัดการ' : 'Click to navigate'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {/* Quick Action 1: Add Book */}
+          <Link
+            href="/books?action=add"
+            className="group p-3.5 rounded-xl border border-neutral-200/90 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-800/40 hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-all text-left flex flex-col justify-between min-h-[105px] shadow-2xs hover:shadow-sm"
+          >
+            <div className="w-8 h-8 rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-black group-hover:bg-white group-hover:text-black dark:group-hover:bg-black dark:group-hover:text-white flex items-center justify-center transition-colors">
+              <Plus size={16} />
+            </div>
+            <div>
+              <p className="text-xs font-bold leading-tight line-clamp-1">
+                {locale === 'th' ? 'เพิ่มหนังสือใหม่' : 'Add New Book'}
+              </p>
+              <p className="text-[10px] text-neutral-400 group-hover:text-neutral-300 dark:group-hover:text-neutral-600 mt-0.5 line-clamp-1">
+                {locale === 'th' ? 'เข้าสู่คลังระบบ' : 'Into catalog'}
+              </p>
+            </div>
+          </Link>
+
+          {/* Quick Action 2: Borrows & Returns */}
+          <Link
+            href="/admin/borrows"
+            className="group p-3.5 rounded-xl border border-neutral-200/90 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-800/40 hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-all text-left flex flex-col justify-between min-h-[105px] shadow-2xs hover:shadow-sm"
+          >
+            <div className="w-8 h-8 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 group-hover:bg-white group-hover:text-black dark:group-hover:bg-black dark:group-hover:text-white flex items-center justify-center transition-colors">
+              <Clock size={16} />
+            </div>
+            <div>
+              <p className="text-xs font-bold leading-tight line-clamp-1">
+                {locale === 'th' ? 'จัดการยืม-คืน' : 'Borrows & Returns'}
+              </p>
+              <p className="text-[10px] text-neutral-400 group-hover:text-neutral-300 dark:group-hover:text-neutral-600 mt-0.5 line-clamp-1">
+                {locale === 'th' ? 'ตรวจรายการ & หลักฐาน' : 'Inspect records'}
+              </p>
+            </div>
+          </Link>
+
+          {/* Quick Action 3: Book Queues */}
+          <Link
+            href="/admin/borrows?tab=queues"
+            className="group p-3.5 rounded-xl border border-neutral-200/90 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-800/40 hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-all text-left flex flex-col justify-between min-h-[105px] shadow-2xs hover:shadow-sm"
+          >
+            <div className="flex items-center justify-between">
+              <div className="w-8 h-8 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 group-hover:bg-white group-hover:text-black dark:group-hover:bg-black dark:group-hover:text-white flex items-center justify-center transition-colors">
+                <BookMarked size={16} />
+              </div>
+              {queuesList.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 group-hover:bg-rose-600 group-hover:text-white">
+                  {queuesList.length}
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-bold leading-tight line-clamp-1">
+                {locale === 'th' ? 'คิวจองหนังสือ' : 'Book Queues'}
+              </p>
+              <p className="text-[10px] text-neutral-400 group-hover:text-neutral-300 dark:group-hover:text-neutral-600 mt-0.5 line-clamp-1">
+                {locale === 'th' ? 'ลำดับการรับเล่ม' : 'Manage queue list'}
+              </p>
+            </div>
+          </Link>
+
+          {/* Quick Action 4: Users & Roles */}
+          <Link
+            href="/admin/users"
+            className="group p-3.5 rounded-xl border border-neutral-200/90 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-800/40 hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-all text-left flex flex-col justify-between min-h-[105px] shadow-2xs hover:shadow-sm"
+          >
+            <div className="w-8 h-8 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 group-hover:bg-white group-hover:text-black dark:group-hover:bg-black dark:group-hover:text-white flex items-center justify-center transition-colors">
+              <Users size={16} />
+            </div>
+            <div>
+              <p className="text-xs font-bold leading-tight line-clamp-1">
+                {locale === 'th' ? 'สมาชิก & ผู้ดูแล' : 'Users & Admins'}
+              </p>
+              <p className="text-[10px] text-neutral-400 group-hover:text-neutral-300 dark:group-hover:text-neutral-600 mt-0.5 line-clamp-1">
+                {locale === 'th' ? 'โควตาแอดมิน, ระงับสิทธิ์' : 'Roles & invitations'}
+              </p>
+            </div>
+          </Link>
+
+          {/* Quick Action 5: Announcements */}
+          <Link
+            href="/admin/announcements"
+            className="group p-3.5 rounded-xl border border-neutral-200/90 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-800/40 hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-all text-left flex flex-col justify-between min-h-[105px] shadow-2xs hover:shadow-sm"
+          >
+            <div className="w-8 h-8 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 group-hover:bg-white group-hover:text-black dark:group-hover:bg-black dark:group-hover:text-white flex items-center justify-center transition-colors">
+              <Bell size={16} />
+            </div>
+            <div>
+              <p className="text-xs font-bold leading-tight line-clamp-1">
+                {locale === 'th' ? 'ประกาศ & แบนเนอร์' : 'Announcements'}
+              </p>
+              <p className="text-[10px] text-neutral-400 group-hover:text-neutral-300 dark:group-hover:text-neutral-600 mt-0.5 line-clamp-1">
+                {locale === 'th' ? 'ข่าวสารและหน้าหลัก' : 'Banners & notices'}
+              </p>
+            </div>
+          </Link>
+
+          {/* Quick Action 6: Feedback */}
+          <Link
+            href="/admin/feedback"
+            className="group p-3.5 rounded-xl border border-neutral-200/90 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-800/40 hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-all text-left flex flex-col justify-between min-h-[105px] shadow-2xs hover:shadow-sm"
+          >
+            <div className="w-8 h-8 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 group-hover:bg-white group-hover:text-black dark:group-hover:bg-black dark:group-hover:text-white flex items-center justify-center transition-colors">
+              <Award size={16} />
+            </div>
+            <div>
+              <p className="text-xs font-bold leading-tight line-clamp-1">
+                {locale === 'th' ? 'ความคิดเห็น & รีวิว' : 'User Feedback'}
+              </p>
+              <p className="text-[10px] text-neutral-400 group-hover:text-neutral-300 dark:group-hover:text-neutral-600 mt-0.5 line-clamp-1">
+                {locale === 'th' ? 'สถิติความพึงพอใจ' : 'Satisfaction rates'}
+              </p>
+            </div>
+          </Link>
+        </div>
       </div>
 
 
 
       {/* ── Two-Column Ranking Grid (Most Borrowed & Top Borrowers) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
         {/* Most Borrowed Books */}
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 sm:p-6 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between mb-4 sm:mb-5">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-900 dark:text-white font-bold">
+                <div className="w-8 h-8 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-900 dark:text-white font-bold shrink-0">
                   <Award size={18} />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-neutral-900 dark:text-white">{t('mostBorrowedRanking')}</h2>
-                  <p className="text-xs text-neutral-400">{locale === 'th' ? 'จัดอันดับตามจำนวนครั้งที่มีการยืม' : 'Ranked by borrow frequency'}</p>
+                  <h2 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white">{t('mostBorrowedRanking')}</h2>
+                  <p className="text-[11px] sm:text-xs text-neutral-400">{locale === 'th' ? 'จัดอันดับตามจำนวนครั้งที่มีการยืม' : 'Ranked by borrow frequency'}</p>
                 </div>
               </div>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+              <span className="text-[10px] sm:text-xs font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 shrink-0">
                 Top 6
               </span>
             </div>
@@ -313,8 +504,8 @@ export default function AdminDashboardContent({
                 {mostBorrowedBooks.map((book, idx) => {
                   const percentage = Math.round((book.borrowCount / maxBookBorrows) * 100)
                   return (
-                    <div key={book.id || idx} className="space-y-1.5">
-                      <div className="flex items-center gap-3">
+                    <div key={book.id || idx} className="space-y-2">
+                      <div className="flex items-center gap-2.5 sm:gap-3">
                         <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
                           idx === 0 ? 'bg-neutral-900 text-white dark:bg-white dark:text-black' :
                           idx === 1 ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200' :
@@ -350,18 +541,20 @@ export default function AdminDashboardContent({
 
                         {/* Borrow count pill */}
                         <div className="text-right shrink-0">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-700">
+                          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-700">
                             {book.borrowCount} {locale === 'th' ? 'ครั้ง' : 'times'}
                           </span>
                         </div>
                       </div>
 
                       {/* Progress bar */}
-                      <div className="w-full bg-neutral-100 dark:bg-neutral-800/80 rounded-full h-1.5 overflow-hidden ml-9">
-                        <div
-                          className="bg-neutral-900 dark:bg-white h-full rounded-full transition-all duration-500"
-                          style={{ width: `${percentage}%` }}
-                        />
+                      <div className="w-full pl-8 sm:pl-9">
+                        <div className="w-full bg-neutral-100 dark:bg-neutral-800/80 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className="bg-neutral-900 dark:bg-white h-full rounded-full transition-all duration-500"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
                       </div>
                     </div>
                   )
@@ -372,19 +565,19 @@ export default function AdminDashboardContent({
         </div>
 
         {/* Top Active Borrowers */}
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 sm:p-6 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between mb-4 sm:mb-5">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-900 dark:text-white font-bold">
+                <div className="w-8 h-8 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-900 dark:text-white font-bold shrink-0">
                   <Users size={18} />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-neutral-900 dark:text-white">{t('topBorrowersRanking')}</h2>
-                  <p className="text-xs text-neutral-400">{locale === 'th' ? 'สมาชิกที่มีความถี่ในการอ่านและยืมสูงสุด' : 'Members with highest borrow count'}</p>
+                  <h2 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white">{t('topBorrowersRanking')}</h2>
+                  <p className="text-[11px] sm:text-xs text-neutral-400">{locale === 'th' ? 'สมาชิกที่มีความถี่ในการอ่านและยืมสูงสุด' : 'Members with highest borrow count'}</p>
                 </div>
               </div>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+              <span className="text-[10px] sm:text-xs font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 shrink-0">
                 Top 6
               </span>
             </div>
@@ -399,8 +592,8 @@ export default function AdminDashboardContent({
                 {topBorrowers.map((user, idx) => {
                   const percentage = Math.round((user.borrowCount / maxUserBorrows) * 100)
                   return (
-                    <div key={user.id || idx} className="space-y-1.5">
-                      <div className="flex items-center gap-3">
+                    <div key={user.id || idx} className="space-y-2">
+                      <div className="flex items-center gap-2.5 sm:gap-3">
                         <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
                           idx === 0 ? 'bg-neutral-900 text-white dark:bg-white dark:text-black' :
                           idx === 1 ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200' :
@@ -411,7 +604,7 @@ export default function AdminDashboardContent({
                         </div>
 
                         {/* User Avatar */}
-                        <div className="w-9 h-9 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0 flex items-center justify-center">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0 flex items-center justify-center">
                           {user.avatar_url ? (
                             <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -433,18 +626,20 @@ export default function AdminDashboardContent({
 
                         {/* Count pill */}
                         <div className="text-right shrink-0">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-700">
+                          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-700">
                             {user.borrowCount} {locale === 'th' ? 'เล่ม' : 'books'}
                           </span>
                         </div>
                       </div>
 
                       {/* Progress bar */}
-                      <div className="w-full bg-neutral-100 dark:bg-neutral-800/80 rounded-full h-1.5 overflow-hidden ml-9">
-                        <div
-                          className="bg-neutral-900 dark:bg-white h-full rounded-full transition-all duration-500"
-                          style={{ width: `${percentage}%` }}
-                        />
+                      <div className="w-full pl-8 sm:pl-9">
+                        <div className="w-full bg-neutral-100 dark:bg-neutral-800/80 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className="bg-neutral-900 dark:bg-white h-full rounded-full transition-all duration-500"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
                       </div>
                     </div>
                   )

@@ -57,6 +57,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
   const [copiedInviteLink, setCopiedInviteLink] = useState(false)
   const [copiedResignLink, setCopiedResignLink] = useState(false)
   const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null)
+  const [copiedResignId, setCopiedResignId] = useState<string | null>(null)
 
   // Blacklist Modal
   const [blacklistModalUser, setBlacklistModalUser] = useState<any | null>(null)
@@ -92,8 +93,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
     const matchSearch =
       !search ||
       u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-      u.email?.toLowerCase().includes(search.toLowerCase()) ||
-      u.student_id?.toLowerCase().includes(search.toLowerCase())
+      u.email?.toLowerCase().includes(search.toLowerCase())
 
     let matchRole = true
     if (filterRole === 'admin') matchRole = u.role === 'admin'
@@ -279,6 +279,86 @@ export default function AdminUsersContent({ users = [] }: Props) {
         </button>
       </div>
 
+      {/* ── User Role KPI Summary Chips (Fluid responsive grid) ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+        {/* All Users */}
+        <button
+          type="button"
+          onClick={() => setFilterRole('all')}
+          className={`p-3.5 rounded-2xl border text-left transition-all ${
+            filterRole === 'all'
+              ? 'bg-neutral-900 text-white dark:bg-white dark:text-black border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400'
+          }`}
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+            {t('filterRoleAll')}
+          </span>
+          <p className="text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight">{users.length}</p>
+        </button>
+
+        {/* Admins */}
+        <button
+          type="button"
+          onClick={() => setFilterRole(filterRole === 'admin' ? 'all' : 'admin')}
+          className={`p-3.5 rounded-2xl border text-left transition-all ${
+            filterRole === 'admin'
+              ? 'bg-neutral-900 text-white dark:bg-white dark:text-black border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+              {t('filterRoleAdmin')}
+            </span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+              {admins.length}/{maxAdmins}
+            </span>
+          </div>
+          <p className="text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight">{admins.length}</p>
+        </button>
+
+        {/* Regular Members */}
+        <button
+          type="button"
+          onClick={() => setFilterRole(filterRole === 'user' ? 'all' : 'user')}
+          className={`p-3.5 rounded-2xl border text-left transition-all ${
+            filterRole === 'user'
+              ? 'bg-neutral-900 text-white dark:bg-white dark:text-black border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400'
+          }`}
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+            {t('filterRoleUser')}
+          </span>
+          <p className="text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight">
+            {users.filter(u => u.role === 'user' && !u.is_blacklisted).length}
+          </p>
+        </button>
+
+        {/* Blacklisted / Suspended */}
+        <button
+          type="button"
+          onClick={() => setFilterRole(filterRole === 'blacklisted' ? 'all' : 'blacklisted')}
+          className={`p-3.5 rounded-2xl border text-left transition-all ${
+            filterRole === 'blacklisted'
+              ? 'bg-rose-600 text-white border-transparent shadow-xs'
+              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-rose-400'
+          }`}
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider block opacity-70">
+            {t('filterRoleBlacklisted')}
+          </span>
+          <p className={`text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight ${
+            filterRole === 'blacklisted'
+              ? 'text-white'
+              : (users.some(u => u.is_blacklisted) ? 'text-rose-600 dark:text-rose-400' : 'text-neutral-900 dark:text-white')
+          }`}>
+            {users.filter(u => !!u.is_blacklisted).length}
+          </p>
+        </button>
+      </div>
+
       {/* Admin Slots Panel (Max 2 Admins) */}
       <div className="p-4 sm:p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-[#121214] space-y-3">
         <div className="flex items-center justify-between">
@@ -352,16 +432,42 @@ export default function AdminUsersContent({ users = [] }: Props) {
               </div>
 
               {pendingInvites.map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between text-xs gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800">
-                  <div className="min-w-0">
-                    <span className="font-semibold text-neutral-800 dark:text-neutral-200">{inv.email}</span>
-                    {inv.replace_admin_id && (
-                      <span className="text-[10px] text-neutral-500 ml-1.5">
-                        ({locale === 'th' ? 'แทนที่แอดมินเดิม' : 'replacing admin'})
+                <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2 pt-2 pb-1 border-t border-neutral-100 dark:border-neutral-800">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-semibold text-neutral-800 dark:text-neutral-200">{inv.email}</span>
+                      {inv.replace_admin_id && (
+                        <span className="text-[10px] text-neutral-500">
+                          ({locale === 'th' ? 'แทนที่แอดมินเดิม' : 'replacing admin'})
+                        </span>
+                      )}
+                    </div>
+                    {/* Status badges */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                        inv.accepted_at
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                          : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                      }`}>
+                        {inv.accepted_at
+                          ? (locale === 'th' ? '✓ คนใหม่กดยอมรับแล้ว' : '✓ Accepted by new admin')
+                          : (locale === 'th' ? '⏳ รอคนใหม่กดยอมรับ' : '⏳ Waiting for accept')}
                       </span>
-                    )}
+                      {inv.replace_admin_id && (
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                          inv.resign_confirmed_at
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                        }`}>
+                          {inv.resign_confirmed_at
+                            ? (locale === 'th' ? '✓ แอดมินเดิมยืนยันสละสิทธิ์แล้ว' : '✓ Resign confirmed')
+                            : (locale === 'th' ? '⏳ รอแอดมินเดิมกดยืนยันสละสิทธิ์' : '⏳ Waiting for resign')}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+
+                  <div className="flex items-center flex-wrap gap-1.5 shrink-0 justify-end sm:self-center">
                     {inv.invite_link && (
                       <button
                         onClick={() => {
@@ -369,15 +475,30 @@ export default function AdminUsersContent({ users = [] }: Props) {
                           setCopiedInviteId(inv.id)
                           setTimeout(() => setCopiedInviteId(null), 2500)
                         }}
-                        className="p-1 rounded text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
-                        title={locale === 'th' ? 'คัดลอกลิงก์คำเชิญ' : 'Copy invite link'}
+                        className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white flex items-center gap-1 transition-colors text-[11px]"
+                        title={locale === 'th' ? 'คัดลอกลิงก์คำเชิญ (สำหรับคนใหม่)' : 'Copy invite link'}
                       >
-                        {copiedInviteId === inv.id ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                        {copiedInviteId === inv.id ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                        <span>{locale === 'th' ? 'ลิงก์เชิญ' : 'Invite'}</span>
+                      </button>
+                    )}
+                    {inv.resign_link && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(inv.resign_link!)
+                          setCopiedResignId(inv.id)
+                          setTimeout(() => setCopiedResignId(null), 2500)
+                        }}
+                        className="px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 flex items-center gap-1 transition-colors text-[11px]"
+                        title={locale === 'th' ? 'คัดลอกลิงก์ยืนยันสละสิทธิ์ (สำหรับแอดมินเดิม)' : 'Copy resign link'}
+                      >
+                        {copiedResignId === inv.id ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                        <span>{locale === 'th' ? 'ลิงก์สละสิทธิ์' : 'Resign'}</span>
                       </button>
                     )}
                     <button
                       onClick={() => handleCancelInvite(inv.id)}
-                      className="p-1 rounded text-neutral-400 hover:text-red-500 transition-colors"
+                      className="p-1.5 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
                       title={locale === 'th' ? 'ยกเลิกคำเชิญ' : 'Cancel invite'}
                     >
                       <Trash2 size={13} />
@@ -429,8 +550,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
             <thead>
               <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40">
                 <th className="px-5 py-3 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider">{t('colUser')}</th>
-                <th className="px-5 py-3 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider hidden md:table-cell">{t('colStudentId')}</th>
-                <th className="px-5 py-3 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider hidden lg:table-cell">{t('colRegisteredDate')}</th>
+                <th className="px-5 py-3 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider hidden md:table-cell">{t('colRegisteredDate')}</th>
                 <th className="px-5 py-3 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-center">{t('colRole')}</th>
                 <th className="px-5 py-3 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-center">{t('colUserStatus')}</th>
                 <th className="px-5 py-3 font-bold text-neutral-700 dark:text-neutral-300 text-xs uppercase tracking-wider text-right">{t('colActions')}</th>
@@ -439,7 +559,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-16 text-neutral-400">
+                  <td colSpan={5} className="text-center py-16 text-neutral-400">
                     <Users size={32} className="mx-auto mb-2 opacity-30" />
                     {t('noUsersFound')}
                   </td>
@@ -470,11 +590,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
                       </div>
                     </td>
 
-                    <td className="px-5 py-3.5 text-neutral-600 dark:text-neutral-400 text-xs hidden md:table-cell font-mono">
-                      {user.student_id || '—'}
-                    </td>
-
-                    <td className="px-5 py-3.5 text-neutral-500 dark:text-neutral-400 text-xs hidden lg:table-cell">
+                    <td className="px-5 py-3.5 text-neutral-500 dark:text-neutral-400 text-xs hidden md:table-cell">
                       {user.created_at ? format(new Date(user.created_at), 'dd MMM yyyy', { locale: dateLocale }) : '—'}
                     </td>
 
@@ -593,9 +709,8 @@ export default function AdminUsersContent({ users = [] }: Props) {
               </div>
 
               <div className="flex items-center justify-between text-xs pt-1 border-t border-neutral-100 dark:border-neutral-800 text-neutral-500">
-                <div>
-                  <span className="text-neutral-400">{t('colStudentId')}: </span>
-                  <span className="font-mono text-neutral-700 dark:text-neutral-300">{user.student_id || '—'}</span>
+                <div className="text-[11px] text-neutral-400">
+                  {user.created_at ? format(new Date(user.created_at), 'dd MMM yyyy', { locale: dateLocale }) : '—'}
                 </div>
                 <div>
                   {user.is_blacklisted ? (
@@ -717,8 +832,8 @@ export default function AdminUsersContent({ users = [] }: Props) {
                 <p className="text-[11px] leading-relaxed text-emerald-800 dark:text-emerald-300">
                   {createdInviteLinks.wasRedirected
                     ? (locale === 'th'
-                        ? `(⚙️ โหมดทดสอบก่อนขึ้น Production: ระบบส่งสำเนาเข้า ${createdInviteLinks.testEmail} และคุณสามารถคัดลอกลิงก์ด้านล่างเพื่อเปิดทดสอบยืนยันได้ทันที)`
-                        : `(⚙️ Sandbox mode: sent to ${createdInviteLinks.testEmail}. You can also test with the links below.)`)
+                        ? `([Sandbox Mode] โหมดทดสอบก่อนขึ้น Production: ระบบส่งสำเนาเข้า ${createdInviteLinks.testEmail} และคุณสามารถคัดลอกลิงก์ด้านล่างเพื่อเปิดทดสอบยืนยันได้ทันที)`
+                        : `([Sandbox Mode] Sent to ${createdInviteLinks.testEmail}. You can also test with the links below.)`)
                     : (locale === 'th'
                         ? 'ระบบได้ส่งอีเมลคำเชิญไปเรียบร้อยแล้ว หรือสามารถคัดลอกลิงก์ด้านล่างนี้ไปเปิดเพื่อยืนยันได้เช่นกัน'
                         : 'Email sent successfully. You can also copy the direct link below.')}
