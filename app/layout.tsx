@@ -27,6 +27,9 @@ export const metadata: Metadata = {
   title: 'MFU Muslim Library | ห้องสมุดชมรมมุสลิม มฟล',
   description: 'Book borrowing system for MFU Muslim Club | ระบบยืม-คืนหนังสือ ชมรมมุสลิม มฟล.',
   icons: { icon: '/logo.jpg' }, 
+  verification: {
+    google: 'fa8rXDrs-lEyh0Lsb75XLZeoTcSfXPBPyk1qzWVsuW4',
+  },
 }
 
 export const viewport: Viewport = {
