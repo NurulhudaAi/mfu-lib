@@ -56,13 +56,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'ไฟล์ใหญ่เกินไป (สูงสุด 10 MB)' }, { status: 400 })
   }
 
-  // ── ตรวจสอบ borrow เป็นของ user คนนี้จริง ──
+  // ── ตรวจสอบ borrow เป็นของ user คนนี้จริง และยังไม่ได้คืน ──
   const { data: borrow } = await supabase
     .from('borrows')
     .select('*, books(id, title, author, available_copies), profiles(email, full_name)')
     .eq('id', parsed.data.borrowId)
     .eq('user_id', user.id)
-    .eq('status', 'active')
+    .in('status', ['active', 'overdue'])
+    .is('returned_at', null)
     .single()
 
   if (!borrow) {
@@ -91,12 +92,11 @@ export async function POST(request: Request) {
 
   // ── อัปเดต borrow status ──
   const actualReturnDate = parsed.data.returnDate ? new Date(parsed.data.returnDate) : new Date()
-  const isOverdue = actualReturnDate > new Date(borrow.due_date)
 
   await supabase
     .from('borrows')
     .update({
-      status: isOverdue ? 'overdue' : 'returned',
+      status: 'returned',
       returned_at: actualReturnDate.toISOString(),
       return_proof_url: fileName,
       proof_signed_url: signedUrlData?.signedUrl ?? null,

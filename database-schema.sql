@@ -181,10 +181,13 @@ create trigger on_auth_user_created
 create or replace function update_book_availability()
 returns trigger as $$
 begin
+  -- Decrement stock when borrow is created
   if TG_OP = 'INSERT' and NEW.status = 'active' then
     update books set available_copies = available_copies - 1 where id = NEW.book_id;
+    delete from queue where user_id = NEW.user_id and book_id = NEW.book_id;
   end if;
-  if TG_OP = 'UPDATE' and OLD.status = 'active' and NEW.status in ('returned', 'overdue') then
+  -- Increment stock ONLY when book is actually returned (not merely overdue while still with borrower)
+  if TG_OP = 'UPDATE' and OLD.status in ('active', 'overdue') and NEW.status = 'returned' and OLD.returned_at is null and NEW.returned_at is not null then
     update books set available_copies = available_copies + 1 where id = NEW.book_id;
   end if;
   return NEW;

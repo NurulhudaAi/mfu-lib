@@ -7,6 +7,8 @@ out/
 node_modules/
 
 # Production environment variables
+.env
+.env*.local
 .env.local
 .env.development.local
 .env.test.local

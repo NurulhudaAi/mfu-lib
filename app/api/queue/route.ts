@@ -10,7 +10,7 @@ import { checkBlacklist } from '@/lib/security'
 export async function POST(req: Request) {
   const cookieStore = await cookies()
 
-  // ✅ Verify session — ไม่รับ userId จาก body (ป้องกัน spoofing)
+  // Verify authenticated session from cookies to prevent spoofing
   const userSupabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -19,21 +19,21 @@ export async function POST(req: Request) {
   const { data: { user } } = await userSupabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // ── Rate Limit: 10 ครั้ง/นาที ──
+  // Rate Limit: 10 requests / minute
   const rl = checkRateLimit(`queue:${user.id}`, { maxRequests: 10, windowSeconds: 60 })
   if (!rl.allowed) return rateLimitResponse(rl.resetAt)
 
-  // ── Blacklist check ──
+  // Blacklist check
   const blocked = await checkBlacklist(user.id)
   if (blocked) return blocked
 
-  // ── Validate input ──
+  // Validate input
   const body = await req.json()
   const parsed = validateInput(queueSchema, body)
   if (parsed.error) return parsed.error
   const { bookId, action } = parsed.data
 
-  // ✅ ใช้ user.id จาก session เสมอ — ไม่ใช้ userId จาก request body
+  // Always use user.id from verified session
   const userId = user.id
 
   const supabase = createServiceClient()

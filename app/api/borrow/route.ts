@@ -57,7 +57,8 @@ export async function POST(request: Request) {
     .from('borrows')
     .select('id')
     .eq('user_id', user.id)
-    .eq('status', 'active')
+    .in('status', ['active', 'overdue'])
+    .is('returned_at', null)
     .limit(1)
 
   if (activeBorrow && activeBorrow.length > 0) {
@@ -105,6 +106,37 @@ export async function POST(request: Request) {
   }
 
   // DB trigger `update_book_availability()` จัดการลด available_copies อัตโนมัติแล้ว
+
+  // ── เคลียร์คิวของผู้ใช้นี้ (หากเคยจองคิวไว้) และขยับลำดับคนที่ต่อคิวอยู่ ──
+  try {
+    const { data: userQueue } = await supabase
+      .from('queue')
+      .select('id, position')
+      .eq('user_id', user.id)
+      .eq('book_id', bookId)
+      .maybeSingle()
+
+    if (userQueue) {
+      await supabase.from('queue').delete().eq('id', userQueue.id)
+
+      const { data: remaining } = await supabase
+        .from('queue')
+        .select('id, position')
+        .eq('book_id', bookId)
+        .gt('position', userQueue.position)
+
+      if (remaining && remaining.length > 0) {
+        for (const item of remaining) {
+          await supabase
+            .from('queue')
+            .update({ position: item.position - 1 })
+            .eq('id', item.id)
+        }
+      }
+    }
+  } catch (queueErr) {
+    console.error('[Borrow] Error clearing queue record:', queueErr)
+  }
 
   // ── ส่ง email ยืนยัน (fire-and-forget — ไม่ block response) ──
   sendBorrowConfirmEmail({
