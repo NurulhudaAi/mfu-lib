@@ -58,7 +58,7 @@ export default function BookCard({
                   onEdit(book)
                 }}
                 className="p-1 rounded-lg hover:bg-white/20 text-white transition-colors"
-                title="แก้ไขข้อมูลหนังสือ"
+                title={locale === 'th' ? 'แก้ไขข้อมูลหนังสือ' : 'Edit book'}
               >
                 <Edit3 size={11} />
               </button>
@@ -77,7 +77,11 @@ export default function BookCard({
                     ? 'hover:bg-emerald-500/40 text-emerald-300'
                     : 'hover:bg-amber-500/40 text-amber-300'
                 }`}
-                title={isDeactivated ? 'เปิดใช้งานหนังสือ' : 'ปิดใช้งานหนังสือ'}
+                title={
+                  isDeactivated
+                    ? (locale === 'th' ? 'เปิดใช้งานหนังสือ' : 'Activate book')
+                    : (locale === 'th' ? 'ปิดใช้งานหนังสือ' : 'Deactivate book')
+                }
               >
                 {isDeactivated ? <Check size={11} /> : <Lock size={11} />}
               </button>
@@ -92,7 +96,7 @@ export default function BookCard({
                   onDelete(book)
                 }}
                 className="p-1 rounded-lg hover:bg-red-500/40 text-red-300 transition-colors"
-                title="ลบหนังสือเล่มนี้"
+                title={locale === 'th' ? 'ลบหนังสือเล่มนี้' : 'Delete this book'}
               >
                 <Trash2 size={11} />
               </button>

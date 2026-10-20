@@ -133,7 +133,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
       const params = new URLSearchParams(window.location.search)
       const returnId = params.get('return')
       if (returnId) {
-        const target = borrows.find((b) => b.id === returnId && b.status === 'active')
+        const target = borrows.find((b) => b.id === returnId && (b.status === 'active' || (b.status === 'overdue' && !b.returned_at)))
         if (target) {
           setTab('active')
           setReturnBorrow(target)
@@ -142,7 +142,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
     }
   }, [borrows])
 
-  // ✅ Contextual search and category filtering helper
+  // Contextual search and category filtering helper
   const isMatch = (itemBook: any) => {
     if (!itemBook) return true
     const q = searchQuery.toLowerCase().trim()
@@ -159,11 +159,11 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
   }
 
   const filteredActiveBorrows = useMemo(() => {
-    return borrows.filter((b) => b.status === 'active' && isMatch(b.books))
+    return borrows.filter((b) => (b.status === 'active' || (b.status === 'overdue' && !b.returned_at)) && isMatch(b.books))
   }, [borrows, searchQuery, selectedCategory])
 
   const filteredHistoryBorrows = useMemo(() => {
-    return borrows.filter((b) => b.status !== 'active' && isMatch(b.books))
+    return borrows.filter((b) => (b.status === 'returned' || Boolean(b.returned_at)) && isMatch(b.books))
   }, [borrows, searchQuery, selectedCategory])
 
   const filteredQueues = useMemo(() => {
@@ -187,8 +187,11 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
     if (!file.type.startsWith('image/')) {
       showAlert({
         type: 'warning',
-        title: 'รูปแบบไฟล์ไม่ถูกต้อง',
-        message: 'กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น (JPG, PNG, WEBP)',
+        title: locale === 'th' ? 'รูปแบบไฟล์ไม่ถูกต้อง' : 'Invalid File Type',
+        message:
+          locale === 'th'
+            ? 'กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น (JPG, PNG, WEBP)'
+            : 'Please upload an image file only (JPG, PNG, WEBP)',
       })
       return
     }
@@ -196,8 +199,11 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
     if (file.size > 10 * 1024 * 1024) {
       showAlert({
         type: 'warning',
-        title: 'ไฟล์มีขนาดใหญ่เกินไป',
-        message: 'ขนาดไฟล์รูปภาพหลักฐานต้องไม่เกิน 10MB กรุณาเลือกไฟล์ใหม่',
+        title: locale === 'th' ? 'ไฟล์มีขนาดใหญ่เกินไป' : 'File Too Large',
+        message:
+          locale === 'th'
+            ? 'ขนาดไฟล์รูปภาพหลักฐานต้องไม่เกิน 10MB กรุณาเลือกไฟล์ใหม่'
+            : 'File size must not exceed 10MB. Please select a smaller image.',
       })
       return
     }
@@ -223,8 +229,11 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
     if (!returnPhoto) {
       showAlert({
         type: 'warning',
-        title: 'กรุณาแนบรูปหลักฐาน',
-        message: 'กรุณาถ่ายรูปหรือแนบรูปถ่ายหนังสือที่นำไปคืนที่ชั้นวางหนังสือเพื่อเป็นหลักฐาน',
+        title: locale === 'th' ? 'กรุณาแนบรูปหลักฐาน' : 'Proof Photo Required',
+        message:
+          locale === 'th'
+            ? 'กรุณาถ่ายรูปหรือแนบรูปถ่ายหนังสือที่นำไปคืนที่ชั้นวางหนังสือเพื่อเป็นหลักฐาน'
+            : 'Please take or upload a photo of the book placed on the return shelf as proof.',
       })
       return
     }
@@ -247,7 +256,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
       if (data.error) {
         showAlert({
           type: 'error',
-          title: 'ไม่สามารถคืนหนังสือได้',
+          title: locale === 'th' ? 'ไม่สามารถคืนหนังสือได้' : 'Return Failed',
           message: data.error,
         })
         setIsSubmittingReturn(false)
@@ -263,29 +272,35 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
 
       showAlert({
         type: 'success',
-        title: 'คืนหนังสือสำเร็จ!',
-        message: `ระบบได้บันทึกการคืนหนังสือ "${bookTitle}" เรียบร้อยแล้ว ขอบคุณที่ดูแลหนังสือเป็นอย่างดี`,
+        title: locale === 'th' ? 'คืนหนังสือสำเร็จ!' : 'Book Returned Successfully!',
+        message:
+          locale === 'th'
+            ? `ระบบได้บันทึกการคืนหนังสือ "${bookTitle}" เรียบร้อยแล้ว ขอบคุณที่ดูแลหนังสือเป็นอย่างดี`
+            : `Successfully recorded the return of "${bookTitle}". Thank you for taking good care of our book.`,
       })
 
       router.refresh()
     } catch (err: any) {
       showAlert({
         type: 'error',
-        title: 'เกิดข้อผิดพลาดในการเชื่อมต่อ',
-        message: err.message || 'กรุณาลองใหม่อีกครั้ง',
+        title: locale === 'th' ? 'เกิดข้อผิดพลาดในการเชื่อมต่อ' : 'Connection Error',
+        message: err.message || (locale === 'th' ? 'กรุณาลองใหม่อีกครั้ง' : 'Please try again'),
       })
       setIsSubmittingReturn(false)
     }
   }
 
-  // ✅ Interactive Cancel Queue confirmation
+  // Interactive Cancel Queue confirmation
   function confirmCancelQueue(queueId: string, bookTitle: string, bookId: string) {
     showConfirm({
       type: 'warning',
-      title: 'ยืนยันการยกเลิกการจองคิว?',
-      message: `คุณต้องการยกเลิกการจองคิวหนังสือ "${bookTitle}" หรือไม่? หากยกเลิกแล้วจะต้องต่อคิวใหม่หากต้องการจองอีกครั้ง`,
-      confirmText: 'ยืนยันยกเลิก',
-      cancelText: 'ย้อนกลับ',
+      title: locale === 'th' ? 'ยืนยันการยกเลิกการจองคิว?' : 'Cancel Queue Confirmation?',
+      message:
+        locale === 'th'
+          ? `คุณต้องการยกเลิกการจองคิวหนังสือ "${bookTitle}" หรือไม่? หากยกเลิกแล้วจะต้องต่อคิวใหม่หากต้องการจองอีกครั้ง`
+          : `Do you want to cancel your queue for "${bookTitle}"? You will need to join the queue again if you change your mind.`,
+      confirmText: locale === 'th' ? 'ยืนยันยกเลิก' : 'Yes, Cancel Queue',
+      cancelText: locale === 'th' ? 'ย้อนกลับ' : 'Back',
       onConfirm: async () => {
         const res = await fetch('/api/queue', {
           method: 'POST',
@@ -294,13 +309,16 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
         })
         const data = await res.json()
         if (!data.error) {
-          showToast('ยกเลิกการจองคิวเรียบร้อยแล้ว', 'info')
+          showToast(
+            locale === 'th' ? 'ยกเลิกการจองคิวเรียบร้อยแล้ว' : 'Queue cancelled successfully',
+            'info'
+          )
           router.refresh()
         } else {
           showAlert({
             type: 'error',
-            title: 'ไม่สามารถยกเลิกได้',
-            message: data.error || 'เกิดข้อผิดพลาด',
+            title: locale === 'th' ? 'ไม่สามารถยกเลิกได้' : 'Failed to Cancel',
+            message: data.error || (locale === 'th' ? 'เกิดข้อผิดพลาด' : 'An error occurred'),
           })
         }
       },
@@ -553,8 +571,8 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                           <span>
                             {locale === 'th'
-                              ? '🎉 ถึงคิวคุณแล้ว! หนังสือถูกคืนแล้วและพร้อมให้คุณยืม (สิทธิ์ 24 ชม.)'
-                              : '🎉 It’s your turn! Book is returned and ready to borrow (24h reservation)'}
+                              ? 'ถึงคิวคุณแล้ว! หนังสือถูกคืนแล้วและพร้อมให้คุณยืม (สิทธิ์ 24 ชม.)'
+                              : "It's your turn! Book is returned and ready to borrow (24h reservation)"}
                           </span>
                         </div>
                         <Link
@@ -630,7 +648,9 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                     {t('returnBook')}
                   </h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    บันทึกการส่งคืนและแนบหลักฐานภาพถ่าย
+                    {locale === 'th'
+                      ? 'บันทึกการส่งคืนและแนบหลักฐานภาพถ่าย'
+                      : 'Record book return and attach photo proof'}
                   </p>
                 </div>
               </div>
@@ -669,7 +689,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                       </span>
                     )}
                     <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                      กำหนดคืน: <strong className="font-semibold text-neutral-800 dark:text-neutral-200">{formatDate(returnBorrow.due_date)}</strong>
+                      {t('dueDate')}: <strong className="font-semibold text-neutral-800 dark:text-neutral-200">{formatDate(returnBorrow.due_date)}</strong>
                     </span>
                   </div>
                 </div>
@@ -679,10 +699,12 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-1">
-                    <span>รูปถ่ายหลักฐานการคืน</span>
+                    <span>{locale === 'th' ? 'รูปถ่ายหลักฐานการคืน' : 'Return Proof Photo'}</span>
                     <span className="text-red-500 font-bold">*</span>
                   </label>
-                  <span className="text-[11px] text-neutral-400 font-medium">JPG, PNG, WEBP (สูงสุด 10MB)</span>
+                  <span className="text-[11px] text-neutral-400 font-medium">
+                    {locale === 'th' ? 'JPG, PNG, WEBP (สูงสุด 10MB)' : 'JPG, PNG, WEBP (Max 10MB)'}
+                  </span>
                 </div>
 
                 {returnPreview ? (
@@ -691,7 +713,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                       <div className="flex items-center gap-1.5 truncate">
                         <ImageIcon size={13} className="text-neutral-400 shrink-0" />
                         <span className="truncate text-[11px] font-medium">
-                          {returnPhoto?.name || 'หลักฐานการคืน'}
+                          {returnPhoto?.name || (locale === 'th' ? 'หลักฐานการคืน' : 'Return proof')}
                         </span>
                         {returnPhoto && (
                           <span className="text-[10px] text-neutral-400 shrink-0">
@@ -702,7 +724,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                       <div className="flex items-center gap-1.5 shrink-0">
                         <label className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white cursor-pointer transition-colors text-[11px] font-medium flex items-center gap-1">
                           <Camera size={11} />
-                          <span>เปลี่ยนรูป</span>
+                          <span>{locale === 'th' ? 'เปลี่ยนรูป' : 'Change'}</span>
                           <input
                             type="file"
                             accept="image/*"
@@ -718,7 +740,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                             setReturnPreview(null)
                           }}
                           className="p-1 rounded-lg bg-white/10 hover:bg-red-500/80 text-white transition-colors"
-                          title="ลบรูปภาพ"
+                          title={locale === 'th' ? 'ลบรูปภาพ' : 'Remove photo'}
                         >
                           <X size={13} />
                         </button>
@@ -764,13 +786,17 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                       <Camera size={22} className="text-neutral-800 dark:text-neutral-200" />
                     </div>
                     <span className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white">
-                      คลิกเพื่ออัปโหลด หรือถ่ายภาพหนังสือ
+                      {locale === 'th'
+                        ? 'คลิกเพื่ออัปโหลด หรือถ่ายภาพหนังสือ'
+                        : 'Click to upload or take a book photo'}
                     </span>
                     <span className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 max-w-xs leading-relaxed">
-                      ถ่ายภาพหนังสือขณะวางคืนบนชั้นหรือจุดคืนให้เห็นเล่มชัดเจน
+                      {locale === 'th'
+                        ? 'ถ่ายภาพหนังสือขณะวางคืนบนชั้นหรือจุดคืนให้เห็นเล่มชัดเจน'
+                        : 'Take a clear photo of the book placed on the return shelf'}
                     </span>
                     <span className="mt-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-neutral-200/70 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-300/60 dark:border-neutral-700">
-                      <Upload size={10} /> ลากไฟล์มาวางที่นี่ได้
+                      <Upload size={10} /> {locale === 'th' ? 'ลากไฟล์มาวางที่นี่ได้' : 'or drag and drop here'}
                     </span>
                   </div>
                 )}
@@ -779,13 +805,19 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
               {/* Notes Field (หมายเหตุเพิ่มเติม) */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center justify-between">
-                  <span>หมายเหตุเพิ่มเติม</span>
-                  <span className="text-[11px] text-neutral-400 font-normal lowercase">(ถ้ามี / ไม่บังคับ)</span>
+                  <span>{locale === 'th' ? 'หมายเหตุเพิ่มเติม' : 'Additional Notes'}</span>
+                  <span className="text-[11px] text-neutral-400 font-normal lowercase">
+                    {locale === 'th' ? '(ถ้ามี / ไม่บังคับ)' : '(Optional)'}
+                  </span>
                 </label>
                 <textarea
                   value={returnNotes}
                   onChange={(e) => setReturnNotes(e.target.value)}
-                  placeholder="เช่น หนังสือสภาพเรียบร้อย วางไว้ที่ชั้นหมวดหมู่วิทยาศาสตร์ แถวที่ 2 หรือฝากไว้ที่เคาน์เตอร์..."
+                  placeholder={
+                    locale === 'th'
+                      ? 'เช่น หนังสือสภาพเรียบร้อย วางไว้ที่ชั้นหมวดหมู่วิทยาศาสตร์ แถวที่ 2 หรือฝากไว้ที่เคาน์เตอร์...'
+                      : 'e.g., Book is in good condition, placed on Shelf #2...'
+                  }
                   rows={3}
                   className="w-full p-3.5 rounded-2xl bg-neutral-50 dark:bg-[#18181b] border border-neutral-200 dark:border-neutral-800 text-xs sm:text-sm text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:border-black dark:focus:border-white transition-all resize-none shadow-xs"
                 />
@@ -795,7 +827,9 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
               <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-neutral-100 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 text-xs border border-neutral-200 dark:border-neutral-800">
                 <Info size={16} className="shrink-0 mt-0.5 text-neutral-600 dark:text-neutral-300" />
                 <p className="leading-relaxed">
-                  ระบบจะบันทึกเวลาคืนในปัจจุบันโดยอัตโนมัติ และแจ้งเตือนสมาชิกในคิวถัดไปให้เข้ามารับหนังสือทันที
+                  {locale === 'th'
+                    ? 'ระบบจะบันทึกเวลาคืนในปัจจุบันโดยอัตโนมัติ และแจ้งเตือนสมาชิกในคิวถัดไปให้เข้ามารับหนังสือทันที'
+                    : 'The system automatically records your return time and notifies the next queued member.'}
                 </p>
               </div>
             </div>
@@ -808,7 +842,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                 onClick={closeReturnModal}
                 className="flex-1 py-3 px-4 rounded-xl border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 font-semibold text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
-                ยกเลิก
+                {locale === 'th' ? 'ยกเลิก' : 'Cancel'}
               </button>
               <button
                 type="button"
@@ -819,12 +853,12 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                 {isSubmittingReturn ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-white dark:border-black border-t-transparent rounded-full animate-spin" />
-                    <span>กำลังบันทึกการคืน...</span>
+                    <span>{locale === 'th' ? 'กำลังบันทึกการคืน...' : 'Submitting return...'}</span>
                   </>
                 ) : (
                   <>
                     <RotateCcw size={14} />
-                    <span>ยืนยันการคืนหนังสือ</span>
+                    <span>{locale === 'th' ? 'ยืนยันการคืนหนังสือ' : 'Confirm Return'}</span>
                   </>
                 )}
               </button>
@@ -874,17 +908,17 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 rounded-xl text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center gap-1 text-xs font-semibold"
-                    title="เปิดรูปขนาดเต็ม"
+                    title={locale === 'th' ? 'เปิดรูปขนาดเต็ม' : 'Open full image'}
                   >
                     <ExternalLink size={16} />
-                    <span className="hidden sm:inline">เปิดรูปเต็ม</span>
+                    <span className="hidden sm:inline">{locale === 'th' ? 'เปิดรูปเต็ม' : 'Full image'}</span>
                   </a>
                 )}
                 <button
                   type="button"
                   onClick={() => setProofBorrow(null)}
                   className="p-2 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                  title="ปิด"
+                  title={locale === 'th' ? 'ปิด' : 'Close'}
                 >
                   <X size={18} />
                 </button>
@@ -911,7 +945,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 font-semibold border border-neutral-300 dark:border-neutral-700">
-                      คืนเรียบร้อยแล้ว
+                      {locale === 'th' ? 'คืนเรียบร้อยแล้ว' : 'Returned'}
                     </span>
                     {proofBorrow.books?.category && (
                       <span className="text-[10px] px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-medium">
@@ -942,7 +976,9 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                       />
                     </div>
                     <div className="w-full p-2.5 bg-neutral-900/90 border-t border-neutral-800 flex items-center justify-between text-xs text-neutral-300 px-4">
-                      <span className="text-[11px] text-neutral-400">รูปภาพหลักฐานการคืนหนังสือ</span>
+                      <span className="text-[11px] text-neutral-400">
+                        {locale === 'th' ? 'รูปภาพหลักฐานการคืนหนังสือ' : 'Book return proof photo'}
+                      </span>
                       <a
                         href={proofBorrow.proof_signed_url}
                         target="_blank"
@@ -950,14 +986,16 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                         className="text-[11px] font-semibold text-white hover:underline flex items-center gap-1"
                       >
                         <ExternalLink size={12} />
-                        <span>เปิดดูภาพขนาดเต็ม</span>
+                        <span>{locale === 'th' ? 'เปิดดูภาพขนาดเต็ม' : 'View full size'}</span>
                       </a>
                     </div>
                   </>
                 ) : (
                   <div className="text-center py-14 px-4 text-neutral-400">
                     <ImageIcon size={38} className="mx-auto mb-2 opacity-40" />
-                    <p className="text-xs font-medium">ไม่มีรูปภาพหลักฐาน หรือลิงก์รูปภาพหมดอายุ</p>
+                    <p className="text-xs font-medium">
+                      {locale === 'th' ? 'ไม่มีรูปภาพหลักฐาน หรือลิงก์รูปภาพหมดอายุ' : 'No proof image available or link expired'}
+                    </p>
                   </div>
                 )}
               </div>
@@ -966,25 +1004,33 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
               <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-[#18181b] border border-neutral-200 dark:border-neutral-800 space-y-3">
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
-                    <span className="text-neutral-400 block text-[11px] mb-0.5">วันที่ยืม</span>
+                    <span className="text-neutral-400 block text-[11px] mb-0.5">
+                      {t('borrowedAt')}
+                    </span>
                     <span className="font-semibold text-neutral-800 dark:text-neutral-200">
                       {formatDate(proofBorrow.borrowed_at)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-neutral-400 block text-[11px] mb-0.5">กำหนดส่งคืน</span>
+                    <span className="text-neutral-400 block text-[11px] mb-0.5">
+                      {t('dueDate')}
+                    </span>
                     <span className="font-semibold text-neutral-800 dark:text-neutral-200">
                       {formatDate(proofBorrow.due_date)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-neutral-400 block text-[11px] mb-0.5">วันที่ส่งคืนจริง</span>
+                    <span className="text-neutral-400 block text-[11px] mb-0.5">
+                      {t('returnedAt')}
+                    </span>
                     <span className="font-semibold text-neutral-900 dark:text-white">
                       {proofBorrow.returned_at ? formatDate(proofBorrow.returned_at) : '-'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-neutral-400 block text-[11px] mb-0.5">รหัสรายการยืม</span>
+                    <span className="text-neutral-400 block text-[11px] mb-0.5">
+                      {locale === 'th' ? 'รหัสรายการยืม' : 'Borrow ID'}
+                    </span>
                     <span className="font-mono text-[11px] text-neutral-700 dark:text-neutral-300">
                       #{proofBorrow.id ? proofBorrow.id.slice(0, 8).toUpperCase() : '-'}
                     </span>
@@ -995,7 +1041,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                 {proofBorrow.notes && (
                   <div className="pt-2.5 border-t border-neutral-200 dark:border-neutral-700/60 text-xs">
                     <span className="text-neutral-500 dark:text-neutral-400 block text-[11px] mb-1 font-semibold">
-                      หมายเหตุจากผู้ยืม:
+                      {locale === 'th' ? 'หมายเหตุจากผู้ยืม:' : 'Borrower notes:'}
                     </span>
                     <div className="p-3 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 font-medium leading-relaxed whitespace-pre-line text-xs">
                       "{proofBorrow.notes}"
@@ -1109,8 +1155,8 @@ function BorrowCard({
                 <AlertTriangle size={13} className="shrink-0 text-red-600 dark:text-red-400" />
                 <span>
                   {locale === 'th'
-                    ? '⚠️ เกินกำหนดส่งคืนแล้ว กรุณาดำเนินการคืนหนังสือโดยเร็ว'
-                    : '⚠️ Overdue! Please return as soon as possible'}
+                    ? 'เกินกำหนดส่งคืนแล้ว กรุณาดำเนินการคืนหนังสือโดยเร็ว'
+                    : 'Overdue! Please return as soon as possible'}
                 </span>
               </div>
             )}
