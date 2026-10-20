@@ -201,7 +201,7 @@ export default function HomeContent({
     showConfirm({
       type: 'warning',
       title: locale === 'th' ? 'ยืนยันการลบประกาศ' : 'Confirm Delete Announcement',
-      message: `${locale === 'th' ? 'คุณต้องการลบประกาศ' : 'Are you sure you want to delete'} "${ann.title}"?`,
+      message: `${locale === 'th' ? 'คุณต้องการลบประกาศ' : 'Are you sure you want to delete'} "${(locale === 'en' && ann.title_en) ? ann.title_en : ann.title}"?`,
       confirmText: locale === 'th' ? 'ยืนยันลบ' : 'Delete',
       cancelText: locale === 'th' ? 'ยกเลิก' : 'Cancel',
       onConfirm: async () => {

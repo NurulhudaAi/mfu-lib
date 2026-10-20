@@ -48,6 +48,19 @@ async function getData() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
+  // กรองคิวที่หนังสือเล่มนั้นผู้ใช้กำลังยืมอยู่แล้วออก (ป้องกันคิวตกค้าง)
+  const activeBookIds = new Set(
+    (borrows || []).filter((b: any) => b.status === 'active' || (b.status === 'overdue' && !b.returned_at)).map((b: any) => b.books?.id)
+  )
+  const validQueues = (queues || []).filter((q: any) => !activeBookIds.has(q.books?.id))
+
+  // เคลียร์คิวตกค้างในฐานข้อมูลแบบ asynchronous
+  const staleQueues = (queues || []).filter((q: any) => activeBookIds.has(q.books?.id))
+  if (staleQueues.length > 0) {
+    const staleIds = staleQueues.map((q: any) => q.id)
+    supabase.from('queue').delete().in('id', staleIds).then(() => {})
+  }
+
   // Get signed URLs for return proofs
   const borrowsWithProof = await Promise.all(
     (borrows || []).map(async (b: any) => {
@@ -61,7 +74,7 @@ async function getData() {
     })
   )
 
-  return { borrows: borrowsWithProof, queues: queues || [], userId: user.id }
+  return { borrows: borrowsWithProof, queues: validQueues, userId: user.id }
 }
 
 export default async function MyBorrowsPage() {

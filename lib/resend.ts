@@ -110,7 +110,7 @@ async function safeSendEmail(params: {
 
       const testBanner = `
         <div style="background:#fffbeb;border:1px solid #f59e0b;border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#92400e;line-height:1.6;">
-          <strong style="color:#b45309;">⚙️ โหมดทดสอบก่อนขึ้น Production</strong><br>
+          <strong style="color:#b45309;">[Sandbox Mode] Pre-production Test</strong><br>
           อีเมลนี้ตั้งใจส่งถึง: <strong style="color:#09090b;">${esc(params.to)}</strong><br>
           <span style="font-size:12px;color:#78350f;">(เนื่องจากยังไม่ได้ผูก Custom Domain ใน Resend ระบบจึงส่งเข้ากล่องจดหมายทดสอบของคุณ เพื่อให้กดทดสอบยืนยันได้จริง)</span>
         </div>
@@ -158,7 +158,7 @@ export async function sendBorrowConfirmEmail({
   const dueDateStr = format(dueDate, 'EEEE dd MMMM yyyy', { locale: th })
 
   const html = wrap(`
-    <p style="margin:0 0 4px;font-size:15px;color:#374151;">สวัสดีคุณ <strong>${name}</strong> </p>
+    <p style="margin:0 0 4px;font-size:15px;color:#374151;">Assalamu'alaikum คุณ <strong>${name}</strong> </p>
     <p style="margin:0 0 16px;font-size:14px;color:#6b7280;">คุณยืมหนังสือสำเร็จแล้ว</p>
 
     ${bookCard(bookTitle, bookAuthor)}
@@ -202,11 +202,11 @@ export async function sendReminderEmail({
   const dueDateStr = format(dueDate, 'EEEE dd MMMM yyyy', { locale: th })
 
   const html = wrap(`
-    <p style="margin:0 0 4px;font-size:15px;color:#374151;">สวัสดีคุณ <strong>${name}</strong></p>
+    <p style="margin:0 0 4px;font-size:15px;color:#374151;">Assalamu'alaikum คุณ <strong>${name}</strong></p>
     <p style="margin:0 0 16px;font-size:14px;color:#6b7280;">
       หนังสือของคุณจะ<strong style="color:#d97706;">ครบกำหนดคืนพรุ่งนี้</strong>     </p>
 
-    <div style="background:#fffbeb;border-left:4px solid #d97706;border-radius:8px;padding:16px 20px;margin:20px 0;">
+    <div style="background:#fffbeb;border-left:4px solid #06afd9ff;border-radius:8px;padding:16px 20px;margin:20px 0;">
       <p style="margin:0;font-size:16px;font-weight:700;color:#92400e;">${bookTitle}</p>
       ${bookAuthor ? `<p style="margin:6px 0 0;font-size:13px;color:#6b7280;">โดย ${bookAuthor}</p>` : ''}
       <p style="margin:10px 0 0;font-size:13px;color:#d97706;font-weight:600;">กำหนดคืน: ${dueDateStr}</p>
@@ -216,7 +216,7 @@ export async function sendReminderEmail({
       กรุณาคืนหนังสือให้ตรงเวลาโดยไปที่แอปแล้วกด "คืนหนังสือ" พร้อมแนบรูปหลักฐาน
     </p>
 
-    ${btn(`${APP_URL}/my-borrows`, 'คืนหนังสือเลย', '#d97706')}
+    ${btn(`${APP_URL}/my-borrows`, 'คืนหนังสือเลย', '#0626d9ff')}
   `)
 
   return safeSendEmail({
@@ -243,7 +243,7 @@ export async function sendOverdueEmail({
   const dueDateStr = format(dueDate, 'dd MMMM yyyy', { locale: th })
 
   const html = wrap(`
-    <p style="margin:0 0 4px;font-size:15px;color:#374151;">สวัสดีคุณ <strong>${name}</strong></p>
+    <p style="margin:0 0 4px;font-size:15px;color:#374151;">Assalamu'alaikum คุณ <strong>${name}</strong></p>
     <p style="margin:0 0 16px;font-size:14px;color:#6b7280;">
       หนังสือของคุณ<strong style="color:#dc2626;">เกินกำหนดคืนแล้ว ${daysOverdue} วัน</strong> กรุณาคืนโดยด่วน
     </p>
@@ -286,7 +286,7 @@ export async function sendQueueNotifyEmail({
   bookId: string
 }) {
   const html = wrap(`
-    <p style="margin:0 0 4px;font-size:15px;color:#374151;">สวัสดีคุณ <strong>${name}</strong> </p>
+    <p style="margin:0 0 4px;font-size:15px;color:#374151;">Assalamu'alaikum คุณ <strong>${name}</strong> </p>
     <p style="margin:0 0 16px;font-size:14px;color:#6b7280;">
       หนังสือที่คุณจองคิวไว้<strong style="color:#16a34a;">พร้อมให้ยืมแล้ว!</strong>
     </p>
@@ -324,7 +324,7 @@ export async function sendReturnConfirmEmail({
   const returnedStr = format(returnedAt, 'dd MMMM yyyy HH:mm น.', { locale: th })
 
   const html = wrap(`
-    <p style="margin:0 0 4px;font-size:15px;color:#374151;">สวัสดีคุณ <strong>${name}</strong></p>
+    <p style="margin:0 0 4px;font-size:15px;color:#374151;">Assalamu'alaikum คุณ <strong>${name}</strong></p>
     <p style="margin:0 0 16px;font-size:14px;color:#6b7280;">บันทึกการคืนหนังสือเรียบร้อยแล้ว </p>
 
     ${bookCard(bookTitle)}
@@ -370,7 +370,7 @@ export async function sendAdminInviteEmail({
   const expiresStr = format(expiresAt, 'dd MMMM yyyy HH:mm น.', { locale: th })
 
   const html = wrap(`
-    <p style="margin:0 0 4px;font-size:15px;color:#374151;">สวัสดีครับ/ค่ะ</p>
+    <p style="margin:0 0 4px;font-size:15px;color:#374151;">Assalamu'alaikum คุณ <strong>${name}</strong></p>
     <p style="margin:0 0 16px;font-size:14px;color:#6b7280;">
       <strong style="color:#09090b;">${esc(inviterName)}</strong> เชิญคุณเป็น<strong style="color:#09090b;">ผู้ดูแลระบบ (Admin)</strong> ของห้องสมุดชมรมมุสลิม
     </p>
@@ -410,7 +410,7 @@ export async function sendAdminResignEmail({
   const expiresStr = format(expiresAt, 'dd MMMM yyyy HH:mm น.', { locale: th })
 
   const html = wrap(`
-    <p style="margin:0 0 4px;font-size:15px;color:#374151;">สวัสดีคุณ <strong>${esc(name)}</strong></p>
+    <p style="margin:0 0 4px;font-size:15px;color:#374151;">Assalamu'alaikum คุณ <strong>${esc(name)}</strong></p>
     <p style="margin:0 0 16px;font-size:14px;color:#6b7280;">
       <strong style="color:#09090b;">${esc(inviterName)}</strong> ขอให้คุณส่งมอบสิทธิ์ผู้ดูแลระบบให้กับ
       <strong style="color:#09090b;">${esc(newAdminEmail)}</strong>
@@ -430,6 +430,53 @@ export async function sendAdminResignEmail({
     from: FROM,
     to,
     subject: 'ยืนยันการส่งมอบสิทธิ์ผู้ดูแลระบบ — ห้องสมุดชมรมมุสลิม',
+    html,
+  })
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 8. แจ้งผลการส่งมอบสิทธิ์ผู้ดูแลระบบสำเร็จ (ส่งให้ทั้งคนใหม่และคนเดิม)
+// ════════════════════════════════════════════════════════════════════════════
+export async function sendAdminTransferSuccessEmail({
+  to,
+  name,
+  roleType,
+  newAdminEmail,
+}: {
+  to: string
+  name: string
+  roleType: 'new_admin' | 'resigned_admin'
+  newAdminEmail?: string
+}) {
+  const isNewAdmin = roleType === 'new_admin'
+
+  const html = wrap(`
+    <p style="margin:0 0 4px;font-size:15px;color:#374151;">Assalamu'alaikum คุณ <strong>${esc(name)}</strong></p>
+    <p style="margin:0 0 16px;font-size:14px;color:#6b7280;">
+      ${
+        isNewAdmin
+          ? 'ยินดีต้อนรับ! คุณได้รับการแต่งตั้งเป็น<strong style="color:#09090b;">ผู้ดูแลระบบ (Admin)</strong> ของห้องสมุดชมรมมุสลิมเรียบร้อยแล้ว'
+          : `การส่งมอบสิทธิ์ผู้ดูแลระบบให้กับ <strong style="color:#09090b;">${esc(newAdminEmail || '')}</strong> เสร็จสมบูรณ์แล้ว`
+      }
+    </p>
+
+    <div style="background:#fafafa;border-left:3px solid #09090b;border-radius:8px;padding:16px 20px;margin:20px 0;font-size:13px;color:#374151;line-height:1.7;">
+      ${
+        isNewAdmin
+          ? 'คุณสามารถเข้าถึงหน้าแดชบอร์ด จัดการหนังสือ จัดการการยืม-คืน ประกาศข่าวสาร และจัดการผู้ดูแลระบบได้ทันที'
+          : 'บัญชีของคุณได้เปลี่ยนกลับเป็น<strong>สมาชิกทั่วไป</strong>เรียบร้อยแล้ว ขอขอบคุณสำหรับการปฏิบัติหน้าที่ผู้ดูแลระบบที่ผ่านมา'
+      }
+    </div>
+
+    ${btn(isNewAdmin ? `${APP_URL}/admin/dashboard` : APP_URL, isNewAdmin ? 'เข้าสู่แดชบอร์ดผู้ดูแล' : 'ไปยังหน้าหลัก')}
+  `)
+
+  return safeSendEmail({
+    from: FROM,
+    to,
+    subject: isNewAdmin
+      ? 'คุณได้รับสิทธิ์ผู้ดูแลระบบเรียบร้อยแล้ว — ห้องสมุดชมรมมุสลิม'
+      : 'การส่งมอบสิทธิ์ผู้ดูแลระบบเสร็จสมบูรณ์ — ห้องสมุดชมรมมุสลิม',
     html,
   })
 }

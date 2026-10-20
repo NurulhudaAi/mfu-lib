@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Camera } from 'lucide-react'
+import { useApp } from '@/lib/app-context'
 
 interface Props {
   onDetected: (isbn: string) => void
@@ -14,6 +15,7 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
   const [error, setError] = useState('')
   const [ready, setReady] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const { locale } = useApp()
 
   useEffect(() => {
     setMounted(true)
@@ -64,7 +66,11 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
 
       } catch (err) {
         console.error(err)
-        setError('ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตสิทธิ์กล้องก่อน')
+        setError(
+          locale === 'th'
+            ? 'ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตสิทธิ์กล้องก่อน'
+            : 'Could not access camera. Please allow camera permissions.'
+        )
       }
     }
 
@@ -76,7 +82,7 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
         try { m.default.stop() } catch {}
       })
     }
-  }, [])
+  }, [locale])
 
   if (!mounted || typeof document === 'undefined') return null
 
@@ -88,7 +94,9 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
         <div className="flex justify-between items-center px-5 py-3.5 border-b border-neutral-100 dark:border-neutral-800">
           <div className="flex items-center gap-2.5">
             <Camera size={18} className="text-neutral-900 dark:text-white" />
-            <h3 className="font-bold text-neutral-900 dark:text-white text-sm">สแกน Barcode ISBN</h3>
+            <h3 className="font-bold text-neutral-900 dark:text-white text-sm">
+              {locale === 'th' ? 'สแกน Barcode ISBN' : 'Scan ISBN Barcode'}
+            </h3>
           </div>
           <button
             type="button"
@@ -108,7 +116,7 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
               onClick={onClose}
               className="mt-4 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-xl text-sm font-medium"
             >
-              ปิด
+              {locale === 'th' ? 'ปิด' : 'Close'}
             </button>
           </div>
         ) : (
@@ -133,12 +141,14 @@ export default function ISBNScanner({ onDetected, onClose }: Props) {
               )}
               {!ready && !error && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <p className="text-white text-xs font-medium tracking-wide animate-pulse">กำลังเปิดกล้อง...</p>
+                  <p className="text-white text-xs font-medium tracking-wide animate-pulse">
+                    {locale === 'th' ? 'กำลังเปิดกล้อง...' : 'Initializing camera...'}
+                  </p>
                 </div>
               )}
             </div>
             <p className="text-center text-xs text-neutral-400 py-3.5 px-4">
-              ส่องกล้องไปที่ barcode หลังปกหนังสือ
+              {locale === 'th' ? 'ส่องกล้องไปที่ barcode หลังปกหนังสือ' : 'Point camera at the barcode on the back cover'}
             </p>
           </>
         )}

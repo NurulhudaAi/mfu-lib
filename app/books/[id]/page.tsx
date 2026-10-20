@@ -34,7 +34,7 @@ async function getData(bookId: string) {
     { data: userAnyBorrow },
     { data: queueEntry },
     { count: queueCount },
-    { count: totalBorrows },   // ✅ เพิ่ม query นี้ — นับจำนวนครั้งที่ถูกยืมทั้งหมด
+    { count: totalBorrows }, // Count all-time total borrows for this book
   ] = await Promise.all([
     supabase
       .from('books')
@@ -56,7 +56,8 @@ async function getData(bookId: string) {
           .select('id, due_date')
           .eq('user_id', user.id)
           .eq('book_id', bookId)
-          .eq('status', 'active')
+          .in('status', ['active', 'overdue'])
+          .is('returned_at', null)
           .maybeSingle()
       : Promise.resolve({ data: null }),
 
@@ -65,7 +66,8 @@ async function getData(bookId: string) {
           .from('borrows')
           .select('id, book_id, books(title)')
           .eq('user_id', user.id)
-          .eq('status', 'active')
+          .in('status', ['active', 'overdue'])
+          .is('returned_at', null)
           .limit(1)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -84,7 +86,7 @@ async function getData(bookId: string) {
       .select('*', { count: 'exact', head: true })
       .eq('book_id', bookId),
 
-    // ✅ นับ borrows ทุก status (active + returned + overdue) = ยอดยืมทั้งหมดตลอดกาล
+    // Count all borrows regardless of status (active + returned + overdue)
     supabase
       .from('borrows')
       .select('*', { count: 'exact', head: true })

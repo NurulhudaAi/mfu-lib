@@ -56,10 +56,13 @@ export default function BorrowButton({
 
     showConfirm({
       type: 'info',
-      title: 'ยืนยันการยืมหนังสือ',
-      message: `คุณต้องการยืมหนังสือ "${book.title}" ใช่หรือไม่?`,
-      confirmText: 'ยืนยันยืม',
-      cancelText: 'ยกเลิก',
+      title: locale === 'th' ? 'ยืนยันการยืมหนังสือ' : 'Confirm Book Borrowing',
+      message:
+        locale === 'th'
+          ? `คุณต้องการยืมหนังสือ "${book.title}" ใช่หรือไม่?`
+          : `Do you want to borrow "${book.title}"?`,
+      confirmText: locale === 'th' ? 'ยืนยันยืม' : 'Confirm Borrow',
+      cancelText: locale === 'th' ? 'ยกเลิก' : 'Cancel',
       onConfirm: async () => {
         setLoading(true)
         setQuotaBlockedMsg(null)
@@ -74,7 +77,7 @@ export default function BorrowButton({
             triggerShake(data.error)
             showAlert({
               type: 'error',
-              title: 'ไม่สามารถยืมหนังสือได้',
+              title: locale === 'th' ? 'ไม่สามารถยืมหนังสือได้' : 'Borrow Failed',
               message: data.error,
             })
             setLoading(false)
@@ -82,16 +85,19 @@ export default function BorrowButton({
           }
           showAlert({
             type: 'success',
-            title: 'ยืมหนังสือสำเร็จ!',
-            message: `บันทึกการยืมหนังสือ "${book.title}" เรียบร้อยแล้ว สามารถดูรายละเอียดกำหนดส่งคืนได้ที่หน้า การยืมของฉัน`,
+            title: locale === 'th' ? 'ยืมหนังสือสำเร็จ!' : 'Borrow Successful!',
+            message:
+              locale === 'th'
+                ? `บันทึกการยืมหนังสือ "${book.title}" เรียบร้อยแล้ว สามารถดูรายละเอียดกำหนดส่งคืนได้ที่หน้า การยืมของฉัน`
+                : `Successfully borrowed "${book.title}". You can check the due date in My Borrows.`,
           })
           router.refresh()
         } catch (err: any) {
           triggerShake(err.message)
           showAlert({
             type: 'error',
-            title: 'เกิดข้อผิดพลาด',
-            message: err.message || 'กรุณาลองใหม่อีกครั้ง',
+            title: locale === 'th' ? 'เกิดข้อผิดพลาด' : 'An error occurred',
+            message: err.message || (locale === 'th' ? 'กรุณาลองใหม่อีกครั้ง' : 'Please try again'),
           })
         } finally {
           setLoading(false)
@@ -109,10 +115,13 @@ export default function BorrowButton({
     if (action === 'leave') {
       showConfirm({
         type: 'warning',
-        title: 'ยืนยันการยกเลิกคิว',
-        message: `คุณต้องการยกเลิกการต่อคิวหนังสือ "${book.title}" ใช่หรือไม่?`,
-        confirmText: 'ยืนยันยกเลิก',
-        cancelText: 'ย้อนกลับ',
+        title: locale === 'th' ? 'ยืนยันการยกเลิกคิว' : 'Cancel Queue Confirmation',
+        message:
+          locale === 'th'
+            ? `คุณต้องการยกเลิกการต่อคิวหนังสือ "${book.title}" ใช่หรือไม่?`
+            : `Are you sure you want to leave the queue for "${book.title}"?`,
+        confirmText: locale === 'th' ? 'ยืนยันยกเลิก' : 'Yes, Leave Queue',
+        cancelText: locale === 'th' ? 'ย้อนกลับ' : 'Back',
         onConfirm: async () => {
           setLoading(true)
           const res = await fetch('/api/queue', {
@@ -123,9 +132,20 @@ export default function BorrowButton({
           const data = await res.json()
           if (data.error) {
             triggerShake()
-            showAlert({ type: 'error', title: 'ไม่สามารถยกเลิกคิวได้', message: data.error })
+            showAlert({
+              type: 'error',
+              title: locale === 'th' ? 'ไม่สามารถยกเลิกคิวได้' : 'Failed to cancel queue',
+              message: data.error,
+            })
           } else {
-            showAlert({ type: 'info', title: 'ยกเลิกคิวแล้ว', message: 'คุณได้ออกจากคิวหนังสือเล่มนี้เรียบร้อยแล้ว' })
+            showAlert({
+              type: 'info',
+              title: locale === 'th' ? 'ยกเลิกคิวแล้ว' : 'Queue Cancelled',
+              message:
+                locale === 'th'
+                  ? 'คุณได้ออกจากคิวหนังสือเล่มนี้เรียบร้อยแล้ว'
+                  : 'You have left the queue for this book.',
+            })
           }
           router.refresh()
           setLoading(false)
@@ -134,10 +154,13 @@ export default function BorrowButton({
     } else {
       showConfirm({
         type: 'info',
-        title: 'ยืนยันการจองคิว',
-        message: `คุณต้องการเข้าคิวหนังสือ "${book.title}" ใช่หรือไม่? ระบบจะส่งอีเมลแจ้งเตือนเมื่อถึงคิวของคุณ`,
-        confirmText: 'ยืนยันจองคิว',
-        cancelText: 'ยกเลิก',
+        title: locale === 'th' ? 'ยืนยันการจองคิว' : 'Join Queue Confirmation',
+        message:
+          locale === 'th'
+            ? `คุณต้องการเข้าคิวหนังสือ "${book.title}" ใช่หรือไม่? ระบบจะส่งอีเมลแจ้งเตือนเมื่อถึงคิวของคุณ`
+            : `Do you want to queue for "${book.title}"? We will email you once it becomes available.`,
+        confirmText: locale === 'th' ? 'ยืนยันจองคิว' : 'Join Queue',
+        cancelText: locale === 'th' ? 'ยกเลิก' : 'Cancel',
         onConfirm: async () => {
           setLoading(true)
           const res = await fetch('/api/queue', {
@@ -148,9 +171,20 @@ export default function BorrowButton({
           const data = await res.json()
           if (data.error) {
             triggerShake()
-            showAlert({ type: 'error', title: 'ไม่สามารถเข้าคิวได้', message: data.error })
+            showAlert({
+              type: 'error',
+              title: locale === 'th' ? 'ไม่สามารถเข้าคิวได้' : 'Failed to join queue',
+              message: data.error,
+            })
           } else {
-            showAlert({ type: 'success', title: 'เข้าคิวสำเร็จ!', message: 'ระบบจะส่งอีเมลแจ้งเตือนเมื่อหนังสือพร้อมให้ยืม' })
+            showAlert({
+              type: 'success',
+              title: locale === 'th' ? 'เข้าคิวสำเร็จ!' : 'Queue Joined!',
+              message:
+                locale === 'th'
+                  ? 'ระบบจะส่งอีเมลแจ้งเตือนเมื่อหนังสือพร้อมให้ยืม'
+                  : 'We will send you an email notification when the book is ready.',
+            })
           }
           router.refresh()
           setLoading(false)

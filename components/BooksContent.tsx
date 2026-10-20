@@ -84,6 +84,7 @@ export default function BooksContent({
   const [showScanner, setShowScanner] = useState(false)
   const uploadFileRef = useRef<HTMLInputElement | null>(null)
   const cameraOcrRef = useRef<HTMLInputElement | null>(null)
+  const cameraDirectRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -169,8 +170,10 @@ export default function BooksContent({
     if (!info) {
       showAlert({
         type: 'warning',
-        title: 'ไม่พบข้อมูล',
-        message: 'ไม่พบข้อมูลหนังสือเล่มนี้จาก Google Books กรุณาตรวจสอบหรือกรอกด้วยตนเอง',
+        title: locale === 'th' ? 'ไม่พบข้อมูล' : 'No Data Found',
+        message: locale === 'th'
+          ? 'ไม่พบข้อมูลหนังสือเล่มนี้จาก Google Books กรุณาตรวจสอบหรือกรอกด้วยตนเอง'
+          : 'No details found from Google Books for this book. Please verify or fill manually.',
       })
       return false
     }
@@ -206,8 +209,10 @@ export default function BooksContent({
 
     showAlert({
       type: 'success',
-      title: 'ดึงข้อมูลสำเร็จ',
-      message: `ดึงข้อมูลหนังสือ "${info.title}" จาก ${sourceDesc} สำเร็จแล้ว`,
+      title: locale === 'th' ? 'ดึงข้อมูลสำเร็จ' : 'Data Fetched Successfully',
+      message: locale === 'th'
+        ? `ดึงข้อมูลหนังสือ "${info.title}" จาก ${sourceDesc} สำเร็จแล้ว`
+        : `Successfully retrieved details for "${info.title}" from ${sourceDesc === 'ชื่อหนังสือ' ? 'title search' : sourceDesc}.`,
     })
     return true
   }
@@ -218,8 +223,10 @@ export default function BooksContent({
     if (!cleaned) {
       showAlert({
         type: 'warning',
-        title: 'กรุณาระบุ ISBN',
-        message: 'กรุณากรอกหรือสแกนเลข ISBN 10 หรือ 13 หลักเพื่อค้นหา',
+        title: locale === 'th' ? 'กรุณาระบุ ISBN' : 'Please Enter ISBN',
+        message: locale === 'th'
+          ? 'กรุณากรอกหรือสแกนเลข ISBN 10 หรือ 13 หลักเพื่อค้นหา'
+          : 'Please enter or scan a 10 or 13-digit ISBN to search.',
       })
       return
     }
@@ -227,36 +234,41 @@ export default function BooksContent({
     setIsSearchingGoogle(true)
     try {
       const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleaned}`)
-      if (!res.ok) throw new Error('เกิดข้อผิดพลาดในการเชื่อมต่อ Google Books API')
+      if (!res.ok) throw new Error(locale === 'th' ? 'เกิดข้อผิดพลาดในการเชื่อมต่อ Google Books API' : 'Failed to connect to Google Books API')
       const data = await res.json()
       fillFromGoogleBooks(data, 'ISBN')
     } catch (err: any) {
       showAlert({
         type: 'error',
-        title: 'ค้นหาไม่สำเร็จ',
-        message: err.message || 'ไม่สามารถดึงข้อมูลจาก Google Books ได้ในขณะนี้',
+        title: locale === 'th' ? 'ค้นหาไม่สำเร็จ' : 'Search Failed',
+        message: err.message || (locale === 'th' ? 'ไม่สามารถดึงข้อมูลจาก Google Books ได้ในขณะนี้' : 'Could not fetch data from Google Books at this time.'),
       })
     } finally {
       setIsSearchingGoogle(false)
     }
   }
 
-  async function lookupTitle(titleToLookup: string) {
+  async function lookupTitle(titleToLookup: string, silent: boolean = false) {
     if (!titleToLookup.trim()) return
     setIsSearchingGoogle(true)
     try {
       const res = await fetch(
         `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(titleToLookup)}&maxResults=1`
       )
-      if (!res.ok) throw new Error('เกิดข้อผิดพลาดในการเชื่อมต่อ Google Books API')
+      if (!res.ok) {
+        if (!silent) throw new Error(locale === 'th' ? 'เกิดข้อผิดพลาดในการเชื่อมต่อ Google Books API' : 'Failed to connect to Google Books API')
+        return
+      }
       const data = await res.json()
-      fillFromGoogleBooks(data, 'ชื่อหนังสือ')
+      fillFromGoogleBooks(data, locale === 'th' ? 'ชื่อหนังสือ' : 'Title')
     } catch (err: any) {
-      showAlert({
-        type: 'error',
-        title: 'ค้นหาไม่สำเร็จ',
-        message: err.message || 'ไม่สามารถดึงข้อมูลจาก Google Books ได้',
-      })
+      if (!silent) {
+        showAlert({
+          type: 'error',
+          title: locale === 'th' ? 'ค้นหาไม่สำเร็จ' : 'Search Failed',
+          message: err.message || (locale === 'th' ? 'ไม่สามารถดึงข้อมูลจาก Google Books ได้' : 'Could not fetch data from Google Books.'),
+        })
+      }
     } finally {
       setIsSearchingGoogle(false)
     }
@@ -287,20 +299,43 @@ export default function BooksContent({
       if (data.title && data.title.trim()) {
         const detectedTitle = data.title.trim()
         setBookTitle(detectedTitle)
-        // Automatically search Google Books for this title to get metadata & crisp cover!
-        await lookupTitle(detectedTitle)
+        if (data.author) setBookAuthor(data.author)
+        if (data.publisher) setBookPublisher(data.publisher)
+        if (data.published_year) setBookPublishedYear(String(data.published_year))
+        if (data.isbn) setBookIsbn(data.isbn)
+        if (data.description) setBookDescription(data.description)
+        if (data.category) {
+          const matched = categories.find(c =>
+            c.toLowerCase().includes(data.category.toLowerCase()) ||
+            data.category.toLowerCase().includes(c.toLowerCase())
+          )
+          if (matched) setBookCategory(matched)
+        }
+
+        showAlert({
+          type: 'success',
+          title: locale === 'th' ? 'สแกนปกและอ่านข้อมูลสำเร็จ!' : 'Cover Scanned Successfully!',
+          message: locale === 'th'
+            ? `AI วิเคราะห์และดึงข้อมูล: "${detectedTitle}" (${data.author || 'ไม่ระบุผู้แต่ง'}${data.publisher ? ` • ${data.publisher}` : ''}) เรียบร้อยแล้ว`
+            : `Extracted details for "${detectedTitle}"`,
+        })
+
+        // Attempt silent background Google Books lookup for high-res cover & extra blurb if available
+        await lookupTitle(detectedTitle, true).catch(() => {})
       } else {
         showAlert({
           type: 'info',
-          title: 'ไม่พบชื่อหนังสือ',
-          message: 'AI ไม่สามารถอ่านชื่อหนังสือจากภาพนี้ได้ กรุณากรอกชื่อหนังสือหรือลองถ่ายภาพใหม่อีกครั้ง',
+          title: locale === 'th' ? 'ไม่พบชื่อหนังสือ' : 'Title Not Found',
+          message: locale === 'th'
+            ? 'AI ไม่สามารถอ่านชื่อหนังสือจากภาพนี้ได้ กรุณากรอกชื่อหนังสือหรือลองถ่ายภาพใหม่อีกครั้ง'
+            : 'AI could not detect the book title from this image. Please enter it manually or retake the photo.',
         })
       }
     } catch (err: any) {
       showAlert({
         type: 'error',
-        title: 'สแกนหน้าปกไม่สำเร็จ',
-        message: err.message || 'เกิดข้อผิดพลาดในการสแกนหน้าปก',
+        title: locale === 'th' ? 'สแกนหน้าปกไม่สำเร็จ' : 'Cover Scan Failed',
+        message: err.message || (locale === 'th' ? 'เกิดข้อผิดพลาดในการสแกนหน้าปก' : 'An error occurred while scanning the cover image.'),
       })
     } finally {
       setIsOcrScanning(false)
@@ -366,34 +401,52 @@ export default function BooksContent({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !current }),
       })
-      if (!res.ok) throw new Error('ไม่สามารถเปลี่ยนสถานะได้')
+      if (!res.ok) throw new Error(locale === 'th' ? 'ไม่สามารถเปลี่ยนสถานะได้' : 'Failed to update book status')
       showAlert({
         type: 'info',
-        title: !current ? 'เปิดใช้งานหนังสือแล้ว' : 'ปิดใช้งานหนังสือแล้ว',
-        message: `หนังสือ "${book.title}" ${!current ? 'พร้อมให้ยืมแล้ว' : 'ถูกปิดใช้งานชั่วคราว'}`,
+        title: !current
+          ? (locale === 'th' ? 'เปิดใช้งานหนังสือแล้ว' : 'Book Activated')
+          : (locale === 'th' ? 'ปิดใช้งานหนังสือแล้ว' : 'Book Deactivated'),
+        message: locale === 'th'
+          ? `หนังสือ "${book.title}" ${!current ? 'พร้อมให้ยืมแล้ว' : 'ถูกปิดใช้งานชั่วคราว'}`
+          : `"${book.title}" is ${!current ? 'now available for borrowing' : 'temporarily deactivated'}.`,
       })
       router.refresh()
     } catch (err: any) {
-      showAlert({ type: 'error', title: 'เกิดข้อผิดพลาด', message: err.message })
+      showAlert({
+        type: 'error',
+        title: locale === 'th' ? 'เกิดข้อผิดพลาด' : 'Error',
+        message: err.message,
+      })
     }
   }
 
   function handleDeleteBook(book: any) {
     showConfirm({
       type: 'warning',
-      title: 'ยืนยันการลบหนังสือ',
-      message: `คุณต้องการลบหนังสือ "${book.title}" ออกจากระบบถาวรใช่หรือไม่?`,
-      confirmText: 'ยืนยันลบ',
-      cancelText: 'ยกเลิก',
+      title: locale === 'th' ? 'ยืนยันการลบหนังสือ' : 'Confirm Book Deletion',
+      message: locale === 'th'
+        ? `คุณต้องการลบหนังสือ "${book.title}" ออกจากระบบถาวรใช่หรือไม่?`
+        : `Are you sure you want to permanently delete "${book.title}" from the catalog?`,
+      confirmText: locale === 'th' ? 'ยืนยันลบ' : 'Delete',
+      cancelText: locale === 'th' ? 'ยกเลิก' : 'Cancel',
       onConfirm: async () => {
         try {
           const res = await fetch(`/api/admin/books/${book.id}`, { method: 'DELETE' })
           const data = await res.json()
           if (data.error) throw new Error(data.error)
-          showAlert({ type: 'success', title: 'ลบสำเร็จ', message: 'ลบหนังสือเรียบร้อยแล้ว' })
+          showAlert({
+            type: 'success',
+            title: locale === 'th' ? 'ลบสำเร็จ' : 'Deleted Successfully',
+            message: locale === 'th' ? 'ลบหนังสือเรียบร้อยแล้ว' : 'Book has been deleted from catalog.',
+          })
           router.refresh()
         } catch (err: any) {
-          showAlert({ type: 'error', title: 'ลบไม่สำเร็จ', message: err.message })
+          showAlert({
+            type: 'error',
+            title: locale === 'th' ? 'ลบไม่สำเร็จ' : 'Delete Failed',
+            message: err.message,
+          })
         }
       },
     })
@@ -402,7 +455,11 @@ export default function BooksContent({
   async function handleSaveBook(e: React.FormEvent) {
     e.preventDefault()
     if (!bookTitle.trim()) {
-      showAlert({ type: 'warning', title: 'ข้อมูลไม่ครบ', message: 'กรุณากรอกชื่อหนังสือ' })
+      showAlert({
+        type: 'warning',
+        title: locale === 'th' ? 'ข้อมูลไม่ครบ' : 'Missing Information',
+        message: locale === 'th' ? 'กรุณากรอกชื่อหนังสือ' : 'Please enter the book title.',
+      })
       return
     }
 
@@ -444,12 +501,18 @@ export default function BooksContent({
       setIsBookModalOpen(false)
       showAlert({
         type: 'success',
-        title: 'สำเร็จ',
-        message: editingBook ? 'แก้ไขข้อมูลหนังสือเรียบร้อยแล้ว' : 'เพิ่มหนังสือใหม่เรียบร้อยแล้ว',
+        title: locale === 'th' ? 'สำเร็จ' : 'Success',
+        message: editingBook
+          ? (locale === 'th' ? 'แก้ไขข้อมูลหนังสือเรียบร้อยแล้ว' : 'Book details updated successfully.')
+          : (locale === 'th' ? 'เพิ่มหนังสือใหม่เรียบร้อยแล้ว' : 'New book added successfully.'),
       })
       router.refresh()
     } catch (err: any) {
-      showAlert({ type: 'error', title: 'เกิดข้อผิดพลาด', message: err.message || 'บันทึกไม่สำเร็จ' })
+      showAlert({
+        type: 'error',
+        title: locale === 'th' ? 'เกิดข้อผิดพลาด' : 'Error',
+        message: err.message || (locale === 'th' ? 'บันทึกไม่สำเร็จ' : 'Failed to save book.'),
+      })
     } finally {
       setSavingBook(false)
     }
@@ -518,16 +581,6 @@ export default function BooksContent({
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">
               {isAdmin ? (locale === 'th' ? 'จัดการหนังสือ' : 'Manage Books') : t('allBooks')}
             </h1>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={openAddBookModal}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-xl text-xs font-semibold transition-all shadow-xs active:scale-95"
-              >
-                <Plus size={15} />
-                <span>{locale === 'th' ? 'เพิ่มหนังสือ' : 'Add Book'}</span>
-              </button>
-            )}
           </div>
           <p className="text-neutral-500 dark:text-neutral-400 text-xs sm:text-sm">
             {filtered.length} {locale === 'th' ? 'เล่มที่แสดง' : 'books shown'}
@@ -542,16 +595,29 @@ export default function BooksContent({
           </p>
         </div>
 
-        {/* Clear All action if multiple filters active */}
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={handleClearAll}
-            className="text-xs font-semibold text-neutral-500 hover:text-black dark:hover:text-white underline self-start sm:self-auto transition-colors"
-          >
-            {locale === 'th' ? 'ล้างตัวกรองทั้งหมด' : 'Clear all filters'}
-          </button>
-        )}
+        <div className="flex items-center gap-3 self-start sm:self-center flex-wrap">
+          {/* Clear All action if multiple filters active */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="text-xs font-semibold text-neutral-500 hover:text-black dark:hover:text-white underline transition-colors"
+            >
+              {locale === 'th' ? 'ล้างตัวกรองทั้งหมด' : 'Clear all filters'}
+            </button>
+          )}
+
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={openAddBookModal}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95"
+            >
+              <Plus size={16} />
+              <span>{locale === 'th' ? 'เพิ่มหนังสือ' : 'Add Book'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Active Filter Badges */}
@@ -667,10 +733,14 @@ export default function BooksContent({
                   </span>
                   <div className="min-w-0">
                     <h3 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white truncate">
-                      {editingBook ? 'แก้ไขข้อมูลหนังสือ' : 'เพิ่มหนังสือใหม่ในแคตตาล็อก'}
+                      {editingBook
+                        ? (locale === 'th' ? 'แก้ไขข้อมูลหนังสือ' : 'Edit Book Details')
+                        : (locale === 'th' ? 'เพิ่มหนังสือใหม่ในแคตตาล็อก' : 'Add New Book to Catalog')}
                     </h3>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                      จัดการรายละเอียด หน้าปก และสถานะของหนังสือเล่มนี้
+                      {locale === 'th'
+                        ? 'จัดการรายละเอียด หน้าปก และสถานะของหนังสือเล่มนี้'
+                        : 'Manage details, cover image, and availability for this book'}
                     </p>
                   </div>
                 </div>
@@ -695,11 +765,11 @@ export default function BooksContent({
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
                           <Upload size={13} />
-                          <span>รูปภาพหน้าปก</span>
+                          <span>{locale === 'th' ? 'รูปภาพหน้าปก' : 'Book Cover'}</span>
                         </label>
                         {googleCoverUrl && !bookCoverFile && (
                           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                            ✓ จาก Google Books
+                            {locale === 'th' ? '✓ จาก Google Books' : '✓ From Google Books'}
                           </span>
                         )}
                       </div>
@@ -712,7 +782,7 @@ export default function BooksContent({
                             <button
                               type="button"
                               onClick={handleRemoveCover}
-                              title="ลบรูปภาพ"
+                              title={locale === 'th' ? 'ลบรูปภาพ' : 'Remove image'}
                               className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 hover:bg-black text-white transition-colors shadow-md"
                             >
                               <X size={14} />
@@ -721,8 +791,12 @@ export default function BooksContent({
                         ) : (
                           <div className="text-center p-4">
                             <ImageIcon size={36} className="mx-auto mb-2 text-neutral-300 dark:text-neutral-600" />
-                            <p className="text-xs font-medium text-neutral-400">ยังไม่มีรูปภาพหน้าปก</p>
-                            <p className="text-[10px] text-neutral-400 mt-0.5">ดึงจาก Google Books หรืออัปโหลดไฟล์</p>
+                            <p className="text-xs font-medium text-neutral-400">
+                              {locale === 'th' ? 'ยังไม่มีรูปภาพหน้าปก' : 'No cover image yet'}
+                            </p>
+                            <p className="text-[10px] text-neutral-400 mt-0.5">
+                              {locale === 'th' ? 'ดึงจาก Google Books หรืออัปโหลดไฟล์' : 'Fetch from Google Books or upload image'}
+                            </p>
                           </div>
                         )}
                       </div>
@@ -731,7 +805,7 @@ export default function BooksContent({
                       <div className="grid grid-cols-2 gap-2">
                         <label className="px-3 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-semibold cursor-pointer transition-colors flex items-center justify-center gap-1.5 shadow-xs text-center">
                           <Upload size={13} />
-                          <span>เลือกไฟล์ภาพ</span>
+                          <span>{locale === 'th' ? 'เลือกไฟล์ภาพ' : 'Choose File'}</span>
                           <input
                             ref={uploadFileRef}
                             type="file"
@@ -755,7 +829,7 @@ export default function BooksContent({
                           className="px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 border border-amber-500/25 disabled:opacity-50 text-center"
                         >
                           {isOcrScanning ? <Loader2 size={13} className="animate-spin text-amber-500" /> : <Scan size={13} />}
-                          <span>{isOcrScanning ? 'AI อ่านปก...' : 'สแกนปก (AI)'}</span>
+                          <span>{isOcrScanning ? (locale === 'th' ? 'AI อ่านปก...' : 'Scanning...') : (locale === 'th' ? 'สแกนปก (AI)' : 'Scan Cover (AI)')}</span>
                         </button>
                       </div>
 
@@ -767,7 +841,7 @@ export default function BooksContent({
                           setBookCoverPreview(e.target.value || null)
                           setBookCoverFile(null)
                         }}
-                        placeholder="https://... ลิงก์รูปภาพ หรือดึงจาก Google"
+                        placeholder={locale === 'th' ? 'https://... ลิงก์รูปภาพ หรือดึงจาก Google' : 'https://... Image URL or from Google'}
                         className="w-full px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-[11px] text-neutral-800 dark:text-neutral-200 outline-none focus:border-black dark:focus:border-white transition-colors"
                       />
                     </div>
@@ -782,8 +856,12 @@ export default function BooksContent({
                           className="rounded border-neutral-300 text-black focus:ring-black"
                         />
                         <div>
-                          <span className="text-xs font-semibold text-neutral-900 dark:text-white block">หนังสือแนะนำ (Featured)</span>
-                          <span className="text-[10px] text-neutral-400">แสดงในแท็บ New Arrival / แนะนำ</span>
+                          <span className="text-xs font-semibold text-neutral-900 dark:text-white block">
+                            {locale === 'th' ? 'หนังสือแนะนำ (Featured)' : 'Featured Book'}
+                          </span>
+                          <span className="text-[10px] text-neutral-400">
+                            {locale === 'th' ? 'แสดงในแท็บ New Arrival / แนะนำ' : 'Highlight in New Arrival and Featured'}
+                          </span>
                         </div>
                       </label>
 
@@ -795,8 +873,12 @@ export default function BooksContent({
                           className="rounded border-neutral-300 text-black focus:ring-black"
                         />
                         <div>
-                          <span className="text-xs font-semibold text-neutral-900 dark:text-white block">เปิดให้ยืม (Active)</span>
-                          <span className="text-[10px] text-neutral-400">สถานะพร้อมใช้งานให้สมาชิกยืมได้</span>
+                          <span className="text-xs font-semibold text-neutral-900 dark:text-white block">
+                            {locale === 'th' ? 'เปิดให้ยืม (Active)' : 'Available for Borrow (Active)'}
+                          </span>
+                          <span className="text-[10px] text-neutral-400">
+                            {locale === 'th' ? 'สถานะพร้อมใช้งานให้สมาชิกยืมได้' : 'Enabled and visible for members to borrow'}
+                          </span>
                         </div>
                       </label>
                     </div>
@@ -809,43 +891,77 @@ export default function BooksContent({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-800 dark:text-neutral-200">
                           <Sparkles size={14} className="text-amber-500 shrink-0" />
-                          <span>ดึงข้อมูล & รูปภาพอัตโนมัติ (Google Books)</span>
+                          <span>{locale === 'th' ? 'ดึงข้อมูลอัตโนมัติ (AI อ่านปก & Google Books)' : 'Auto-fetch Details (AI Vision & Google)'}</span>
                         </div>
-                        {isSearchingGoogle && (
+                        {(isSearchingGoogle || isOcrScanning) && (
                           <span className="text-[11px] text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
                             <Loader2 size={11} className="animate-spin text-amber-500" />
-                            กำลังค้นหา...
+                            {isOcrScanning
+                              ? (locale === 'th' ? 'AI กำลังอ่านปก...' : 'AI scanning cover...')
+                              : (locale === 'th' ? 'กำลังค้นหา...' : 'Searching...')}
                           </span>
                         )}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
+                        {/* Direct Camera Snapshot (Mobile Rear Camera) */}
+                        <button
+                          type="button"
+                          disabled={isOcrScanning}
+                          onClick={() => cameraDirectRef.current?.click()}
+                          className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-95 disabled:opacity-50"
+                          title={locale === 'th' ? 'เปิดกล้องมือถือถ่ายภาพหน้าปกเพื่ออ่านข้อมูลอัตโนมัติ' : 'Take a photo of book cover to auto-extract details'}
+                        >
+                          {isOcrScanning ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Camera size={14} />
+                          )}
+                          <span>{locale === 'th' ? 'ถ่ายรูปหน้าปก' : 'Take Cover Photo'}</span>
+                        </button>
+
+                        {/* Upload Cover Photo (AI OCR) Button */}
+                        <button
+                          type="button"
+                          disabled={isOcrScanning}
+                          onClick={() => cameraOcrRef.current?.click()}
+                          className="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:border-amber-500 dark:hover:border-amber-400 text-neutral-800 dark:text-neutral-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs disabled:opacity-50"
+                          title={locale === 'th' ? 'เลือกรูปภาพหน้าปกที่มีอยู่แล้วในเครื่อง' : 'Choose an existing cover image from device'}
+                        >
+                          <Scan size={14} className="text-amber-500" />
+                          <span>{locale === 'th' ? 'เลือกรูปภาพปก' : 'Pick Cover Image'}</span>
+                        </button>
+
                         {/* Scan Barcode Button */}
                         <button
                           type="button"
                           onClick={() => setShowScanner(true)}
                           className="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:border-black dark:hover:border-white text-neutral-800 dark:text-neutral-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                         >
-                          <Camera size={14} className="text-neutral-600 dark:text-neutral-300" />
-                          <span>สแกน Barcode ISBN</span>
+                          <Scan size={14} className="text-neutral-600 dark:text-neutral-300" />
+                          <span>{locale === 'th' ? 'สแกน Barcode ISBN' : 'Scan ISBN Barcode'}</span>
                         </button>
 
-                        {/* Scan Cover Photo (AI OCR) Button */}
-                        <button
-                          type="button"
-                          disabled={isOcrScanning}
-                          onClick={() => cameraOcrRef.current?.click()}
-                          className="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:border-amber-500 dark:hover:border-amber-400 text-neutral-800 dark:text-neutral-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs disabled:opacity-50"
-                        >
-                          {isOcrScanning ? (
-                            <Loader2 size={14} className="animate-spin text-amber-500" />
-                          ) : (
-                            <Scan size={14} className="text-amber-500" />
-                          )}
-                          <span>{isOcrScanning ? 'AI อ่านปก...' : 'สแกนรูปหน้าปก (AI)'}</span>
-                        </button>
+                        {/* Hidden input for direct camera snapshot */}
+                        <input
+                          ref={cameraDirectRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              setBookCoverFile(file)
+                              setBookCoverPreview(URL.createObjectURL(file))
+                              setGoogleCoverUrl(null)
+                              handleOCRImage(file)
+                            }
+                            e.target.value = ''
+                          }}
+                        />
 
-                        {/* Hidden input for camera/file OCR */}
+                        {/* Hidden input for photo gallery / file upload */}
                         <input
                           ref={cameraOcrRef}
                           type="file"
@@ -869,7 +985,7 @@ export default function BooksContent({
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                          ชื่อหนังสือ *
+                          {locale === 'th' ? 'ชื่อหนังสือ *' : 'Book Title *'}
                         </label>
                         {bookTitle.trim() && (
                           <button
@@ -879,7 +995,7 @@ export default function BooksContent({
                             className="text-[11px] text-neutral-500 hover:text-black dark:hover:text-white flex items-center gap-1 transition-colors"
                           >
                             <Search size={11} />
-                            <span>ค้นหาข้อมูลจากชื่อนี้</span>
+                            <span>{locale === 'th' ? 'ค้นหาข้อมูลจากชื่อนี้' : 'Search by title'}</span>
                           </button>
                         )}
                       </div>
@@ -888,7 +1004,7 @@ export default function BooksContent({
                         required
                         value={bookTitle}
                         onChange={(e) => setBookTitle(e.target.value)}
-                        placeholder="เช่น หลักการอิสลามเบื้องต้น..."
+                        placeholder={locale === 'th' ? 'เช่น หลักการอิสลามเบื้องต้น...' : 'e.g. Fundamental Principles of Islam...'}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
                       />
                     </div>
@@ -896,13 +1012,13 @@ export default function BooksContent({
                     {/* Author */}
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                        ชื่อผู้แต่ง / ผู้เขียน
+                        {locale === 'th' ? 'ชื่อผู้แต่ง / ผู้เขียน' : 'Author'}
                       </label>
                       <input
                         type="text"
                         value={bookAuthor}
                         onChange={(e) => setBookAuthor(e.target.value)}
-                        placeholder="เช่น ดร. ยูซุฟ อัล-ก็อรฎอวีย์"
+                        placeholder={locale === 'th' ? 'เช่น ดร. ยูซุฟ อัล-ก็อรฎอวีย์' : 'e.g. Dr. Yusuf Al-Qaradawi'}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
                       />
                     </div>
@@ -912,7 +1028,7 @@ export default function BooksContent({
                       {/* ISBN */}
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                          ISBN (10 หรือ 13 หลัก)
+                          {locale === 'th' ? 'ISBN (10 หรือ 13 หลัก)' : 'ISBN (10 or 13 digits)'}
                         </label>
                         <div className="relative">
                           <input
@@ -932,7 +1048,7 @@ export default function BooksContent({
                             <button
                               type="button"
                               onClick={() => setShowScanner(true)}
-                              title="สแกน Barcode หลังปก"
+                              title={locale === 'th' ? 'สแกน Barcode หลังปก' : 'Scan barcode on back cover'}
                               className="p-1.5 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors"
                             >
                               <Camera size={14} />
@@ -941,10 +1057,10 @@ export default function BooksContent({
                               type="button"
                               disabled={isSearchingGoogle || !bookIsbn.trim()}
                               onClick={() => lookupISBN()}
-                              title="ดึงข้อมูลจาก Google Books"
+                              title={locale === 'th' ? 'ดึงข้อมูลจาก Google Books' : 'Fetch details from Google Books'}
                               className="px-2.5 py-1 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-[11px] font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity"
                             >
-                              {isSearchingGoogle ? <Loader2 size={12} className="animate-spin" /> : 'ค้นหา'}
+                              {isSearchingGoogle ? <Loader2 size={12} className="animate-spin" /> : (locale === 'th' ? 'ค้นหา' : 'Search')}
                             </button>
                           </div>
                         </div>
@@ -953,19 +1069,21 @@ export default function BooksContent({
                       {/* Category */}
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                          หมวดหมู่
+                          {locale === 'th' ? 'หมวดหมู่' : 'Category'}
                         </label>
                         <input
                           type="text"
                           list="category-suggestions"
                           value={bookCategory}
                           onChange={(e) => setBookCategory(e.target.value)}
-                          placeholder="เลือกหรือพิมพ์หมวดหมู่..."
+                          placeholder={locale === 'th' ? 'เลือกหรือพิมพ์หมวดหมู่...' : 'Select or type category...'}
                           className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
                         />
                         <datalist id="category-suggestions">
                           {categories.map((c) => (
-                            <option key={c} value={c} />
+                            <option key={c} value={c}>
+                              {getCategoryLabel(c, locale)}
+                            </option>
                           ))}
                         </datalist>
                       </div>
@@ -975,25 +1093,25 @@ export default function BooksContent({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                          สำนักพิมพ์
+                          {locale === 'th' ? 'สำนักพิมพ์' : 'Publisher'}
                         </label>
                         <input
                           type="text"
                           value={bookPublisher}
                           onChange={(e) => setBookPublisher(e.target.value)}
-                          placeholder="สำนักพิมพ์..."
+                          placeholder={locale === 'th' ? 'สำนักพิมพ์...' : 'Publisher name...'}
                           className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                          ปีที่พิมพ์ (พ.ศ. / ค.ศ.)
+                          {locale === 'th' ? 'ปีที่พิมพ์ (พ.ศ. / ค.ศ.)' : 'Year Published'}
                         </label>
                         <input
                           type="number"
                           value={bookPublishedYear}
                           onChange={(e) => setBookPublishedYear(e.target.value)}
-                          placeholder="2566 หรือ 2023"
+                          placeholder={locale === 'th' ? '2566 หรือ 2023' : '2023 or 2566'}
                           className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
                         />
                       </div>
@@ -1002,7 +1120,7 @@ export default function BooksContent({
                     {/* Total Copies */}
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                        จำนวนสำเนาทั้งหมด (เล่ม)
+                        {locale === 'th' ? 'จำนวนสำเนาทั้งหมด (เล่ม)' : 'Total Copies (Books)'}
                       </label>
                       <input
                         type="number"
@@ -1016,13 +1134,13 @@ export default function BooksContent({
                     {/* Description */}
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                        คำอธิบาย / เรื่องย่อ
+                        {locale === 'th' ? 'คำอธิบาย / เรื่องย่อ' : 'Description / Synopsis'}
                       </label>
                       <textarea
                         rows={3}
                         value={bookDescription}
                         onChange={(e) => setBookDescription(e.target.value)}
-                        placeholder="รายละเอียดเนื้อหาโดยย่อ..."
+                        placeholder={locale === 'th' ? 'รายละเอียดเนื้อหาโดยย่อ...' : 'Brief summary or synopsis...'}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors resize-none"
                       />
                     </div>
@@ -1037,14 +1155,18 @@ export default function BooksContent({
                   onClick={() => setIsBookModalOpen(false)}
                   className="px-4 py-2.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                 >
-                  ยกเลิก
+                  {locale === 'th' ? 'ยกเลิก' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   disabled={savingBook}
                   className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold bg-black text-white dark:bg-white dark:text-black hover:opacity-90 active:scale-98 transition-all disabled:opacity-50 shadow-sm"
                 >
-                  {savingBook ? 'กำลังบันทึก...' : editingBook ? 'บันทึกการแก้ไข' : 'เพิ่มหนังสือ'}
+                  {savingBook
+                    ? (locale === 'th' ? 'กำลังบันทึก...' : 'Saving...')
+                    : editingBook
+                    ? (locale === 'th' ? 'บันทึกการแก้ไข' : 'Save Changes')
+                    : (locale === 'th' ? 'เพิ่มหนังสือ' : 'Add Book')}
                 </button>
               </div>
             </form>
