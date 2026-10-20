@@ -1,171 +1,146 @@
-# MFU Muslim Club Library Management System
+# MFU Library
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-mcmfu--library.vercel.app-000000?style=for-the-badge&logo=vercel)](https://mcmfu-library.vercel.app)
-[![Next.js](https://img.shields.io/badge/Next.js-15+-000000?style=for-the-badge&logo=nextdotjs)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![Supabase](https://img.shields.io/badge/Supabase-Database%20%26%20Auth-3ECF8E?style=for-the-badge&logo=supabase)](https://supabase.com/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+A modern web application for managing book circulation, waitlist queues, and catalog inventory for the Mae Fah Luang University Muslim Club community. Built with Next.js, Supabase, Tailwind CSS, and Google Gemini AI.
 
-A modern, minimalist library management web application designed for the **Mae Fah Luang University (MFU) Muslim Club**. Built with high performance, accessibility, clean architecture, and AI-powered automation.
+Production URL: https://mcmfu-library.vercel.app
 
 ---
 
-## Key Features
+## Overview
 
-### For Students & Readers
-- **Curated Catalog & Fast Search:** Instant search across titles, authors, and categories with dynamic status badges (Available, Borrowed, Queued).
-- **Smart Queue Reservation:** Automated FIFO queue system. When a book is returned, the next user in queue receives priority borrowing rights.
-- **My Borrows Dashboard:** Real-time tracking of active borrows, due date countdowns, overdue indicators, and queue status.
-- **Bilingual Interface:** Full localization support for both Thai and English.
-- **Mobile-First Responsive Design:** Clean monochrome aesthetic optimized for smartphones, tablets, and desktops.
+MFU Library is designed to simplify book lending for university club members while giving administrators full visibility into their collection. The system replaces manual spreadsheets with automated queues, book availability tracking, and automated email reminders for returns.
 
-### For Administrators
-- **AI-Powered Book Cover Scanner:** Take a photo or upload a book cover image; Google Gemini Vision extracts the title, author, publisher, and publication year automatically.
-- **Barcode & ISBN Scanner:** Built-in camera scanner (powered by Quagga2) for quick book cataloging and checkouts.
-- **Borrow & Return Lifecycle:** One-click confirmation, return tracking, and penalty calculations.
-- **Dashboard & Analytics:** Overview metrics for total inventory, active borrows, overdue items, member engagement, and feedback.
-- **Role-Based Admin Invitations:** Secure invite tokens for onboarding club officers without exposing master credentials.
-- **Automated Email Notifications:** Scheduled daily cron jobs send due date reminders and return confirmations via SMTP (Gmail) and Resend.
+---
+
+## Core Features
+
+### Member Experience
+- Catalog Browsing: Instant keyword search, category filtering, and related book suggestions.
+- Queue and Waitlist: When a book is currently borrowed, members can join a waitlist. Once the copy is returned, the next queued member is promoted to borrow.
+- Circulation Dashboard: A personal "My Borrows" area tracking active loans, due dates, past borrow history, and queue position.
+- Localization: Bilingual user interface supporting English and Thai.
+
+### Administrative Tools
+- Inventory Management: Add, edit, archive, and monitor physical book copies with availability tracking.
+- AI Cover Vision: Upload or capture a book cover with a camera. Google Gemini Vision extracts the title, author, publisher, and publication year directly from the cover image.
+- Member Administration: Role-based access control (Admin and Member), secure invitation links with token expiration, and member borrow audits.
+- Announcements & Notices: Broadcast club announcements with pinned alerts and category tags.
+- Circulation Monitoring: Live status tracking for active, overdue, and returned books.
+
+### Notifications & Automation
+- Automated Email Dispatch: Sends transaction receipts, return confirmations, and reminder notices via Gmail SMTP / Resend.
+- Daily Cron Reminders: Scheduled cron endpoint to identify overdue loans and notify borrowers.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Framework** | [Next.js](https://nextjs.org/) (App Router, Server Components & Route Handlers) |
-| **Language** | [TypeScript](https://www.typescriptlang.org/) |
-| **Styling** | [Tailwind CSS](https://tailwindcss.com/) with Lucide Icons |
-| **Database & Auth** | [Supabase](https://supabase.com/) (PostgreSQL, Row Level Security, Storage, Auth) |
-| **Vision AI** | [Google Gemini Flash](https://ai.google.dev/) (Book cover OCR & metadata extraction) |
-| **Email Service** | [Nodemailer](https://nodemailer.com/) (SMTP) & [Resend](https://resend.com/) |
-| **Deployment** | [Vercel](https://vercel.com/) |
-
----
-
-## Project Structure
-
-```text
-mfu-lib/
-├── app/                        # Next.js App Router
-│   ├── admin/                  # Admin dashboard & management routes
-│   │   ├── announcements/      # Club news & announcements
-│   │   ├── books/              # Inventory management & AI book scanner
-│   │   ├── borrows/            # Active borrows & return approvals
-│   │   ├── dashboard/          # Analytics & key performance metrics
-│   │   ├── feedback/           # User reviews & suggestions
-│   │   └── users/              # Member & admin role management
-│   ├── api/                    # Serverless API route handlers
-│   │   ├── borrow/             # Borrow & auto-queue dispatch
-│   │   ├── cron/remind/        # Daily scheduled overdue email trigger
-│   │   ├── queue/              # Queue join/cancel management
-│   │   └── read-cover/         # Gemini Vision AI cover scanner
-│   ├── books/                  # Book catalog & book detail views
-│   ├── my-borrows/             # User borrowing history & active queue
-│   └── login/                  # Authentication entry
-├── components/                 # Reusable UI & client components
-├── lib/                        # Core utilities (Supabase, Email, i18n)
-├── database-schema.sql         # PostgreSQL schema, RLS policies, and triggers
-└── public/                     # Static media & assets
-```
+- Framework: Next.js (App Router, React Server Components)
+- Language: TypeScript
+- Database & Auth: Supabase (PostgreSQL with Row Level Security, Supabase Auth, Supabase Storage)
+- Styling: Tailwind CSS (Monochrome, responsive, high-contrast design system)
+- AI & Vision: Google Gemini API (gemini-1.5-flash / gemini-2.0-flash)
+- Email Engine: Nodemailer (Gmail SMTP transport) with Resend fallback
+- Hosting: Vercel
 
 ---
 
 ## Getting Started
 
-### 1. Prerequisites
-- Node.js 18.x or later
+### Prerequisites
+- Node.js 18.18 or higher
 - npm or yarn
-- A [Supabase](https://supabase.com) project
-- A [Google AI Studio API Key](https://aistudio.google.com/) (for book cover AI extraction)
+- A Supabase project with PostgreSQL
 
-### 2. Clone and Install Dependencies
+### Installation
 
-```bash
-git clone https://github.com/NurulhudaAi/mfu-lib.git
-cd mfu-lib
-npm install
-```
-
-### 3. Setup Environment Variables
-
-Copy the example environment configuration:
-
-```bash
-cp .env.local.example .env.local
-```
-
-Fill in your actual credentials in `.env.local`:
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_public_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-
-# App Configuration
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_BORROW_DAYS=14
-
-# AI Vision & Metadata Extraction
-GEMINI_API_KEY=your_gemini_api_key
-
-# Email Notifications (SMTP)
-SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_gmail_app_password
-SMTP_FROM="MFU Library <your_email@gmail.com>"
-
-# Cron Security Secret
-CRON_SECRET=your_random_secret_token
-```
-
-### 4. Database Setup
-
-Execute the SQL script in [`database-schema.sql`](./database-schema.sql) in your Supabase SQL Editor. This sets up:
-- Tables: `books`, `borrows`, `book_queue`, `profiles`, `announcements`, `feedback`, `admin_invitations`
-- Storage buckets: `covers`, `avatars` (ensure buckets are set to public read)
-- Row Level Security (RLS) policies for user privacy and role-based admin controls
-
-### 5. Run the Development Server
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
----
-
-## Production Build & Quality Assurance
-
-Run type check and create an optimized production build:
-
-```bash
-# Type check
-npx tsc --noEmit
-
-# Production build
-npm run build
-```
-
----
-
-## Deployment to Vercel
-
-1. Push your repository to GitHub:
+1. Clone the repository:
    ```bash
-   git push origin main
+   git clone https://github.com/NurulhudaAi/mfu-lib.git
+   cd mfu-lib
    ```
-2. Import the project into [Vercel](https://vercel.com).
-3. Paste all variables from `.env.local` into the **Environment Variables** section on Vercel.
-4. Set `NEXT_PUBLIC_APP_URL` to your production domain (e.g. `https://mcmfu-library.vercel.app`).
-5. In **Supabase Authentication > URL Configuration**, add your production domain to **Site URL** and **Redirect URLs**:
-   - `https://mcmfu-library.vercel.app/**`
-   - `https://mcmfu-library.vercel.app/auth/callback`
-   - `https://mcmfu-library.vercel.app/login`
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up environment variables:
+   Copy `.env.local.example` to `.env.local`:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+   Fill in the required credentials:
+   ```env
+   # Supabase
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+   # SMTP / Email
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASS=your-google-app-password
+   SMTP_FROM="MFU Library <your-email@gmail.com>"
+
+   # AI Cover Vision
+   GEMINI_API_KEY=your-gemini-api-key
+
+   # App Settings
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
+   NEXT_PUBLIC_BORROW_DAYS=14
+   CRON_SECRET=your-random-cron-secret
+   ```
+
+4. Database Setup:
+   Execute the schema defined in `database-schema.sql` inside your Supabase SQL Editor. This configures the required tables, triggers, and Row Level Security policies.
+
+5. Run the development server:
+   ```bash
+   npm run dev
+   ```
+   Open http://localhost:3000 in your browser.
 
 ---
 
-## License
+## Building for Production
 
-This project is open-source and maintained for the educational and community services of the **Mae Fah Luang University Muslim Club**.
+To create an optimized production build:
+
+```bash
+npm run build
+npm run start
+```
+
+---
+
+## Deployment on Vercel
+
+1. Push your code to GitHub.
+2. Import the repository in Vercel.
+3. Configure Environment Variables in Project Settings matching `.env.local.example`, setting `NEXT_PUBLIC_APP_URL` to your production domain (`https://mcmfu-library.vercel.app`).
+4. In Supabase Dashboard under Authentication -> URL Configuration:
+   - Set Site URL to `https://mcmfu-library.vercel.app`
+   - Add `https://mcmfu-library.vercel.app/**` and `https://mcmfu-library.vercel.app/auth/callback` to Redirect URLs.
+5. In Supabase Storage, ensure the `covers` and `avatars` buckets are created and set to Public.
+
+---
+
+## Project Structure
+
+```
+├── app/                  # Next.js App Router pages and API routes
+│   ├── admin/            # Admin console views
+│   ├── api/              # Server route handlers (borrow, queue, AI vision, cron)
+│   ├── auth/             # Supabase authentication callback handlers
+│   └── books/            # Catalog and book detail pages
+├── components/           # Reusable UI components
+├── lib/                  # Utilities (Supabase clients, email transport, i18n)
+├── database-schema.sql   # PostgreSQL database schema and RLS policies
+└── public/               # Static assets
+```
+
+---
+
+## Maintainers
+
+Maintained by the Mae Fah Luang University Muslim Club development team.
