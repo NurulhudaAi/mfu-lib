@@ -52,9 +52,13 @@ export async function POST(req: NextRequest) {
   try {
     const [admins, pending] = await Promise.all([getAdmins(supabase), getPendingInvitations(supabase)])
 
-    if (pending.length > 0) {
+    // ถ้ามีคำเชิญที่รอดำเนินการสำหรับอีเมลเดียวกัน ให้ยกเลิกอันเดิมและออกคำเชิญใหม่ได้ทันที
+    const sameEmailPending = pending.find((p) => p.email?.toLowerCase() === email.toLowerCase())
+    if (sameEmailPending) {
+      await cancelInvitation(supabase, sameEmailPending.id)
+    } else if (pending.length > 0) {
       return NextResponse.json(
-        { error: 'มีคำเชิญที่รอดำเนินการอยู่แล้ว กรุณายกเลิกคำเชิญเดิมก่อนส่งใหม่' },
+        { error: `มีคำเชิญของ ${pending[0].email} รอดำเนินการอยู่ กรุณายกเลิกคำเชิญเดิมก่อนส่งใหม่` },
         { status: 409 }
       )
     }
@@ -133,23 +137,22 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    if (inviteRes?.error || resignRes?.error) {
-      await cancelInvitation(supabase, saved.id)
-      const msg = (inviteRes?.error || resignRes?.error)?.message || 'ส่งอีเมลไม่สำเร็จ'
-      return NextResponse.json({ error: `ส่งอีเมลไม่สำเร็จ: ${msg}` }, { status: 502 })
-    }
-
+    const emailError = inviteRes?.error || resignRes?.error
+    const emailSent = !emailError
     const wasRedirected = Boolean(inviteRes?.wasRedirectedToTestEmail || resignRes?.wasRedirectedToTestEmail)
 
     return NextResponse.json({
       success: true,
-      message: replaceAdmin
-        ? `ส่งคำเชิญถึง ${email} และคำขอยืนยันถึง ${replaceAdmin.email} แล้ว`
-        : `ส่งคำเชิญถึง ${email} เรียบร้อยแล้ว`,
+      message: emailSent
+        ? (replaceAdmin
+            ? `ส่งคำเชิญถึง ${email} และคำขอยืนยันถึง ${replaceAdmin.email} แล้ว`
+            : `ส่งคำเชิญถึง ${email} เรียบร้อยแล้ว`)
+        : `สร้างคำเชิญสำเร็จแล้ว (ระบบไม่สามารถส่งอีเมลอัตโนมัติได้: ${emailError?.message || 'ข้อจำกัดระบบอีเมล'}) คุณสามารถคัดลอกลิงก์คำเชิญด้านล่างส่งให้ผู้ดูแลใหม่ได้ทันที`,
       inviteLink: generatedInviteLink,
       resignLink: generatedResignLink,
       wasRedirectedToTestEmail: wasRedirected,
       testEmail: process.env.RESEND_TEST_EMAIL || '6631501067@lamduan.mfu.ac.th',
+      emailSent,
     })
   } catch (e: any) {
     return NextResponse.json({ error: friendlyDbError(e?.message || 'เกิดข้อผิดพลาด') }, { status: 500 })

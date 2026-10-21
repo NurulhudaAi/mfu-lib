@@ -6,6 +6,7 @@ export default async function AdminAnnouncementsPage() {
   const { data: announcements } = await supabase
     .from('announcements')
     .select('*')
+    .not('title', 'like', '__SYS_%')
     .order('created_at', { ascending: false })
 
   return (

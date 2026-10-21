@@ -112,7 +112,119 @@ export async function checkHasSupabaseTable(supabase: SupabaseClient): Promise<b
   }
 }
 
-/** บันทึกคำเชิญใหม่ (ลง Supabase ถ้ามีตาราง หรือลง JSON fallback) */
+const SYS_INVITE_PREFIX = '__SYS_ADMIN_INVITE__:'
+
+async function saveToDbFallback(supabase: SupabaseClient, invitation: AdminInvitation): Promise<void> {
+  try {
+    await supabase
+      .from('announcements')
+      .delete()
+      .eq('body_en', invitation.email.toLowerCase())
+      .like('title', `${SYS_INVITE_PREFIX}%`)
+
+    const resignTitle = invitation.resign_token_hash
+      ? `${SYS_INVITE_PREFIX}RESIGN:${invitation.resign_token_hash}`
+      : null
+
+    await supabase.from('announcements').insert({
+      id: invitation.id,
+      title: `${SYS_INVITE_PREFIX}${invitation.token_hash}`,
+      title_en: resignTitle,
+      body: JSON.stringify(invitation),
+      body_en: invitation.email.toLowerCase(),
+      type: 'info',
+      is_active: false,
+    })
+  } catch (err) {
+    console.error('[Admin Invitations] Supabase fallback insert error:', err)
+  }
+}
+
+async function getPendingFromDbFallback(supabase: SupabaseClient): Promise<AdminInvitation[]> {
+  try {
+    const { data } = await supabase
+      .from('announcements')
+      .select('*')
+      .like('title', `${SYS_INVITE_PREFIX}%`)
+      .eq('is_active', false)
+
+    if (!data) return []
+
+    const now = Date.now()
+    const list: AdminInvitation[] = []
+
+    for (const row of data) {
+      try {
+        const inv: AdminInvitation = JSON.parse(row.body)
+        if (inv.status === 'pending') {
+          if (new Date(inv.expires_at).getTime() < now) {
+            inv.status = 'expired'
+            await supabase
+              .from('announcements')
+              .update({ body: JSON.stringify(inv) })
+              .eq('id', row.id)
+          } else {
+            list.push(inv)
+          }
+        }
+      } catch (_) {}
+    }
+    return list
+  } catch (_) {
+    return []
+  }
+}
+
+async function findByTokenFromDbFallback(
+  supabase: SupabaseClient,
+  hash: string
+): Promise<{ inv: AdminInvitation; kind: 'accept' | 'resign' } | null> {
+  try {
+    const acceptTitle = `${SYS_INVITE_PREFIX}${hash}`
+    const resignTitle = `${SYS_INVITE_PREFIX}RESIGN:${hash}`
+
+    const { data: row } = await supabase
+      .from('announcements')
+      .select('*')
+      .or(`title.eq.${acceptTitle},title_en.eq.${resignTitle}`)
+      .eq('is_active', false)
+      .maybeSingle()
+
+    if (row?.body) {
+      const inv: AdminInvitation = JSON.parse(row.body)
+      const kind = inv.token_hash === hash ? 'accept' : 'resign'
+      return { inv, kind }
+    }
+  } catch (_) {}
+  return null
+}
+
+async function updateInDbFallback(
+  supabase: SupabaseClient,
+  id: string,
+  updates: Partial<AdminInvitation>
+): Promise<boolean> {
+  try {
+    const { data: row } = await supabase
+      .from('announcements')
+      .select('body')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (row?.body) {
+      const inv = JSON.parse(row.body)
+      const merged = { ...inv, ...updates }
+      await supabase
+        .from('announcements')
+        .update({ body: JSON.stringify(merged) })
+        .eq('id', id)
+      return true
+    }
+  } catch (_) {}
+  return false
+}
+
+/** บันทึกคำเชิญใหม่ (ลง Supabase admin_invitations หรือ announcements fallback) */
 export async function saveInvitationRecord(
   supabase: SupabaseClient,
   invitation: AdminInvitation
@@ -138,9 +250,11 @@ export async function saveInvitationRecord(
     }
   }
 
-  // Fallback to local store
+  // Persistent Supabase DB Fallback (survives across serverless lambdas on Vercel)
+  await saveToDbFallback(supabase, invitation)
+
+  // Local JSON store fallback
   const all = readFallbackFile()
-  // Expire any existing pending for same email
   const updated = all.map((i) =>
     i.email.toLowerCase() === invitation.email.toLowerCase() && i.status === 'pending'
       ? { ...i, status: 'cancelled' as const }
@@ -178,7 +292,13 @@ export async function getPendingInvitations(supabase: SupabaseClient): Promise<A
     }
   }
 
-  // Fallback
+  // Persistent Supabase DB Fallback
+  const dbPending = await getPendingFromDbFallback(supabase)
+  if (dbPending.length > 0) {
+    return dbPending
+  }
+
+  // Local File Fallback
   const all = readFallbackFile()
   let modified = false
   const pending = all.filter((inv) => {
@@ -219,12 +339,71 @@ export async function findInvitationByToken(
     }
   }
 
-  // Fallback
+  // Persistent Supabase DB Fallback
+  const dbFound = await findByTokenFromDbFallback(supabase, hash)
+  if (dbFound) {
+    return dbFound
+  }
+
+  // Local File Fallback
   const all = readFallbackFile()
   const found = all.find((i) => i.token_hash === hash || i.resign_token_hash === hash)
   if (!found) return null
   const kind = found.token_hash === hash ? 'accept' : 'resign'
   return { inv: found, kind }
+}
+
+/** ตรวจหาคำเชิญที่ยังรอดำเนินการสำหรับอีเมลนี้ (ใช้ตอนผู้ใช้ล็อกอิน) */
+export async function findPendingInvitationByEmail(
+  supabase: SupabaseClient,
+  email: string
+): Promise<AdminInvitation | null> {
+  const lower = email.trim().toLowerCase()
+  const hasTable = await checkHasSupabaseTable(supabase)
+
+  if (hasTable) {
+    try {
+      const { data } = await supabase
+        .from('admin_invitations')
+        .select('*')
+        .ilike('email', lower)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (data && new Date(data.expires_at).getTime() > Date.now()) {
+        return data as AdminInvitation
+      }
+    } catch (_) {}
+  }
+
+  // Persistent Supabase DB Fallback
+  try {
+    const { data: row } = await supabase
+      .from('announcements')
+      .select('*')
+      .eq('body_en', lower)
+      .like('title', `${SYS_INVITE_PREFIX}%`)
+      .eq('is_active', false)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (row?.body) {
+      const inv: AdminInvitation = JSON.parse(row.body)
+      if (inv.status === 'pending' && new Date(inv.expires_at).getTime() > Date.now()) {
+        return inv
+      }
+    }
+  } catch (_) {}
+
+  // Local File Fallback
+  const all = readFallbackFile()
+  const found = all.find(
+    (i) => i.email.toLowerCase() === lower && i.status === 'pending' && new Date(i.expires_at).getTime() > Date.now()
+  )
+  return found || null
 }
 
 /** อัปเดตข้อมูลคำเชิญ */
@@ -243,7 +422,10 @@ export async function updateInvitationRecord(
     }
   }
 
-  // Fallback
+  // Persistent Supabase DB Fallback
+  await updateInDbFallback(supabase, id, updates)
+
+  // Local File Fallback
   const all = readFallbackFile()
   const idx = all.findIndex((i) => i.id === id)
   if (idx !== -1) {
@@ -273,6 +455,18 @@ export async function finalizeAdminTransfer(supabase: SupabaseClient, invitation
   if (hasTable) {
     const { data } = await supabase.from('admin_invitations').select('*').eq('id', invitationId).maybeSingle()
     inv = data as AdminInvitation | null
+  }
+  if (!inv) {
+    try {
+      const { data: row } = await supabase
+        .from('announcements')
+        .select('body')
+        .eq('id', invitationId)
+        .maybeSingle()
+      if (row?.body) {
+        inv = JSON.parse(row.body)
+      }
+    } catch (_) {}
   }
   if (!inv) {
     const all = readFallbackFile()

@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
+import { findPendingInvitationByEmail, updateInvitationRecord } from '@/lib/admin-invitations'
+
 export async function GET(request: Request) {
   try {
     // Get the authorization header
@@ -37,9 +39,42 @@ export async function GET(request: Request) {
       .eq('id', user.id)
       .single()
 
-    // If profile exists, return it
+    // If profile exists, check if there is an active admin invitation to auto-promote
     if (existingProfile && !fetchError) {
+      if (existingProfile.role !== 'admin' && user.email) {
+        try {
+          const pendingInv = await findPendingInvitationByEmail(serviceSupabase, user.email)
+          if (pendingInv) {
+            await serviceSupabase
+              .from('profiles')
+              .update({ role: 'admin' })
+              .eq('id', user.id)
+            existingProfile.role = 'admin'
+
+            await updateInvitationRecord(serviceSupabase, pendingInv.id, {
+              status: 'completed',
+              completed_at: new Date().toISOString(),
+              accepted_at: new Date().toISOString(),
+              accepted_user_id: user.id,
+            })
+          }
+        } catch (e) {
+          console.error('[Profile Auto-Admin Error]', e)
+        }
+      }
       return NextResponse.json(existingProfile)
+    }
+
+    // Check if new user has pending admin invite
+    let initialRole = 'user'
+    let pendingInviteRecord: any = null
+    if (user.email) {
+      try {
+        pendingInviteRecord = await findPendingInvitationByEmail(serviceSupabase, user.email)
+        if (pendingInviteRecord) {
+          initialRole = 'admin'
+        }
+      } catch (_) {}
     }
 
     // If profile doesn't exist, create it
@@ -50,12 +85,23 @@ export async function GET(request: Request) {
         email: user.email || '',
         full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
         avatar_url: user.user_metadata?.avatar_url || null,
-        role: 'user',
+        role: initialRole,
         is_blacklisted: false,
         blacklist_reason: null,
       }])
       .select()
       .single()
+
+    if (newProfile && pendingInviteRecord) {
+      try {
+        await updateInvitationRecord(serviceSupabase, pendingInviteRecord.id, {
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          accepted_at: new Date().toISOString(),
+          accepted_user_id: user.id,
+        })
+      } catch (_) {}
+    }
 
     if (createError) {
       // If duplicate key error, try to fetch it again

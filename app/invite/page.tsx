@@ -57,14 +57,9 @@ function InviteContent() {
     }
   }, [data?.isRightUser, searchParams])
 
-  async function handleLogin() {
+  function handleLogin() {
     const returnUrl = `/invite?token=${encodeURIComponent(token || '')}&auto_confirm=1`
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(returnUrl)}`,
-      },
-    })
+    router.push(`/login?redirect=${encodeURIComponent(returnUrl)}`)
   }
 
   async function handleConfirm() {
