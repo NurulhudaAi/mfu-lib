@@ -359,18 +359,20 @@ function esc(s: string) {
 // 6. เชิญเป็นผู้ดูแลระบบ (ต้องกดยืนยันจากลิงก์)
 // ════════════════════════════════════════════════════════════════════════════
 export async function sendAdminInviteEmail({
-  to, inviterName, replacingName, link, expiresAt,
+  to, name, inviterName, replacingName, link, expiresAt,
 }: {
   to: string
+  name?: string | null
   inviterName: string
   replacingName?: string | null
   link: string
   expiresAt: Date
 }) {
   const expiresStr = format(expiresAt, 'dd MMMM yyyy HH:mm น.', { locale: th })
+  const greetingTarget = name ? `คุณ <strong>${esc(name)}</strong>` : `<strong>${esc(to)}</strong>`
 
   const html = wrap(`
-    <p style="margin:0 0 4px;font-size:15px;color:#374151;">Assalamu'alaikum คุณ <strong>${name}</strong></p>
+    <p style="margin:0 0 4px;font-size:15px;color:#374151;">Assalamu'alaikum ${greetingTarget}</p>
     <p style="margin:0 0 16px;font-size:14px;color:#6b7280;">
       <strong style="color:#09090b;">${esc(inviterName)}</strong> เชิญคุณเป็น<strong style="color:#09090b;">ผู้ดูแลระบบ (Admin)</strong> ของห้องสมุดชมรมมุสลิม
     </p>

@@ -104,9 +104,17 @@ export async function POST(req: NextRequest) {
 
     const saved = await saveInvitationRecord(supabase, record)
 
+    // ตรวจสอบชื่อผู้ถูกเชิญหากมีบัญชีอยู่แล้วในระบบ
+    const { data: targetProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .ilike('email', email.trim())
+      .maybeSingle()
+
     // ── ส่งอีเมล ──
     const inviteRes = await sendAdminInviteEmail({
       to: email,
+      name: targetProfile?.full_name || null,
       inviterName,
       replacingName: replaceAdmin ? replaceAdmin.full_name || replaceAdmin.email : null,
       link: generatedInviteLink,
