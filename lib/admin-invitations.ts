@@ -522,7 +522,7 @@ export async function finalizeAdminTransfer(supabase: SupabaseClient, invitation
 
 /** แปลง error จาก DB เป็นข้อความภาษาไทยที่อ่านเข้าใจ */
 export function friendlyDbError(message: string) {
-  if (message.includes('MAX_ADMINS_REACHED')) return 'ระบบมีผู้ดูแลครบ 2 คนแล้ว'
+  if (message.includes('MAX_ADMINS_REACHED')) return 'ไม่สามารถเพิ่มผู้ดูแลได้ในขณะนี้'
   if (message.includes('RESIGN_NOT_CONFIRMED')) return 'รอผู้ดูแลเดิมยืนยันการสละสิทธิ์'
   if (message.includes('INVITATION_NOT_PENDING')) return 'คำเชิญนี้ถูกใช้งานหรือยกเลิกไปแล้ว'
   if (

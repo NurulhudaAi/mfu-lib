@@ -4,7 +4,6 @@ import { createServiceClient } from '@/lib/supabase-server'
 import { requireAdmin } from '@/lib/admin-guard'
 import { inviteAdminSchema, validateInput } from '@/lib/validation'
 import {
-  MAX_ADMINS,
   INVITE_TTL_HOURS,
   generateToken,
   inviteLink,
@@ -34,9 +33,9 @@ export async function GET() {
 }
 
 /**
- * POST — ส่งคำเชิญเป็นแอดมินทางอีเมล
- *   - ถ้ามีแอดมิน < 2 คน: เชิญเพิ่มได้เลย
- *   - ถ้ามีครบ 2 คน: ต้องระบุ replaceAdminId (แอดมินที่จะออก) → แอดมินเดิมต้องยืนยันทางอีเมลด้วย
+ * POST — ส่งคำเชิญเป็นแอดมินทางอีเมล (ไม่จำกัดจำนวน)
+ *   - สามารถส่งคำเชิญเพื่อเพิ่มผู้ดูแลระบบร่วมได้ไม่จำกัดจำนวน
+ *   - หากต้องการแทนที่แอดมินเดิม สามารถระบุ replaceAdminId ได้
  */
 export async function POST(req: NextRequest) {
   const auth = await requireAdmin()

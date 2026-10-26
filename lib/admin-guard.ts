@@ -2,34 +2,48 @@ import { createServerClient } from '@supabase/ssr'
 import { createServiceClient } from '@/lib/supabase-server'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import type { User } from '@supabase/supabase-js'
 
 export const ADMIN_ROLES = ['admin', 'super_admin'] as const
 export type AdminRole = typeof ADMIN_ROLES[number]
+
+export interface AuthenticatedAdminProfile {
+  id: string
+  email: string
+  full_name: string | null
+  role: AdminRole
+  is_blacklisted: boolean
+}
+
+export type AdminAuthResult =
+  | { ok: true; admin: User; profile: AuthenticatedAdminProfile }
+  | { ok: false; response: NextResponse }
 
 /**
  * ตรวจสอบว่า request มาจาก admin หรือ super_admin หรือไม่
  * ใช้ใน API routes ฝั่ง admin เพื่อป้องกันการเรียกตรงโดยไม่ผ่าน middleware
  *
- * @returns { ok: true, admin, profile } ถ้ามีสิทธิ์ admin หรือ super_admin
- * @returns { ok: false, response: NextResponse } ถ้าไม่มีสิทธิ์
+ * @returns { ok: true, admin, profile } เมื่อมีสิทธิ์
+ * @returns { ok: false, response } เมื่อไม่มีสิทธิ์
  */
-export async function requireAdmin(): Promise<
-  | { ok: true; admin: any; profile: any }
-  | { ok: false; response: NextResponse }
-> {
+export async function requireAdmin(): Promise<AdminAuthResult> {
   const cookieStore = await cookies()
   const userSupabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return cookieStore.getAll() },
+        getAll() {
+          return cookieStore.getAll()
+        },
         setAll() {},
       },
     }
   )
 
-  const { data: { user } } = await userSupabase.auth.getUser()
+  const {
+    data: { user },
+  } = await userSupabase.auth.getUser()
 
   if (!user) {
     return {
@@ -49,7 +63,7 @@ export async function requireAdmin(): Promise<
     .eq('id', user.id)
     .single()
 
-  if (!profile?.role || !ADMIN_ROLES.includes(profile.role)) {
+  if (!profile?.role || !ADMIN_ROLES.includes(profile.role as AdminRole)) {
     return {
       ok: false,
       response: NextResponse.json(
@@ -59,16 +73,17 @@ export async function requireAdmin(): Promise<
     }
   }
 
-  return { ok: true, admin: user, profile }
+  return {
+    ok: true,
+    admin: user,
+    profile: profile as AuthenticatedAdminProfile,
+  }
 }
 
 /**
  * ตรวจสอบว่า request มาจาก super_admin หรือไม่
  */
-export async function requireSuperAdmin(): Promise<
-  | { ok: true; admin: any; profile: any }
-  | { ok: false; response: NextResponse }
-> {
+export async function requireSuperAdmin(): Promise<AdminAuthResult> {
   const adminCheck = await requireAdmin()
   if (!adminCheck.ok) return adminCheck
 
