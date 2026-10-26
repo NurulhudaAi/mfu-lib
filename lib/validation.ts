@@ -111,7 +111,7 @@ export const updateUserSchema = z.object({
   is_blacklisted: z.boolean().optional(),
   reason: optionalSafeString(500),
   blacklist_reason: optionalSafeString(500),
-  role: z.enum(['user', 'admin']).optional(),
+  role: z.enum(['user', 'admin', 'super_admin']).optional(),
   full_name: optionalSafeString(100),
 })
 
