@@ -98,12 +98,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Extract clean numeric year from parsedJson.published_year if present
+    let cleanedYear = ''
+    if (parsedJson.published_year) {
+      const rawYearStr = String(parsedJson.published_year).trim()
+      const match = rawYearStr.match(/\b\d{4}\b/) || rawYearStr.match(/\d+/)
+      cleanedYear = match ? match[0] : rawYearStr
+    }
+
     return NextResponse.json({
       success: true,
       title: parsedJson.title || '',
       author: parsedJson.author || '',
       publisher: parsedJson.publisher || '',
-      published_year: parsedJson.published_year || '',
+      published_year: cleanedYear,
       isbn: parsedJson.isbn || '',
       category: parsedJson.category || '',
       description: parsedJson.description || '',

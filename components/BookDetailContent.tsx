@@ -246,6 +246,11 @@ export default function BookDetailContent({
       if (data.title && data.title.trim()) {
         const detectedTitle = data.title.trim()
         setEditTitle(detectedTitle)
+        if (data.author) setEditAuthor(data.author)
+        if (data.publisher) setEditPublisher(data.publisher)
+        if (data.published_year) setEditPublishedYear(String(data.published_year))
+        if (data.isbn) setEditIsbn(data.isbn)
+        if (data.description) setEditDescription(data.description)
         await lookupTitle(detectedTitle)
       } else {
         showAlert({

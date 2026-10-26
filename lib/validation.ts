@@ -123,7 +123,16 @@ export const createBookFieldsSchema = z.object({
   description: optionalSafeString(5000),
   category: optionalSafeString(100),
   publisher: optionalSafeString(200),
-  published_year: z.coerce.number().int().min(1000).max(2100).optional().nullable(),
+  published_year: z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? null : v),
+    z.coerce
+      .number()
+      .int('ปีที่พิมพ์ต้องเป็นตัวเลขจำนวนเต็ม')
+      .min(1, 'ปีที่พิมพ์ต้องไม่ต่ำกว่า 1')
+      .max(3000, 'ปีที่พิมพ์ต้องไม่เกิน 3000')
+      .optional()
+      .nullable()
+  ),
   total_copies: z.coerce.number().int().min(1).max(9999).default(1),
   is_featured: z.preprocess((v) => v === 'true' || v === true, z.boolean().default(false)),
   is_active: z.preprocess((v) => v !== 'false' && v !== false, z.boolean().default(true)),
