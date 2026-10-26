@@ -217,7 +217,7 @@ export default function BorrowButton({
   }
 
   // 3. Admin Account (Cannot borrow)
-  if (profile?.role === 'admin') {
+  if (profile?.role === 'admin' || profile?.role === 'super_admin') {
     return (
       <div className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800/80 text-neutral-500 dark:text-neutral-400 font-medium text-xs sm:text-sm border border-neutral-200 dark:border-neutral-700/80 select-none">
         <ShieldCheck size={18} className="opacity-70" />

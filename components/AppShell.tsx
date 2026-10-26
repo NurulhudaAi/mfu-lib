@@ -158,7 +158,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return items
   }, [personalNotifications, announcements, locale])
 
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+  const isSuperAdmin = profile?.role === 'super_admin'
   const isFeedbackPage = pathname.startsWith('/feedback') || pathname.startsWith('/admin/feedback')
 
   // Dynamic search placeholder depending on current page context
@@ -754,7 +755,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                     {profile.full_name?.split(' ')[0] || profile.email?.split('@')[0]}
                   </div>
                   <div className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">
-                    {isAdmin ? 'Admin' : 'Member'}
+                    {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Admin' : 'Member'}
                   </div>
                 </div>
               </div>

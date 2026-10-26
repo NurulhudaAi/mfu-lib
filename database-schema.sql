@@ -9,7 +9,7 @@ create table if not exists profiles (
   email text unique not null,
   full_name text,
   avatar_url text,
-  role text not null default 'user' check (role in ('user', 'admin')),
+  role text not null default 'user' check (role in ('user', 'admin', 'super_admin')),
   is_blacklisted boolean not null default false,
   blacklist_reason text,
   created_at timestamptz not null default now()
@@ -26,7 +26,7 @@ set search_path = ''
 as $$
   select exists (
     select 1 from public.profiles
-    where id = auth.uid() and role = 'admin'
+    where id = auth.uid() and role in ('admin', 'super_admin')
   );
 $$;
 

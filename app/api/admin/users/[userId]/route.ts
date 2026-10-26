@@ -22,19 +22,42 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
   if (parsed.error) return parsed.error
   const body = parsed.data
 
-  // Protect role switching - must use email invite flow
-  if ('role' in body && body.role === 'admin') {
-    return NextResponse.json(
-      { error: 'ไม่อนุญาตให้เปลี่ยนบทบาทแอดมินผ่านหน้านี้ กรุณาใช้ระบบเชิญด้วยอีเมล' },
-      { status: 400 }
-    )
+  const isSuperAdmin = auth.profile?.role === 'super_admin'
+
+  // ตรวจสอบสิทธิ์การเปลี่ยนบทบาท (Role)
+  if ('role' in body && body.role !== undefined) {
+    if (!isSuperAdmin) {
+      return NextResponse.json(
+        { error: 'เฉพาะ Super Admin เท่านั้นที่สามารถเปลี่ยนบทบาทผู้ใช้ได้' },
+        { status: 403 }
+      )
+    }
+
+    if (!['user', 'admin', 'super_admin'].includes(body.role)) {
+      return NextResponse.json({ error: 'บทบาทผู้ใช้ไม่ถูกต้อง' }, { status: 400 })
+    }
+
+    // ป้องกัน Super Admin คนเดียวลดสิทธิ์ตนเอง
+    if (userId === auth.admin.id && body.role !== 'super_admin') {
+      const { count } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'super_admin')
+
+      if ((count || 0) <= 1) {
+        return NextResponse.json(
+          { error: 'ไม่สามารถลดสิทธิ์ตนเองได้ เนื่องจากเป็น Super Admin คนเดียวในระบบ' },
+          { status: 400 }
+        )
+      }
+    }
   }
 
-  // ห้ามถอด/ระงับสิทธิ์แอดมินโดยตรง — ต้องเชิญผู้ดูแลคนใหม่มาแทนที่เท่านั้น
+  // ป้องกันการ Blacklist แอดมินหรือ Super Admin
   const { data: target } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
-  if (target?.role === 'admin' && (body.role === 'user' || body.is_blacklisted === true)) {
+  if (target && ['admin', 'super_admin'].includes(target.role) && body.is_blacklisted === true) {
     return NextResponse.json(
-      { error: 'ไม่สามารถถอดหรือระงับสิทธิ์ผู้ดูแลโดยตรงได้ กรุณาเชิญผู้ดูแลคนใหม่เพื่อแทนที่' },
+      { error: 'ไม่สามารถระงับสิทธิ์ (Blacklist) ผู้ดูแลระบบได้' },
       { status: 400 }
     )
   }
@@ -99,7 +122,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
   // Other profile updates — only allow safe fields
   const safeFields: Record<string, any> = {}
   if (body.full_name !== undefined) safeFields.full_name = body.full_name
-  if (body.role !== undefined && body.role !== 'admin') safeFields.role = body.role
+  if (body.role !== undefined && isSuperAdmin) safeFields.role = body.role
 
   if (Object.keys(safeFields).length === 0) {
     return NextResponse.json({ error: 'ไม่มีข้อมูลที่ต้องอัปเดต' }, { status: 400 })

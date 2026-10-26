@@ -2,12 +2,14 @@
 import { createClient } from '@/lib/supabase'
 import { useEffect, useState, useMemo } from 'react'
 
+export type UserRole = 'user' | 'admin' | 'super_admin'
+
 export interface Profile {
   id: string
   email: string
   full_name: string | null
   avatar_url: string | null
-  role: 'user' | 'admin'
+  role: UserRole
   is_blacklisted: boolean
   blacklist_reason: string | null
   created_at: string
@@ -70,5 +72,8 @@ export function useProfile() {
     }
   }, [])
 
-  return { profile, loading, isAdmin: profile?.role === 'admin' }
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+  const isSuperAdmin = profile?.role === 'super_admin'
+
+  return { profile, loading, isAdmin, isSuperAdmin }
 }

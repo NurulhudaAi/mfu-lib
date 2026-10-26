@@ -27,7 +27,7 @@ export async function GET() {
   const supabase = createServiceClient()
   try {
     const [admins, pending] = await Promise.all([getAdmins(supabase), getPendingInvitations(supabase)])
-    return NextResponse.json({ admins, pending, maxAdmins: MAX_ADMINS })
+    return NextResponse.json({ admins, pending, maxAdmins: null })
   } catch (e: any) {
     return NextResponse.json({ error: friendlyDbError(e?.message || 'โหลดข้อมูลไม่สำเร็จ') }, { status: 500 })
   }
@@ -70,12 +70,6 @@ export async function POST(req: NextRequest) {
     const replaceAdmin = replaceAdminId ? admins.find((a) => a.id === replaceAdminId) : null
     if (replaceAdminId && !replaceAdmin) {
       return NextResponse.json({ error: 'ไม่พบผู้ดูแลที่ต้องการแทนที่' }, { status: 400 })
-    }
-    if (admins.length >= MAX_ADMINS && !replaceAdmin) {
-      return NextResponse.json(
-        { error: `ระบบมีผู้ดูแลครบ ${MAX_ADMINS} คนแล้ว กรุณาเลือกผู้ดูแลที่จะออกเพื่อแทนที่` },
-        { status: 400 }
-      )
     }
 
     // ข้อมูลผู้เชิญ (แสดงในอีเมล)

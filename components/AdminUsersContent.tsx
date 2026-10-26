@@ -85,9 +85,9 @@ export default function AdminUsersContent({ users = [] }: Props) {
     }
   }
 
-  const admins = users.filter((u) => u.role === 'admin')
-  const maxAdmins = 2
-  const isFull = admins.length >= maxAdmins
+  const admins = users.filter((u) => u.role === 'admin' || u.role === 'super_admin')
+  const maxAdmins = Infinity
+  const isFull = false
 
   const filtered = users.filter((u) => {
     const matchSearch =
@@ -96,25 +96,21 @@ export default function AdminUsersContent({ users = [] }: Props) {
       u.email?.toLowerCase().includes(search.toLowerCase())
 
     let matchRole = true
-    if (filterRole === 'admin') matchRole = u.role === 'admin'
+    if (filterRole === 'admin') matchRole = u.role === 'admin' || u.role === 'super_admin'
     else if (filterRole === 'user') matchRole = u.role === 'user' && !u.is_blacklisted
     else if (filterRole === 'blacklisted') matchRole = !!u.is_blacklisted
 
     return matchSearch && matchRole
   })
 
-  // Open invite modal and default replaceAdminId if full
+  // Open invite modal
   function handleOpenInvite() {
     setInviteEmail('')
     setInviteMessage(null)
     setCreatedInviteLinks(null)
     setCopiedInviteLink(false)
     setCopiedResignLink(false)
-    if (isFull && admins.length > 0) {
-      setReplaceAdminId(admins[0].id)
-    } else {
-      setReplaceAdminId('')
-    }
+    setReplaceAdminId('')
     setInviteModalOpen(true)
   }
 
@@ -122,14 +118,6 @@ export default function AdminUsersContent({ users = [] }: Props) {
   async function handleInviteAdmin(e: React.FormEvent) {
     e.preventDefault()
     if (!inviteEmail.trim()) return
-
-    if (isFull && !replaceAdminId) {
-      setInviteMessage({
-        type: 'error',
-        text: locale === 'th' ? 'กรุณาเลือกผู้ดูแลที่จะสละสิทธิ์เพื่อส่งต่อตำแหน่ง' : 'Please select an admin to replace.',
-      })
-      return
-    }
 
     setInviteLoading(true)
     setInviteMessage(null)
@@ -312,7 +300,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
               {t('filterRoleAdmin')}
             </span>
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
-              {admins.length}/{maxAdmins}
+              {admins.length} คน
             </span>
           </div>
           <p className="text-xl sm:text-2xl font-extrabold mt-0.5 tracking-tight">{admins.length}</p>
@@ -359,58 +347,51 @@ export default function AdminUsersContent({ users = [] }: Props) {
         </button>
       </div>
 
-      {/* Admin Slots Panel (Max 2 Admins) */}
+      {/* Admin Panel (Unlimited Admins) */}
       <div className="p-4 sm:p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-[#121214] space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold text-neutral-900 dark:text-white">
             <ShieldCheck size={16} />
             <span>
               {locale === 'th'
-                ? `โควตาผู้ดูแลระบบ (Admin) — ${admins.length}/${maxAdmins} คน`
-                : `Admin Slots — ${admins.length}/${maxAdmins}`}
+                ? `รายชื่อผู้ดูแลระบบ (Admin) — ${admins.length} คน (ไม่จำกัดจำนวน)`
+                : `Active Admins — ${admins.length} (Unlimited)`}
             </span>
           </div>
           <span className="text-[10px] text-neutral-500 font-medium">
-            {locale === 'th' ? 'ระบบจำกัดสูงสุด 2 คน' : 'Strict limit: 2 admins'}
+            {locale === 'th' ? 'ไม่จำกัดจำนวนผู้ดูแล' : 'No admin limit'}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[0, 1].map((index) => {
-            const adminUser = admins[index]
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {admins.map((adminUser) => {
+            const isTargetSuper = adminUser.role === 'super_admin'
             return (
               <div
-                key={index}
+                key={adminUser.id}
                 className="p-3.5 rounded-xl border border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-neutral-900 flex items-center justify-between gap-3 shadow-xs"
               >
-                {adminUser ? (
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center shrink-0">
-                      {adminUser.avatar_url ? (
-                        <img src={adminUser.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <Users size={14} className="text-neutral-400" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-neutral-900 dark:text-white truncate">
-                        {adminUser.full_name || adminUser.email}
-                      </p>
-                      <p className="text-[10px] text-neutral-400 truncate">{adminUser.email}</p>
-                    </div>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center shrink-0">
+                    {adminUser.avatar_url ? (
+                      <img src={adminUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <Users size={14} className="text-neutral-400" />
+                    )}
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-neutral-400 text-xs">
-                    <div className="w-8 h-8 rounded-full border border-dashed border-neutral-300 dark:border-neutral-700 flex items-center justify-center shrink-0">
-                      <Users size={14} />
-                    </div>
-                    <span className="text-xs italic">
-                      {locale === 'th' ? `ช่องว่างที่ ${index + 1}` : `Slot ${index + 1} Available`}
-                    </span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-neutral-900 dark:text-white truncate">
+                      {adminUser.full_name || adminUser.email}
+                    </p>
+                    <p className="text-[10px] text-neutral-400 truncate">{adminUser.email}</p>
                   </div>
-                )}
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
-                  {adminUser ? 'Active' : 'Empty'}
+                </div>
+                <span className={`text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full ${
+                  isTargetSuper
+                    ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
+                }`}>
+                  {isTargetSuper ? 'Super Admin' : 'Admin'}
                 </span>
               </div>
             )
@@ -806,7 +787,7 @@ export default function AdminUsersContent({ users = [] }: Props) {
               <ModalButton
                 variant="primary"
                 onClick={handleInviteAdmin}
-                disabled={inviteLoading || !inviteEmail.trim() || (isFull && !replaceAdminId)}
+                disabled={inviteLoading || !inviteEmail.trim()}
               >
                 {inviteLoading ? (
                   <span className="flex items-center gap-1.5 justify-center">
@@ -903,30 +884,29 @@ export default function AdminUsersContent({ users = [] }: Props) {
               />
             </div>
 
-            {/* If 2 admins already exist, must choose one to replace */}
-            {isFull && (
-              <div>
-                <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
-                  {locale === 'th' ? 'ผู้ดูแลที่จะส่งมอบสิทธิ์แทนที่ *' : 'Admin to Replace *'}
-                </label>
-                <select
-                  value={replaceAdminId}
-                  onChange={(e) => setReplaceAdminId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs sm:text-sm outline-none focus:border-black dark:focus:border-white text-neutral-900 dark:text-white"
-                >
-                  {admins.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.full_name || a.email} ({a.email})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">
-                  {locale === 'th'
-                    ? 'ระบบจำกัดแอดมินไว้ 2 คน แอดมินเดิมจะต้องกดยืนยันการสละสิทธิ์ทางอีเมลด้วย'
-                    : 'System limit: 2 admins. Outgoing admin must confirm resignation via email.'}
-                </p>
-              </div>
-            )}
+            {/* Optional replace admin */}
+            <div>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
+                {locale === 'th' ? 'ต้องการให้แทนที่ผู้ดูแลเดิมหรือไม่ (ไม่จำเป็น)' : 'Replace Existing Admin (Optional)'}
+              </label>
+              <select
+                value={replaceAdminId}
+                onChange={(e) => setReplaceAdminId(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs sm:text-sm outline-none focus:border-black dark:focus:border-white text-neutral-900 dark:text-white"
+              >
+                <option value="">{locale === 'th' ? '-- ไม่แทนที่ (เพิ่มเป็นแอดมินใหม่ร่วมกัน) --' : '-- Do not replace (Add as co-admin) --'}</option>
+                {admins.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.full_name || a.email} ({a.email})
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">
+                {locale === 'th'
+                  ? 'ระบบไม่จำกัดจำนวนผู้ดูแล หากเลือกแทนที่จะมีการส่งอีเมลให้ผู้ดูแลเดิมยืนยันการสละสิทธิ์'
+                  : 'No admin limit. If replaced, the outgoing admin will be emailed to confirm resignation.'}
+              </p>
+            </div>
 
             {inviteMessage && (
               <div className="space-y-2">

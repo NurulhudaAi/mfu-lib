@@ -3,8 +3,8 @@ import fs from 'fs'
 import path from 'path'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-/** ระบบอนุญาตผู้ดูแลได้สูงสุด 2 คน */
-export const MAX_ADMINS = 2
+/** ระบบอนุญาตผู้ดูแลได้ไม่จำกัดจำนวน */
+export const MAX_ADMINS = Infinity
 /** ลิงก์เชิญ/ยืนยันมีอายุ 48 ชั่วโมง */
 export const INVITE_TTL_HOURS = 48
 
@@ -46,8 +46,8 @@ export function inviteLink(token: string) {
 export async function getAdmins(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, full_name, avatar_url, created_at')
-    .eq('role', 'admin')
+    .select('id, email, full_name, avatar_url, created_at, role')
+    .in('role', ['admin', 'super_admin'])
     .order('created_at', { ascending: true })
   if (error) throw error
   return data ?? []
