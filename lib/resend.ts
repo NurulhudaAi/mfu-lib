@@ -12,16 +12,30 @@ const smtpTransport =
     ? nodemailer.createTransport({
         service: process.env.SMTP_SERVICE || 'gmail',
         auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
+          user: process.env.SMTP_USER.trim(),
+          pass: process.env.SMTP_PASS.replace(/\s+/g, ''),
         },
       })
     : null
 
 // ถ้ายังไม่มี custom domain → ใช้ onboarding@resend.dev (ส่งได้เฉพาะ email ที่ verify แล้ว)
 // เมื่อมี domain แล้วเปลี่ยนเป็น: 'ห้องสมุดชมรมมุสลิม <library@yourdomain.com>'
-const FROM = process.env.SMTP_FROM || process.env.RESEND_FROM_EMAIL || (process.env.SMTP_USER ? `"ห้องสมุดชมรมมุสลิม" <${process.env.SMTP_USER}>` : 'onboarding@resend.dev')
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+const FROM = process.env.SMTP_FROM || process.env.RESEND_FROM_EMAIL || (process.env.SMTP_USER ? `"ห้องสมุดชมรมมุสลิม" <${process.env.SMTP_USER.trim()}>` : 'onboarding@resend.dev')
+
+// Smart APP_URL to prevent http://localhost:3000 links in emails (which trigger spam filters)
+const getAppUrl = () => {
+  if (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost')) {
+    return process.env.NEXT_PUBLIC_APP_URL
+  }
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+  return process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+}
+const APP_URL = getAppUrl()
 
 // ── shared HTML wrapper ──────────────────────────────────────────────────────
 function wrap(content: string) {
@@ -71,6 +85,21 @@ function bookCard(title: string, author?: string) {
   `
 }
 
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<br\s*[\/]?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/tr>/gi, '\n')
+    .replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '$2 ($1)')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/\n\s*\n\s*\n/g, '\n\n')
+    .trim()
+}
+
 /**
  * ส่งอีเมลอย่างปลอดภัย รองรับโหมดทดสอบก่อนขึ้น Production (เมื่อยังไม่ได้ Verify Domain)
  * หาก Resend ปฏิเสธเนื่องจากผู้รับไม่ใช่ที่อยู่อีเมลที่ลงทะเบียนไว้ ระบบจะส่งต่อเข้า RESEND_TEST_EMAIL
@@ -83,17 +112,23 @@ async function safeSendEmail(params: {
   html: string
 }) {
   try {
+    const text = htmlToPlainText(params.html)
+
     if (smtpTransport) {
       const info = await smtpTransport.sendMail({
         from: params.from,
         to: params.to,
         subject: params.subject,
+        text,
         html: params.html,
       })
       return { data: { id: info.messageId }, error: null, wasRedirectedToTestEmail: false, originalTo: params.to }
     }
 
-    const primary = await resend.emails.send(params)
+    const primary = await resend.emails.send({
+      ...params,
+      text,
+    })
     if (!primary.error) {
       return { data: primary.data, error: null, wasRedirectedToTestEmail: false, originalTo: params.to }
     }
