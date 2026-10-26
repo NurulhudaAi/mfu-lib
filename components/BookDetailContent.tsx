@@ -45,7 +45,7 @@ export default function BookDetailContent({
   const [isPending, startTransition] = useTransition()
   const { t, locale, profile, showAlert } = useApp()
 
-  const userIsAdmin = isAdmin || profile?.role === 'admin'
+  const userIsAdmin = isAdmin || profile?.role === 'admin' || profile?.role === 'super_admin'
   const isDeactivated = book.is_active === false
   const isAvailable = !isDeactivated && book.available_copies > 0
   const dateLocale = locale === 'th' ? th : enUS
@@ -637,7 +637,9 @@ export default function BookDetailContent({
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-neutral-900 dark:bg-white" />
                   <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider">
-                    {t('adminControls')}
+                    {profile?.role === 'super_admin'
+                      ? (locale === 'th' ? 'แผงควบคุม Super Admin' : 'Super Admin Controls')
+                      : t('adminControls')}
                   </span>
                 </div>
                 <span className="text-[11px] text-neutral-500 dark:text-neutral-400 bg-neutral-200/60 dark:bg-neutral-800 px-2.5 py-0.5 rounded-full">

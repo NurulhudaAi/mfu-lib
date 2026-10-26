@@ -56,7 +56,7 @@ export default function HomeContent({
 }: Props) {
   const { locale, t, profile, showAlert, showConfirm } = useApp()
   const router = useRouter()
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [hideInactive, setHideInactive] = useState<boolean>(false)

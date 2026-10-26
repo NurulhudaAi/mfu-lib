@@ -136,7 +136,7 @@ async function getData(bookId: string) {
       }
     : null
 
-  const isAdmin = (profile as any)?.role === 'admin'
+  const isAdmin = (profile as any)?.role === 'admin' || (profile as any)?.role === 'super_admin'
 
   return {
     book,

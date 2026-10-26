@@ -149,7 +149,7 @@ export default function AnnouncementCarousel({
 }: Props) {
   const { locale, t, profile, showAlert, showConfirm } = useApp()
   const router = useRouter()
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)

@@ -139,7 +139,7 @@ export async function DELETE(req: Request) {
       .eq('id', user.id)
       .single()
 
-    const isAdmin = profile?.role === 'admin'
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
     if (!isAdmin && queueItem.user_id !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
