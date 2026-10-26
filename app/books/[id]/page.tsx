@@ -138,9 +138,17 @@ async function getData(bookId: string) {
 
   const isAdmin = (profile as any)?.role === 'admin' || (profile as any)?.role === 'super_admin'
 
+  const { data: catData } = await supabase
+    .from('books')
+    .select('category')
+    .not('category', 'is', null)
+
+  const categories = [...new Set(catData?.map((b: any) => b.category).filter(Boolean) || [])] as string[]
+
   return {
     book,
     similarBooks,
+    categories,
     userId: user?.id ?? null,
     isAdmin,
     activeBorrow: activeBorrow ?? null,
@@ -153,12 +161,13 @@ async function getData(bookId: string) {
 
 export default async function BookDetailPage({ params }: Props) {
   const { id } = await params
-  const { book, similarBooks, userId, isAdmin, activeBorrow, otherActiveBorrow, queueEntry, queueCount, totalBorrows } = await getData(id)
+  const { book, similarBooks, categories, userId, isAdmin, activeBorrow, otherActiveBorrow, queueEntry, queueCount, totalBorrows } = await getData(id)
 
   return (
     <BookDetailContent
       book={book}
       similarBooks={similarBooks}
+      categories={categories}
       userId={userId}
       isAdmin={isAdmin}
       activeBorrow={activeBorrow}

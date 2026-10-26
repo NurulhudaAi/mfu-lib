@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useTransition, useRef } from 'react'
+import { useState, useEffect, useTransition, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -9,10 +9,10 @@ import { th, enUS } from 'date-fns/locale'
 import {
   BookOpen, Lock, Sparkles, Check, CheckCircle2,
   Pencil, Upload, X, MessageSquare, ArrowRight,
-  ShieldCheck, AlertCircle, Camera, Scan, Search, Loader2, ImageIcon, Calendar
+  ShieldCheck, AlertCircle, Camera, Scan, Search, Loader2, ImageIcon, Calendar, ChevronDown
 } from 'lucide-react'
 import { useApp } from '@/lib/app-context'
-import { getCategoryLabel } from '@/lib/i18n'
+import { getCategoryLabel, DEFAULT_BOOK_CATEGORIES } from '@/lib/i18n'
 import BorrowButton from './BorrowButton'
 import BookCard from './BookCard'
 
@@ -21,6 +21,7 @@ const ISBNScanner = dynamic(() => import('./ISBNScanner'), { ssr: false })
 interface Props {
   book: any
   similarBooks?: any[]
+  categories?: string[]
   userId: string | null
   isAdmin?: boolean
   activeBorrow: { id: string; due_date: string } | null
@@ -33,6 +34,7 @@ interface Props {
 export default function BookDetailContent({
   book,
   similarBooks = [],
+  categories = [],
   userId,
   isAdmin = false,
   activeBorrow,
@@ -91,6 +93,12 @@ export default function BookDetailContent({
   const [editAuthor, setEditAuthor] = useState(book.author || '')
   const [editIsbn, setEditIsbn] = useState(book.isbn || '')
   const [editCategory, setEditCategory] = useState(book.category || 'ทั่วไป')
+  const [isCustomCategory, setIsCustomCategory] = useState(false)
+  const allCategories = useMemo(() => {
+    const set = new Set<string>([...categories, ...DEFAULT_BOOK_CATEGORIES])
+    if (editCategory && editCategory.trim()) set.add(editCategory.trim())
+    return Array.from(set).filter(Boolean)
+  }, [categories, editCategory])
   const [editTotalCopies, setEditTotalCopies] = useState<number>(book.total_copies ?? 1)
   const [editAvailableCopies, setEditAvailableCopies] = useState<number>(book.available_copies ?? 1)
   const [editPublisher, setEditPublisher] = useState(book.publisher || '')
@@ -1210,15 +1218,55 @@ export default function BookDetailContent({
                     {/* Category & ISBN */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                          {locale === 'th' ? 'หมวดหมู่' : 'Category'}
-                        </label>
-                        <input
-                          type="text"
-                          value={editCategory}
-                          onChange={e => setEditCategory(e.target.value)}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-neutral-900 dark:focus:border-white"
-                        />
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                            {locale === 'th' ? 'หมวดหมู่' : 'Category'}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setIsCustomCategory(!isCustomCategory)}
+                            className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline font-medium"
+                          >
+                            {isCustomCategory
+                              ? (locale === 'th' ? '← เลือกจากรายการ' : '← Choose from list')
+                              : (locale === 'th' ? '+ กำหนดเอง' : '+ Custom')}
+                          </button>
+                        </div>
+
+                        {isCustomCategory ? (
+                          <input
+                            type="text"
+                            value={editCategory}
+                            onChange={e => setEditCategory(e.target.value)}
+                            placeholder={locale === 'th' ? 'พิมพ์ชื่อหมวดหมู่ใหม่...' : 'Type custom category...'}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-neutral-900 dark:focus:border-white"
+                          />
+                        ) : (
+                          <div className="relative">
+                            <select
+                              value={editCategory}
+                              onChange={e => {
+                                if (e.target.value === '__custom__') {
+                                  setIsCustomCategory(true)
+                                } else {
+                                  setEditCategory(e.target.value)
+                                }
+                              }}
+                              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-neutral-900 dark:focus:border-white appearance-none cursor-pointer pr-10"
+                            >
+                              <option value="">{locale === 'th' ? '-- เลือกหมวดหมู่ --' : '-- Select Category --'}</option>
+                              {allCategories.map(c => (
+                                <option key={c} value={c}>
+                                  {getCategoryLabel(c, locale)}
+                                </option>
+                              ))}
+                              <option value="__custom__">
+                                {locale === 'th' ? '✏️ + พิมพ์หมวดหมู่ใหม่เอง...' : '✏️ + Type custom category...'}
+                              </option>
+                            </select>
+                            <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">

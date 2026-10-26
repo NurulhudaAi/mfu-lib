@@ -21,11 +21,12 @@ import {
   Scan,
   Loader2,
   RotateCw,
+  ChevronDown,
   Image as ImageIcon
 } from 'lucide-react'
 import BookCard from './BookCard'
 import { useApp } from '@/lib/app-context'
-import { getCategoryLabel } from '@/lib/i18n'
+import { getCategoryLabel, DEFAULT_BOOK_CATEGORIES } from '@/lib/i18n'
 
 const ISBNScanner = dynamic(() => import('./ISBNScanner'), { ssr: false })
 
@@ -90,6 +91,12 @@ export default function BooksContent({
   const [bookAuthor, setBookAuthor] = useState('')
   const [bookIsbn, setBookIsbn] = useState('')
   const [bookCategory, setBookCategory] = useState('')
+  const [isCustomCategory, setIsCustomCategory] = useState(false)
+  const allCategories = useMemo(() => {
+    const set = new Set<string>([...categories, ...DEFAULT_BOOK_CATEGORIES])
+    if (bookCategory && bookCategory.trim()) set.add(bookCategory.trim())
+    return Array.from(set).filter(Boolean)
+  }, [categories, bookCategory])
   const [bookTotalCopies, setBookTotalCopies] = useState(1)
   const [bookPublisher, setBookPublisher] = useState('')
   const [bookPublishedYear, setBookPublishedYear] = useState('')
@@ -382,6 +389,7 @@ export default function BooksContent({
     setIsSearchingGoogle(false)
     setIsOcrScanning(false)
     setShowScanner(false)
+    setIsCustomCategory(false)
     setIsBookModalOpen(true)
   }
 
@@ -412,6 +420,7 @@ export default function BooksContent({
     setIsSearchingGoogle(false)
     setIsOcrScanning(false)
     setShowScanner(false)
+    setIsCustomCategory(false)
     setIsBookModalOpen(true)
   }
 
@@ -612,6 +621,22 @@ export default function BooksContent({
     router.push('/books')
   }
 
+  function handleCategoryChange(cat: string) {
+    setSelectedCategory(cat)
+    const params = new URLSearchParams()
+    if (searchQuery.trim()) {
+      params.set('q', searchQuery.trim())
+    }
+    if (cat && cat !== 'all') {
+      params.set('category', cat)
+    }
+    if (statusFilter && statusFilter !== 'all') {
+      params.set('status', statusFilter)
+    }
+    const qs = params.toString()
+    router.push(`/books${qs ? `?${qs}` : ''}`)
+  }
+
   const hasActiveFilters =
     Boolean(searchQuery.trim()) ||
     selectedCategory !== 'all' ||
@@ -651,6 +676,24 @@ export default function BooksContent({
               {locale === 'th' ? 'ล้างตัวกรองทั้งหมด' : 'Clear all filters'}
             </button>
           )}
+
+          {/* Category Dropdown Filter */}
+          <div className="relative">
+            <select
+              value={selectedCategory}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              title={locale === 'th' ? 'เลือกหมวดหมู่หนังสือ' : 'Filter by category'}
+              className="appearance-none pl-3 pr-8 py-2 rounded-xl text-xs sm:text-sm font-medium bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 border border-neutral-200/60 dark:border-neutral-700 outline-none cursor-pointer transition-colors max-w-[170px] sm:max-w-[210px] truncate"
+            >
+              <option value="all">{locale === 'th' ? 'ทุกหมวดหมู่' : 'All Categories'}</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {getCategoryLabel(cat, locale)}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+          </div>
 
           {/* Refresh Data Button */}
           <button
@@ -1150,24 +1193,55 @@ export default function BooksContent({
 
                       {/* Category */}
                       <div className="space-y-1">
-                        <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                          {locale === 'th' ? 'หมวดหมู่' : 'Category'}
-                        </label>
-                        <input
-                          type="text"
-                          list="category-suggestions"
-                          value={bookCategory}
-                          onChange={(e) => setBookCategory(e.target.value)}
-                          placeholder={locale === 'th' ? 'เลือกหรือพิมพ์หมวดหมู่...' : 'Select or type category...'}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
-                        />
-                        <datalist id="category-suggestions">
-                          {categories.map((c) => (
-                            <option key={c} value={c}>
-                              {getCategoryLabel(c, locale)}
-                            </option>
-                          ))}
-                        </datalist>
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                            {locale === 'th' ? 'หมวดหมู่' : 'Category'}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setIsCustomCategory(!isCustomCategory)}
+                            className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline font-medium"
+                          >
+                            {isCustomCategory
+                              ? (locale === 'th' ? '← เลือกจากรายการ' : '← Choose from list')
+                              : (locale === 'th' ? '+ กำหนดเอง' : '+ Custom')}
+                          </button>
+                        </div>
+
+                        {isCustomCategory ? (
+                          <input
+                            type="text"
+                            value={bookCategory}
+                            onChange={(e) => setBookCategory(e.target.value)}
+                            placeholder={locale === 'th' ? 'พิมพ์ชื่อหมวดหมู่ใหม่...' : 'Type custom category...'}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
+                          />
+                        ) : (
+                          <div className="relative">
+                            <select
+                              value={bookCategory}
+                              onChange={(e) => {
+                                if (e.target.value === '__custom__') {
+                                  setIsCustomCategory(true)
+                                } else {
+                                  setBookCategory(e.target.value)
+                                }
+                              }}
+                              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors appearance-none cursor-pointer pr-10"
+                            >
+                              <option value="">{locale === 'th' ? '-- เลือกหมวดหมู่ --' : '-- Select Category --'}</option>
+                              {allCategories.map((c) => (
+                                <option key={c} value={c}>
+                                  {getCategoryLabel(c, locale)}
+                                </option>
+                              ))}
+                              <option value="__custom__">
+                                {locale === 'th' ? '✏️ + พิมพ์หมวดหมู่ใหม่เอง...' : '✏️ + Type custom category...'}
+                              </option>
+                            </select>
+                            <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+                          </div>
+                        )}
                       </div>
                     </div>
 
