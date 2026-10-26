@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { BookOpen, Plus, Trash2, Star, ArrowLeft, Search, Pencil, X, Upload, ToggleLeft, ToggleRight, Tag } from 'lucide-react'
+import { BookOpen, Plus, Trash2, Star, ArrowLeft, Search, Pencil, X, Upload, ToggleLeft, ToggleRight, Tag, RotateCw } from 'lucide-react'
 
 import { useApp } from '@/lib/app-context'
 import { getCategoryLabel } from '@/lib/i18n'
@@ -44,6 +44,17 @@ export default function AdminBooksContent({ books, categories: initialCategories
   const { categories, addCategory, deleteCategory } = useCategories(initialCategories)
   const { searchQuery, selectedCategory, locale, t } = useApp()
   const router = useRouter()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  async function handleRefresh() {
+    setIsRefreshing(true)
+    try {
+      router.refresh()
+      await new Promise((r) => setTimeout(r, 600))
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   const bookStats = {
     total: books.length,
@@ -167,6 +178,16 @@ export default function AdminBooksContent({ books, categories: initialCategories
             {books.length} {locale === 'th' ? 'เล่มทั้งหมด' : 'books total'}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          title={locale === 'th' ? 'รีเฟรชข้อมูลล่าสุด' : 'Refresh latest books'}
+          className="flex items-center gap-1.5 px-3.5 py-2.5 bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-xl text-xs sm:text-sm font-semibold transition-colors border border-neutral-200 dark:border-neutral-800 active:scale-95 disabled:opacity-50"
+        >
+          <RotateCw size={15} className={isRefreshing ? 'animate-spin text-amber-500' : ''} />
+          <span className="hidden sm:inline">{isRefreshing ? (locale === 'th' ? 'กำลังโหลด...' : 'Refreshing...') : (locale === 'th' ? 'รีเฟรช' : 'Refresh')}</span>
+        </button>
         <button
           onClick={() => setShowCatManager(true)}
           className="flex items-center gap-1.5 px-4 py-2.5 bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-xl text-xs sm:text-sm font-semibold transition-colors border border-neutral-200 dark:border-neutral-800"

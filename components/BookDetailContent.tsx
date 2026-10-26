@@ -953,6 +953,31 @@ export default function BookDetailContent({
 
               {/* 2. SCROLLABLE MODAL CONTENT (HORIZONTAL 2-COLUMN LAYOUT) */}
               <div className="flex-1 overflow-y-auto min-h-0 p-5 sm:p-6">
+                {/* AI OCR Scanning Active Banner */}
+                {isOcrScanning && (
+                  <div className="mb-5 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-purple-500/10 to-blue-500/15 border border-amber-500/30 dark:border-amber-400/30 shadow-sm animate-pulse">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                        <Sparkles className="w-5 h-5 animate-spin" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-semibold text-neutral-900 dark:text-white">
+                            {locale === 'th' ? 'AI กำลังวิเคราะห์ข้อมูลปกหนังสือ...' : 'AI is Analyzing Book Cover...'}
+                          </h4>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500 text-white font-medium">Gemini AI</span>
+                        </div>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+                          {locale === 'th' ? 'กำลังอ่านและค้นหาชื่อเรื่อง ผู้แต่ง สำนักพิมพ์ หมวดหมู่ และปีที่พิมพ์ โปรดรอสักครู่...' : 'Reading title, author, publisher, and year published...'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="w-full bg-neutral-200 dark:bg-neutral-800 rounded-full h-1.5 mt-3 overflow-hidden">
+                      <div className="bg-gradient-to-r from-amber-500 via-purple-500 to-amber-500 h-full w-2/3 animate-pulse rounded-full" />
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
                   
                   {/* ── LEFT COLUMN: BOOK COVER & TOGGLES (5 cols) ── */}

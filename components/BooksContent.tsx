@@ -20,6 +20,7 @@ import {
   Camera,
   Scan,
   Loader2,
+  RotateCw,
   Image as ImageIcon
 } from 'lucide-react'
 import BookCard from './BookCard'
@@ -59,7 +60,28 @@ export default function BooksContent({
     showConfirm,
   } = useApp()
   const router = useRouter()
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+  const [booksList, setBooksList] = useState(books)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  useEffect(() => {
+    setBooksList(books)
+  }, [books])
+
+  async function handleRefresh() {
+    setIsRefreshing(true)
+    try {
+      router.refresh()
+      await new Promise((r) => setTimeout(r, 600))
+      showAlert({
+        type: 'success',
+        title: locale === 'th' ? 'อัปเดตข้อมูลแล้ว' : 'Updated',
+        message: locale === 'th' ? 'ดึงข้อมูลหนังสือล่าสุดเรียบร้อยแล้ว' : 'Fetched latest books data.',
+      })
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   // Admin Book In-Place CRUD Modal State
   const [isBookModalOpen, setIsBookModalOpen] = useState(false)
@@ -133,14 +155,14 @@ export default function BooksContent({
   }, [initialStatus])
 
   const stats = useMemo(() => {
-    const total = books.length
-    const available = books.filter((b) => b.is_active !== false && b.available_copies > 0).length
-    const inactive = books.filter((b) => b.is_active === false).length
+    const total = booksList.length
+    const available = booksList.filter((b) => b.is_active !== false && b.available_copies > 0).length
+    const inactive = booksList.filter((b) => b.is_active === false).length
     return { total, available, inactive }
-  }, [books])
+  }, [booksList])
 
   const filtered = useMemo(() => {
-    return books.filter((book) => {
+    return booksList.filter((book) => {
       const matchSearch =
         !searchQuery ||
         book.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -157,7 +179,7 @@ export default function BooksContent({
 
       return matchSearch && matchCat
     })
-  }, [books, searchQuery, selectedCategory, statusFilter])
+  }, [booksList, searchQuery, selectedCategory, statusFilter])
 
   function handleRemoveCover() {
     setBookCoverFile(null)
@@ -489,6 +511,26 @@ export default function BooksContent({
         })
         const data = await res.json()
         if (data.error) throw new Error(data.error)
+        setBooksList((prev) =>
+          prev.map((b) =>
+            b.id === editingBook.id
+              ? {
+                  ...b,
+                  title: bookTitle.trim(),
+                  author: bookAuthor.trim() || null,
+                  isbn: bookIsbn.trim() || null,
+                  category: bookCategory.trim() || null,
+                  total_copies: bookTotalCopies,
+                  publisher: bookPublisher.trim() || null,
+                  published_year: bookPublishedYear ? Number(bookPublishedYear) : null,
+                  description: bookDescription.trim() || null,
+                  is_featured: bookIsFeatured,
+                  is_active: bookIsActive,
+                  cover_url: bookCoverPreview || b.cover_url,
+                }
+              : b
+          )
+        )
       } else {
         const res = await fetch('/api/admin/books', {
           method: 'POST',
@@ -496,6 +538,9 @@ export default function BooksContent({
         })
         const data = await res.json()
         if (data.error) throw new Error(data.error)
+        if (data.book) {
+          setBooksList((prev) => [data.book, ...prev])
+        }
       }
 
       setIsBookModalOpen(false)
@@ -606,6 +651,18 @@ export default function BooksContent({
               {locale === 'th' ? 'ล้างตัวกรองทั้งหมด' : 'Clear all filters'}
             </button>
           )}
+
+          {/* Refresh Data Button */}
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            title={locale === 'th' ? 'รีเฟรชข้อมูลล่าสุด' : 'Refresh latest books'}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-xl text-xs sm:text-sm font-medium transition-all active:scale-95 disabled:opacity-50 border border-neutral-200/60 dark:border-neutral-700"
+          >
+            <RotateCw size={14} className={isRefreshing ? 'animate-spin text-amber-500' : ''} />
+            <span className="hidden sm:inline">{isRefreshing ? (locale === 'th' ? 'กำลังโหลด...' : 'Refreshing...') : (locale === 'th' ? 'รีเฟรช' : 'Refresh')}</span>
+          </button>
 
           {isAdmin && (
             <button
@@ -756,6 +813,31 @@ export default function BooksContent({
 
               {/* 2. SCROLLABLE MODAL CONTENT (HORIZONTAL 2-COLUMN LAYOUT) */}
               <div className="flex-1 overflow-y-auto min-h-0 p-5 sm:p-6">
+                {/* AI OCR Scanning Active Banner */}
+                {isOcrScanning && (
+                  <div className="mb-5 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-purple-500/10 to-blue-500/15 border border-amber-500/30 dark:border-amber-400/30 shadow-sm animate-pulse">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                        <Sparkles className="w-5 h-5 animate-spin" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-semibold text-neutral-900 dark:text-white">
+                            {locale === 'th' ? 'AI กำลังวิเคราะห์ข้อมูลปกหนังสือ...' : 'AI is Analyzing Book Cover...'}
+                          </h4>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500 text-white font-medium">Gemini AI</span>
+                        </div>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+                          {locale === 'th' ? 'กำลังอ่านและค้นหาชื่อเรื่อง ผู้แต่ง สำนักพิมพ์ หมวดหมู่ และปีที่พิมพ์ โปรดรอสักครู่...' : 'Reading title, author, publisher, and year published...'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="w-full bg-neutral-200 dark:bg-neutral-800 rounded-full h-1.5 mt-3 overflow-hidden">
+                      <div className="bg-gradient-to-r from-amber-500 via-purple-500 to-amber-500 h-full w-2/3 animate-pulse rounded-full" />
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
                   
                   {/* ── LEFT COLUMN: BOOK COVER & VISIBILITY TOGGLES (5 cols) ── */}

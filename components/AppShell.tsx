@@ -37,6 +37,7 @@ import {
   CheckCheck,
 } from 'lucide-react'
 import { cleanAnnouncementBody } from './AnnouncementCarousel'
+import TopProgressBar from './TopProgressBar'
 
 interface Announcement {
   id: string
@@ -410,6 +411,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen w-full bg-white dark:bg-[#0a0a0c] flex antialiased font-sans text-neutral-900 dark:text-neutral-100">
+      <TopProgressBar />
       
       {/* ======================================================== */}
       {/* 1. LEFT DOCKED SIDEBAR (Desktop)                         */}
