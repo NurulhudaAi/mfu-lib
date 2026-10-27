@@ -13,6 +13,12 @@ import {
   Layers,
   EyeOff,
   ScrollText,
+  Settings,
+  Plus,
+  Trash2,
+  X,
+  ChevronDown,
+  Check,
 } from 'lucide-react'
 import BookCard from './BookCard'
 import AnnouncementCarousel, {
@@ -61,6 +67,136 @@ export default function HomeContent({
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [hideInactive, setHideInactive] = useState<boolean>(false)
   const [onlyAvailable, setOnlyAvailable] = useState<boolean>(false)
+
+  // Categories CRUD state
+  const [categoriesList, setCategoriesList] = useState<string[]>(categories || [])
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
+  const [newCatInput, setNewCatInput] = useState('')
+  const [isSubmittingCat, setIsSubmittingCat] = useState(false)
+
+  // Sync categories prop
+  useEffect(() => {
+    if (categories && categories.length > 0) {
+      setCategoriesList(categories)
+    }
+  }, [categories])
+
+  // Clean & de-duplicate categories
+  const uniqueCategories = useMemo(() => {
+    const set = new Set<string>()
+    const list: string[] = []
+    for (const c of categoriesList) {
+      if (!c) continue
+      const trimmed = c.trim()
+      if (!trimmed) continue
+      const lower = trimmed.toLowerCase()
+      if (!set.has(lower)) {
+        set.add(lower)
+        list.push(trimmed)
+      }
+    }
+    return list
+  }, [categoriesList])
+
+  // Count books per category
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const b of books) {
+      if (hideInactive && b.is_active === false) continue
+      if (onlyAvailable && b.available_copies <= 0) continue
+      const cat = b.category?.trim() || 'ทั่วไป'
+      counts[cat] = (counts[cat] || 0) + 1
+    }
+    return counts
+  }, [books, hideInactive, onlyAvailable])
+
+  // Handle Add Category
+  async function handleAddCategory(e?: React.FormEvent) {
+    if (e) e.preventDefault()
+    const name = newCatInput.trim()
+    if (!name) return
+
+    if (uniqueCategories.some((c) => c.toLowerCase() === name.toLowerCase())) {
+      showAlert({
+        type: 'warning',
+        title: locale === 'th' ? 'มีหมวดหมู่นี้อยู่แล้ว' : 'Category Exists',
+        message: locale === 'th' ? `หมวดหมู่ "${name}" มีอยู่ในระบบแล้ว` : `Category "${name}" already exists.`,
+      })
+      return
+    }
+
+    setIsSubmittingCat(true)
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to add category')
+
+      setCategoriesList((prev) => [...prev, name])
+      setNewCatInput('')
+      showAlert({
+        type: 'success',
+        title: locale === 'th' ? 'เพิ่มหมวดหมู่สำเร็จ' : 'Category Added',
+        message: locale === 'th' ? `เพิ่มหมวดหมู่ "${name}" เรียบร้อยแล้ว` : `Added category "${name}" successfully.`,
+      })
+    } catch (err: any) {
+      showAlert({
+        type: 'error',
+        title: locale === 'th' ? 'เกิดข้อผิดพลาด' : 'Error',
+        message: err.message || 'Cannot add category',
+      })
+    } finally {
+      setIsSubmittingCat(false)
+    }
+  }
+
+  // Handle Delete Category
+  async function handleDeleteCategory(categoryToDelete: string) {
+    const bookCount = books.filter((b) => b.category?.trim() === categoryToDelete).length
+
+    showConfirm({
+      type: 'warning',
+      title: locale === 'th' ? 'ยืนยันการลบหมวดหมู่' : 'Delete Category',
+      message:
+        bookCount > 0
+          ? locale === 'th'
+            ? `มีหนังสือ ${bookCount} เล่มอยู่ในหมวดหมู่ "${categoryToDelete}" ระบบจะย้ายหนังสือเหล่านี้ไปยังหมวด "ทั่วไป" ต้องการดำเนินการต่อหรือไม่?`
+            : `There are ${bookCount} books in "${categoryToDelete}". They will be moved to "General". Continue?`
+          : locale === 'th'
+          ? `คุณต้องการลบหมวดหมู่ "${categoryToDelete}" ใช่หรือไม่?`
+          : `Are you sure you want to delete category "${categoryToDelete}"?`,
+      confirmText: locale === 'th' ? 'ลบหมวดหมู่' : 'Delete',
+      cancelText: locale === 'th' ? 'ยกเลิก' : 'Cancel',
+      onConfirm: async () => {
+        try {
+          const res = await fetch('/api/categories', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: categoryToDelete }),
+          })
+          if (!res.ok) throw new Error('Failed to delete category')
+
+          setCategoriesList((prev) => prev.filter((c) => c !== categoryToDelete))
+          if (selectedCategory === categoryToDelete) setSelectedCategory('all')
+          showAlert({
+            type: 'success',
+            title: locale === 'th' ? 'ลบหมวดหมู่แล้ว' : 'Category Deleted',
+            message: locale === 'th' ? `ลบหมวดหมู่ "${categoryToDelete}" เรียบร้อยแล้ว` : `Category "${categoryToDelete}" removed.`,
+          })
+          router.refresh()
+        } catch (err: any) {
+          showAlert({
+            type: 'error',
+            title: locale === 'th' ? 'ไม่สามารถลบได้' : 'Delete Failed',
+            message: err.message || 'Error deleting category',
+          })
+        }
+      },
+    })
+  }
 
   // Announcement Popup Modal state
   const [mounted, setMounted] = useState(false)
@@ -283,39 +419,46 @@ export default function HomeContent({
       {/* 3. CATEGORIES & CATALOG EXPLORER                         */}
       {/* ======================================================== */}
       <section className="space-y-6 pt-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-3">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white flex items-center gap-2">
               <Layers size={20} className="stroke-[2.5]" />
               <span>{locale === 'th' ? 'หมวดหมู่หนังสือ' : 'Categories'}</span>
             </h2>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-              {filteredCategoryBooks.length} {locale === 'th' ? 'เล่มในหมวดนี้' : 'books in this category'}
+              {filteredCategoryBooks.length} {locale === 'th' ? 'เล่มในหมวดที่เลือก' : 'books in selected category'}
             </p>
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {books.some((b) => b.is_active === false) && (
-              <button
-                type="button"
-                onClick={() => setHideInactive(!hideInactive)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
-                  hideInactive
-                    ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900 shadow-xs'
-                    : 'bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
-                }`}
-                title={locale === 'th' ? 'ซ่อนหนังสือที่ปิดใช้งาน' : 'Hide inactive books'}
+          {/* Category Dropdown & Actions Toolbar */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Category Dropdown Selector */}
+            <div className="relative min-w-[210px] sm:min-w-[260px] flex-1 sm:flex-initial">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full appearance-none pl-3.5 pr-9 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all cursor-pointer shadow-xs"
               >
-                <EyeOff size={13} />
-                <span>{locale === 'th' ? 'ซ่อนที่ปิดใช้งาน' : 'Hide Inactive'}</span>
-              </button>
-            )}
+                <option value="all">
+                  📚 {locale === 'th' ? 'ทุกหมวดหมู่' : 'All Categories'} ({books.length})
+                </option>
+                {uniqueCategories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {getCategoryLabel(cat, locale)} ({categoryCounts[cat] || 0})
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={15}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
+              />
+            </div>
 
+            {/* Quick Status Filters */}
             <button
               type="button"
               onClick={() => setOnlyAvailable(!onlyAvailable)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
                 onlyAvailable
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400'
@@ -325,31 +468,34 @@ export default function HomeContent({
               <span>{locale === 'th' ? 'พร้อมให้ยืม' : 'Available'}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setSelectedCategory('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
-                selectedCategory === 'all'
-                  ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
-                  : 'bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800'
-              }`}
-            >
-              {locale === 'th' ? 'ทุกหมวดหมู่' : 'All'}
-            </button>
-            {categories.map((cat) => (
+            {books.some((b) => b.is_active === false) && (
               <button
-                key={cat}
                 type="button"
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
-                  selectedCategory === cat
-                    ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
-                    : 'bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800'
+                onClick={() => setHideInactive(!hideInactive)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
+                  hideInactive
+                    ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900 shadow-xs'
+                    : 'bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
                 }`}
+                title={locale === 'th' ? 'ซ่อนหนังสือที่ปิดใช้งาน' : 'Hide inactive books'}
               >
-                {getCategoryLabel(cat, locale)}
+                <EyeOff size={13} />
+                <span>{locale === 'th' ? 'ซ่อนที่ปิด' : 'Hide Inactive'}</span>
               </button>
-            ))}
+            )}
+
+            {/* Admin: Manage Categories Button */}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setIsCategoryModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800 transition-colors shadow-xs shrink-0 cursor-pointer"
+                title={locale === 'th' ? 'เพิ่มหรือลบหมวดหมู่' : 'Manage Categories'}
+              >
+                <Settings size={13} />
+                <span>{locale === 'th' ? 'จัดการหมวดหมู่' : 'Manage'}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -417,6 +563,125 @@ export default function HomeContent({
             )}
           </button>
         </aside>,
+        document.body
+      )}
+
+      {/* ======================================================== */}
+      {/* 5. CATEGORY MANAGEMENT MODAL (ADMIN ONLY)                */}
+      {/* ======================================================== */}
+      {mounted && isCategoryModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 overflow-hidden" role="dialog" aria-modal="true">
+          <div
+            onClick={() => setIsCategoryModalOpen(false)}
+            className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-xs animate-fade-in"
+          />
+
+          <div className="relative w-full max-w-lg bg-white dark:bg-[#141416] rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl z-10 flex flex-col max-h-[85vh] overflow-hidden animate-scale-in text-left">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between shrink-0 bg-neutral-50/50 dark:bg-neutral-900/30">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-black text-white dark:bg-white dark:text-black flex items-center justify-center shadow-xs">
+                  <Layers size={17} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white leading-tight">
+                    {locale === 'th' ? 'จัดการหมวดหมู่หนังสือ' : 'Manage Categories'}
+                  </h3>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    {locale === 'th' ? 'เพิ่มหรือลบหมวดหมู่ในระบบ' : 'Add or remove book categories'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsCategoryModalOpen(false)}
+                className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
+              {/* Add New Category Form */}
+              <form onSubmit={handleAddCategory} className="space-y-2">
+                <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider block">
+                  {locale === 'th' ? 'เพิ่มหมวดหมู่ใหม่' : 'Add New Category'}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newCatInput}
+                    onChange={(e) => setNewCatInput(e.target.value)}
+                    placeholder={locale === 'th' ? 'ระบุชื่อหมวดหมู่ เช่น วรรณกรรมเยาวชน, วิทยาศาสตร์...' : 'Enter category name...'}
+                    className="flex-1 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-black dark:focus:border-white transition-all shadow-xs"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newCatInput.trim() || isSubmittingCat}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold bg-black text-white dark:bg-white dark:text-black hover:opacity-90 disabled:opacity-40 transition-all shadow-sm shrink-0 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>{locale === 'th' ? 'เพิ่ม' : 'Add'}</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* Categories List */}
+              <div className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                <div className="flex items-center justify-between text-xs font-bold text-neutral-500 uppercase tracking-wider px-1">
+                  <span>{locale === 'th' ? 'รายการหมวดหมู่ทั้งหมด' : 'All Categories'} ({uniqueCategories.length})</span>
+                </div>
+
+                <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
+                  {uniqueCategories.map((cat) => {
+                    const count = categoryCounts[cat] || 0
+                    const isDefaultGeneral = cat === 'ทั่วไป'
+
+                    return (
+                      <div
+                        key={cat}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200/80 dark:border-neutral-800 text-xs"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                          <span className="font-semibold text-neutral-900 dark:text-white truncate">
+                            {getCategoryLabel(cat, locale)}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-medium shrink-0">
+                            {count} {locale === 'th' ? 'เล่ม' : 'books'}
+                          </span>
+                        </div>
+
+                        {!isDefaultGeneral && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCategory(cat)}
+                            className="p-1.5 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors shrink-0"
+                            title={locale === 'th' ? `ลบหมวดหมู่ ${cat}` : `Delete ${cat}`}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 sm:p-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/40 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsCategoryModalOpen(false)}
+                className="py-2 px-5 rounded-xl text-xs font-semibold bg-neutral-200 hover:bg-neutral-300 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white transition-colors"
+              >
+                {locale === 'th' ? 'เสร็จสิ้น' : 'Done'}
+              </button>
+            </div>
+          </div>
+        </div>,
         document.body
       )}
 
