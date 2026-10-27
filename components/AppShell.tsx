@@ -34,6 +34,8 @@ import {
   Sparkles,
   Clock,
   ArrowRight,
+  ChevronDown,
+  Globe,
   CheckCheck,
 } from 'lucide-react'
 import { cleanAnnouncementBody } from './AnnouncementCarousel'
@@ -94,6 +96,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<string[]>([])
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const filterDropdownRef = useRef<HTMLDivElement>(null)
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+  const profileDropdownRef = useRef<HTMLDivElement>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isAnnounceModalOpen, setIsAnnounceModalOpen] = useState(false)
   const [selectedNotification, setSelectedNotification] = useState<{
@@ -236,11 +240,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return () => clearInterval(interval)
   }, [profile?.id])
 
-  // Close category dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
         setIsFilterOpen(false)
+      }
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -249,9 +256,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Close mobile drawer on route change & sync search query & filters from URL
+  // Close mobile drawer & profile menu on route change & sync search query & filters from URL
   useEffect(() => {
     setIsMobileMenuOpen(false)
+    setIsProfileMenuOpen(false)
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       setSearchQuery(params.get('q') || '')
@@ -740,28 +748,111 @@ export default function AppShell({ children }: { children: ReactNode }) {
               ) : null}
             </button>
 
-            {/* Profile Capsule */}
+            {/* Profile Capsule & Interactive Dropdown Menu */}
             {profile ? (
-              <div className="flex items-center gap-2.5 pl-2 sm:pl-3 border-l border-neutral-200 dark:border-neutral-800">
-                <div className="w-8 h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 overflow-hidden flex items-center justify-center shrink-0 border border-neutral-300 dark:border-neutral-700">
-                  {profile.avatar_url ? (
-                    <img
-                      src={profile.avatar_url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User size={16} className="text-neutral-600 dark:text-neutral-300" />
-                  )}
-                </div>
-                <div className="hidden sm:block text-left">
-                  <div className="text-xs font-bold text-neutral-900 dark:text-white leading-tight">
-                    {profile.full_name?.split(' ')[0] || profile.email?.split('@')[0]}
+              <div className="relative pl-1 sm:pl-2 border-l border-neutral-200 dark:border-neutral-800" ref={profileDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  className="flex items-center gap-2 sm:gap-2.5 p-1 rounded-2xl hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors cursor-pointer text-left focus:outline-none"
+                  aria-label="User Profile and Settings"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 overflow-hidden flex items-center justify-center shrink-0 border border-neutral-300 dark:border-neutral-700 shadow-xs ring-2 ring-transparent hover:ring-neutral-400 dark:hover:ring-neutral-600 transition-all">
+                    {profile.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User size={16} className="text-neutral-600 dark:text-neutral-300" />
+                    )}
                   </div>
-                  <div className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">
-                    {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Admin' : 'Member'}
+                  <div className="hidden sm:block text-left">
+                    <div className="text-xs font-bold text-neutral-900 dark:text-white leading-tight flex items-center gap-1">
+                      <span>{profile.full_name?.split(' ')[0] || profile.email?.split('@')[0]}</span>
+                      <ChevronDown size={13} className={`text-neutral-400 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                    <div className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">
+                      {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Admin' : (locale === 'th' ? 'สมาชิก' : 'Member')}
+                    </div>
                   </div>
-                </div>
+                </button>
+
+                {/* Profile Popup Dropdown */}
+                {isProfileMenuOpen && (
+                  <div className="absolute right-0 mt-2.5 w-60 sm:w-64 p-2 bg-white dark:bg-[#151518] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl z-50 animate-scale-in text-neutral-900 dark:text-white">
+                    {/* User Header */}
+                    <div className="p-3 mb-1.5 bg-neutral-100/70 dark:bg-neutral-900/80 rounded-xl border border-neutral-200/60 dark:border-neutral-800">
+                      <div className="font-bold text-xs truncate">
+                        {profile.full_name || profile.email}
+                      </div>
+                      <div className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
+                        {profile.email}
+                      </div>
+                      <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-black text-white dark:bg-white dark:text-black">
+                        {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Admin' : (locale === 'th' ? 'สมาชิกห้องสมุด' : 'Member')}
+                      </div>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <Link
+                        href="/my-borrows"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                      >
+                        <BookOpen size={14} className="text-neutral-500" />
+                        <span>{t('myBorrows')}</span>
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          toggleTheme()
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+                          <span>{theme === 'dark' ? (locale === 'th' ? 'โหมดสว่าง' : 'Light Mode') : (locale === 'th' ? 'โหมดมืด' : 'Dark Mode')}</span>
+                        </span>
+                        <span className="text-[10px] uppercase font-bold text-neutral-400 px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800">
+                          {theme}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLocale(locale === 'th' ? 'en' : 'th')
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <Globe size={14} />
+                          <span>{locale === 'th' ? 'เปลี่ยนภาษา' : 'Language'}</span>
+                        </span>
+                        <span className="text-[10px] uppercase font-bold text-neutral-400 px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800">
+                          {locale === 'th' ? 'ไทย' : 'ENG'}
+                        </span>
+                      </button>
+                    </div>
+
+                    <div className="pt-1.5 mt-1.5 border-t border-neutral-100 dark:border-neutral-800">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProfileMenuOpen(false)
+                          handleSignOut()
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors text-left"
+                      >
+                        <LogOut size={14} />
+                        <span>{locale === 'th' ? 'ออกจากระบบ' : 'Logout'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <Link
@@ -865,23 +956,38 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </button>
           </>
         ) : (
-          navLinks.map((link) => {
-            const Icon = link.icon
-            return (
-              <Link
-                key={link.key}
-                href={link.href}
-                className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
-                  link.isActive
-                    ? 'text-black dark:text-white font-bold'
-                    : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
-                }`}
-              >
-                <Icon size={18} className="shrink-0" />
-                <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">{link.label}</span>
-              </Link>
-            )
-          })
+          <>
+            {navLinks.map((link) => {
+              const Icon = link.icon
+              return (
+                <Link
+                  key={link.key}
+                  href={link.href}
+                  className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 ${
+                    link.isActive
+                      ? 'text-black dark:text-white font-bold'
+                      : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Icon size={18} className="shrink-0" />
+                  <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">{link.label}</span>
+                </Link>
+              )
+            })}
+
+            {/* 5. Menu Drawer Button for Regular Users */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all min-w-0 flex-1 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+              aria-label="Open Navigation Menu"
+            >
+              <Menu size={18} className="shrink-0" />
+              <span className="text-[10px] leading-tight tracking-tight truncate max-w-full text-center">
+                {locale === 'th' ? 'เมนู' : 'Menu'}
+              </span>
+            </button>
+          </>
         )}
       </nav>
 
@@ -974,10 +1080,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </div>
 
             {/* Mobile Footer Settings */}
-            <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800 space-y-2">
+            <div className="pt-5 border-t border-neutral-200 dark:border-neutral-800 space-y-2">
               <button
                 onClick={toggleTheme}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-900"
               >
                 <div className="flex items-center gap-2">
                   {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
@@ -990,22 +1096,48 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
               <button
                 onClick={() => setLocale(locale === 'th' ? 'en' : 'th')}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-900"
               >
-                <span>{locale === 'th' ? 'ภาษา' : 'Language'}</span>
+                <span className="flex items-center gap-2">
+                  <Globe size={16} />
+                  <span>{locale === 'th' ? 'ภาษา' : 'Language'}</span>
+                </span>
                 <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
                   {locale === 'th' ? 'TH' : 'EN'}
                 </span>
               </button>
 
               {profile ? (
-                <button
-                  onClick={handleSignOut}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-                >
-                  <LogOut size={16} />
-                  <span>{locale === 'th' ? 'ออกจากระบบ' : 'Logout'}</span>
-                </button>
+                <div className="pt-2">
+                  <div className="p-3 mb-2 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 overflow-hidden flex items-center justify-center shrink-0">
+                      {profile.avatar_url ? (
+                        <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <User size={16} className="text-neutral-500" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-xs text-neutral-900 dark:text-white truncate">
+                        {profile.full_name || profile.email}
+                      </div>
+                      <div className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">
+                        {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Admin' : (locale === 'th' ? 'สมาชิก' : 'Member')}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false)
+                      handleSignOut()
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors shadow-xs"
+                  >
+                    <LogOut size={15} />
+                    <span>{locale === 'th' ? 'ออกจากระบบ' : 'Logout'}</span>
+                  </button>
+                </div>
               ) : (
                 <Link
                   href="/login"
