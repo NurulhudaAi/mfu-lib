@@ -649,6 +649,7 @@ export default function HomeContent({
                         className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200/80 dark:border-neutral-800 text-xs"
                       >
                         <div className="flex items-center gap-2 min-w-0 pr-2">
+                          <Layers size={13} className="text-neutral-400 shrink-0" />
                           <span className="font-semibold text-neutral-900 dark:text-white truncate">
                             {getCategoryLabel(cat, locale)}
                           </span>

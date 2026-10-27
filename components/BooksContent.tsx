@@ -22,6 +22,7 @@ import {
   Loader2,
   RotateCw,
   ChevronDown,
+  Layers,
   Image as ImageIcon
 } from 'lucide-react'
 import BookCard from './BookCard'
@@ -685,11 +686,15 @@ export default function BooksContent({
 
           {/* Category Dropdown Filter */}
           <div className="relative">
+            <Layers
+              size={13}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
+            />
             <select
               value={selectedCategory}
               onChange={(e) => handleCategoryChange(e.target.value)}
               title={locale === 'th' ? 'เลือกหมวดหมู่หนังสือ' : 'Filter by category'}
-              className="appearance-none pl-3 pr-8 py-2 rounded-xl text-xs sm:text-sm font-medium bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 border border-neutral-200/60 dark:border-neutral-700 outline-none cursor-pointer transition-colors max-w-[170px] sm:max-w-[210px] truncate"
+              className="appearance-none pl-7 pr-8 py-2 rounded-xl text-xs sm:text-sm font-medium bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 border border-neutral-200/60 dark:border-neutral-700 outline-none cursor-pointer transition-colors max-w-[170px] sm:max-w-[210px] truncate"
             >
               <option value="all">{locale === 'th' ? 'ทุกหมวดหมู่' : 'All Categories'}</option>
               {categories.map((cat) => (
