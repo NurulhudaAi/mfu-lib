@@ -24,24 +24,41 @@ async function getData(bookId: string) {
       },
     }
   )
-  const { data: { user } } = await userSupabase.auth.getUser()
-
-  // ── Run all queries in parallel ──
+  // ── 1. Fetch base book info, counts, and user session concurrently ──
   const [
+    userRes,
     { data: book },
-    { data: profile },
-    { data: activeBorrow },
-    { data: userAnyBorrow },
-    { data: queueEntry },
     { count: queueCount },
-    { count: totalBorrows }, // Count all-time total borrows for this book
+    { count: totalBorrows },
   ] = await Promise.all([
+    userSupabase.auth.getUser().catch(() => ({ data: { user: null } })),
     supabase
       .from('books')
       .select('*')
       .eq('id', bookId)
       .single(),
+    supabase
+      .from('queue')
+      .select('*', { count: 'exact', head: true })
+      .eq('book_id', bookId),
+    supabase
+      .from('borrows')
+      .select('*', { count: 'exact', head: true })
+      .eq('book_id', bookId),
+  ])
 
+  if (!book) notFound()
+
+  const user = userRes?.data?.user
+
+  // ── 2. Run user-specific queries & similar books in parallel ──
+  const [
+    { data: profile },
+    { data: activeBorrow },
+    { data: userAnyBorrow },
+    { data: queueEntry },
+    { data: catBooks },
+  ] = await Promise.all([
     user
       ? supabase
           .from('profiles')
@@ -81,36 +98,20 @@ async function getData(bookId: string) {
           .maybeSingle()
       : Promise.resolve({ data: null }),
 
-    supabase
-      .from('queue')
-      .select('*', { count: 'exact', head: true })
-      .eq('book_id', bookId),
-
-    // Count all borrows regardless of status (active + returned + overdue)
-    supabase
-      .from('borrows')
-      .select('*', { count: 'exact', head: true })
-      .eq('book_id', bookId),
+    book.category
+      ? supabase
+          .from('books')
+          .select('*')
+          .neq('id', bookId)
+          .eq('category', book.category)
+          .neq('is_active', false)
+          .order('is_featured', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(4)
+      : Promise.resolve({ data: [] }),
   ])
 
-  if (!book) notFound()
-
-  // ── Query similar books (same category, not current book, active only) ──
-  let similarBooks: any[] = []
-  if (book.category) {
-    const { data: catBooks } = await supabase
-      .from('books')
-      .select('*')
-      .neq('id', bookId)
-      .eq('category', book.category)
-      .neq('is_active', false)
-      .order('is_featured', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(4)
-    if (catBooks && catBooks.length > 0) {
-      similarBooks = catBooks
-    }
-  }
+  let similarBooks: any[] = catBooks || []
 
   // Fallback: If not enough books in the same category, fetch other latest books
   if (similarBooks.length < 4) {

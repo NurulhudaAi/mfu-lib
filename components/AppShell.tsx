@@ -202,7 +202,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   }
 
-  // Fetch announcements for notification bell globally & unique categories
+  // Fetch announcements for notification bell globally & unique categories (fetch only once on mount)
   useEffect(() => {
     async function fetchInitialData() {
       try {
@@ -227,12 +227,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
       }
     }
     fetchInitialData()
-    fetchNotificationsData()
+  }, [supabase])
 
-    // Refresh notifications every 45s or when route changes
+  // Fetch notifications on user change & periodically every 45s
+  useEffect(() => {
+    fetchNotificationsData()
     const interval = setInterval(fetchNotificationsData, 45000)
     return () => clearInterval(interval)
-  }, [profile?.id, pathname])
+  }, [profile?.id])
 
   // Close category dropdown on outside click
   useEffect(() => {

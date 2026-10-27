@@ -34,16 +34,25 @@ async function getData() {
 }
 
 export default async function HomePage() {
-  const { books, announcements, categories } = await getData()
-  const supabase = await createSessionClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const [data, sessionUser] = await Promise.all([
+    getData(),
+    (async () => {
+      try {
+        const supabase = await createSessionClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        return user
+      } catch {
+        return null
+      }
+    })(),
+  ])
 
   return (
     <HomeContent
-      books={books}
-      announcements={announcements}
-      categories={categories}
-      userId={user?.id ?? null}
+      books={data.books}
+      announcements={data.announcements}
+      categories={data.categories}
+      userId={sessionUser?.id ?? null}
     />
   )
 }

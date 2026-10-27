@@ -20,13 +20,12 @@ async function getData(q?: string, category?: string) {
     query = query.eq('category', category)
   }
 
-  const { data: books } = await query
-
-  // Get unique categories
-  const { data: catData } = await supabase
+  const catQuery = supabase
     .from('books')
     .select('category')
     .not('category', 'is', null)
+
+  const [{ data: books }, { data: catData }] = await Promise.all([query, catQuery])
 
   const categories = [...new Set(catData?.map(b => b.category).filter(Boolean) || [])]
 

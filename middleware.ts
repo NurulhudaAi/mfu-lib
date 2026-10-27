@@ -50,7 +50,30 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // ── สร้าง Supabase client ที่อ่าน/เขียน cookie ได้ ──
+  // ── Guard: หน้าที่ต้องตรวจสอบสิทธิ์ ──
+  const requiresAuth = pathname.startsWith('/my-borrows') || pathname.startsWith('/return/')
+  const requiresLoginOnly = pathname.startsWith('/invite')
+  const requiresAdmin = pathname.startsWith('/admin')
+  const isProtectedRoute = requiresAuth || requiresLoginOnly || requiresAdmin
+
+  // ตรวจสอบเบื้องต้นว่ามี Auth Cookie ของ Supabase หรือไม่
+  const allCookies = request.cookies.getAll()
+  const hasAuthCookie = allCookies.some(c => c.name.includes('auth-token') || c.name.startsWith('sb-'))
+
+  // 1. ถ้าเป็นหน้า Public ทั่วไป (เช่น /, /books, /books/[id], /login, /api/...)
+  // ไม่จำเป็นต้องเรียก Supabase Auth ข้ามทวีปให้หน่วงเวลา 200-350ms -> ตอบกลับทันที
+  if (!isProtectedRoute) {
+    return response
+  }
+
+  // 2. ถ้าเป็นหน้าที่ต้องการ Login แต่ไม่มี Auth Cookie อยู่เลย -> Redirect ทันทีไม่ต้องรอ Supabase
+  if (!hasAuthCookie) {
+    const loginUrl = new URL('/login', request.url)
+    loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  // ── 3. กรณีเป็นหน้าที่ต้องใช้สิทธิ์ และมี Auth Cookie -> ตรวจสอบ Session กับ Supabase ──
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy-supabase-url.supabase.co',
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-anon-key',
@@ -77,14 +100,11 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // ── ดึง session (refresh token อัตโนมัติ) ──
+  // ดึง session (refresh token อัตโนมัติสำหรับหน้าที่ต้องใช้สิทธิ์)
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // ── Guard: หน้าที่ต้อง login ──
-  const requiresAuth = pathname.startsWith('/my-borrows') || pathname.startsWith('/return/')
-  const requiresLoginOnly = pathname.startsWith('/invite')
   if ((requiresAuth || requiresLoginOnly) && !user) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search)
