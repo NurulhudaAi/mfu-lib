@@ -20,6 +20,7 @@ export interface AlertModalOptions {
 export interface ToastItem {
   id: string
   type: AlertType
+  title?: string
   message: string
 }
 
@@ -42,7 +43,7 @@ interface AppContextType {
   showConfirm: (options: AlertModalOptions) => void
   closeAlert: () => void
   toasts: ToastItem[]
-  showToast: (message: string, type?: AlertType) => void
+  showToast: (message: string, type?: AlertType, title?: string) => void
   removeToast: (id: string) => void
 }  
 
@@ -104,6 +105,13 @@ export function AppProvider({
   }
 
   function showAlert(options: AlertModalOptions) {
+    // If it is an informational, success, warning or error alert without cancel action,
+    // show it as a high-visibility Toast / Snackbar above all modals (no backdrop blocking)
+    if (!options.showCancel) {
+      showToast(options.message, options.type || 'info', options.title)
+      return
+    }
+
     setAlertModal({
       ...options,
       showCancel: false,
@@ -124,12 +132,12 @@ export function AppProvider({
     setAlertModal(null)
   }
 
-  function showToast(message: string, type: AlertType = 'info') {
+  function showToast(message: string, type: AlertType = 'info', title?: string) {
     const id = Date.now().toString() + Math.random().toString(36).substring(2, 5)
-    setToasts((prev) => [...prev, { id, message, type }])
+    setToasts((prev) => [...prev, { id, message, type, title }])
     setTimeout(() => {
       removeToast(id)
-    }, 3500)
+    }, 4500)
   }
 
   function removeToast(id: string) {
