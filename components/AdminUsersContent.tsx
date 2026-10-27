@@ -425,24 +425,40 @@ export default function AdminUsersContent({ users = [] }: Props) {
                     </div>
                     {/* Status badges */}
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
                         inv.accepted_at
                           ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
                           : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
                       }`}>
-                        {inv.accepted_at
-                          ? (locale === 'th' ? '✓ คนใหม่กดยอมรับแล้ว' : '✓ Accepted by new admin')
-                          : (locale === 'th' ? '⏳ รอคนใหม่กดยอมรับ' : '⏳ Waiting for accept')}
+                        {inv.accepted_at ? (
+                          <>
+                            <Check size={11} strokeWidth={2.5} />
+                            <span>{locale === 'th' ? 'คนใหม่กดยอมรับแล้ว' : 'Accepted by new admin'}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Clock size={11} />
+                            <span>{locale === 'th' ? 'รอคนใหม่กดยอมรับ' : 'Waiting for accept'}</span>
+                          </>
+                        )}
                       </span>
                       {inv.replace_admin_id && (
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
                           inv.resign_confirmed_at
                             ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
                             : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
                         }`}>
-                          {inv.resign_confirmed_at
-                            ? (locale === 'th' ? '✓ แอดมินเดิมยืนยันสละสิทธิ์แล้ว' : '✓ Resign confirmed')
-                            : (locale === 'th' ? '⏳ รอแอดมินเดิมกดยืนยันสละสิทธิ์' : '⏳ Waiting for resign')}
+                          {inv.resign_confirmed_at ? (
+                            <>
+                              <Check size={11} strokeWidth={2.5} />
+                              <span>{locale === 'th' ? 'แอดมินเดิมยืนยันสละสิทธิ์แล้ว' : 'Resign confirmed'}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Clock size={11} />
+                              <span>{locale === 'th' ? 'รอแอดมินเดิมกดยืนยันสละสิทธิ์' : 'Waiting for resign'}</span>
+                            </>
+                          )}
                         </span>
                       )}
                     </div>

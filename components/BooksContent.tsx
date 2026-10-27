@@ -899,8 +899,9 @@ export default function BooksContent({
                           <span>{locale === 'th' ? 'รูปภาพหน้าปก' : 'Book Cover'}</span>
                         </label>
                         {googleCoverUrl && !bookCoverFile && (
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                            {locale === 'th' ? '✓ จาก Google Books' : '✓ From Google Books'}
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 inline-flex items-center gap-1">
+                            <Check size={11} strokeWidth={2.5} />
+                            <span>{locale === 'th' ? 'จาก Google Books' : 'From Google Books'}</span>
                           </span>
                         )}
                       </div>
@@ -1242,7 +1243,7 @@ export default function BooksContent({
                                 </option>
                               ))}
                               <option value="__custom__">
-                                {locale === 'th' ? '✏️ + พิมพ์หมวดหมู่ใหม่เอง...' : '✏️ + Type custom category...'}
+                                {locale === 'th' ? '+ พิมพ์หมวดหมู่ใหม่เอง...' : '+ Type custom category...'}
                               </option>
                             </select>
                             <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />

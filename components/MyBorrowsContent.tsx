@@ -1144,8 +1144,8 @@ function BorrowCard({
                 <Clock size={13} className="shrink-0 text-amber-600 dark:text-amber-400" />
                 <span>
                   {locale === 'th'
-                    ? '⏰ ครบกำหนดส่งคืนในวันพรุ่งนี้ (แจ้งเตือนล่วงหน้า 1 วัน)'
-                    : '⏰ Due tomorrow! (1-day reminder)'}
+                    ? 'ครบกำหนดส่งคืนในวันพรุ่งนี้ (แจ้งเตือนล่วงหน้า 1 วัน)'
+                    : 'Due tomorrow! (1-day reminder)'}
                 </span>
               </div>
             )}

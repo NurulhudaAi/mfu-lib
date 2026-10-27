@@ -434,13 +434,17 @@ export default function HomeContent({
           <div className="flex items-center gap-2.5 flex-wrap">
             {/* Category Dropdown Selector */}
             <div className="relative min-w-[210px] sm:min-w-[260px] flex-1 sm:flex-initial">
+              <Layers
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
+              />
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full appearance-none pl-3.5 pr-9 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all cursor-pointer shadow-xs"
+                className="w-full appearance-none pl-8 pr-9 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all cursor-pointer shadow-xs"
               >
                 <option value="all">
-                  📚 {locale === 'th' ? 'ทุกหมวดหมู่' : 'All Categories'} ({books.length})
+                  {locale === 'th' ? 'ทุกหมวดหมู่' : 'All Categories'} ({books.length})
                 </option>
                 {uniqueCategories.map((cat) => (
                   <option key={cat} value={cat}>
