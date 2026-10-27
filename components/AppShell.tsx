@@ -1281,29 +1281,29 @@ export default function AppShell({ children }: { children: ReactNode }) {
       )}
 
       {/* ======================================================== */}
-      {/* 6. GLOBAL INTERACTIVE ALERT / CONFIRM MODAL             */}
+      {/* 6. GLOBAL CONFIRMATION / ALERT MODAL (TOP-LAYER z-[99999]) */}
       {/* ======================================================== */}
       {alertModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
           <div
             onClick={closeAlert}
-            className="fixed inset-0 bg-black/50 dark:bg-black/70 animate-fade-in"
+            className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-xs animate-fade-in"
           />
 
           <div className="relative w-full max-w-sm bg-white dark:bg-[#141416] rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl p-6 z-10 text-center animate-scale-in space-y-4">
             {/* Icon */}
             <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center mx-auto text-neutral-900 dark:text-white shadow-xs">
               {alertModal.type === 'success' && (
-                <CheckCircle2 size={28} className="text-black dark:text-white" />
+                <CheckCircle2 size={28} className="text-emerald-500" />
               )}
               {alertModal.type === 'warning' && (
-                <AlertTriangle size={28} className="text-black dark:text-white" />
+                <AlertTriangle size={28} className="text-amber-500" />
               )}
               {alertModal.type === 'error' && (
-                <AlertCircle size={28} className="text-black dark:text-white" />
+                <AlertCircle size={28} className="text-rose-500" />
               )}
               {(!alertModal.type || alertModal.type === 'info') && (
-                <Info size={28} className="text-black dark:text-white" />
+                <Info size={28} className="text-sky-500" />
               )}
             </div>
 
@@ -1349,26 +1349,56 @@ export default function AppShell({ children }: { children: ReactNode }) {
       )}
 
       {/* ======================================================== */}
-      {/* 7. GLOBAL TOAST NOTIFICATIONS                            */}
+      {/* 7. GLOBAL TOAST / SNACKBAR NOTIFICATIONS (TOP-LAYER z-[99999]) */}
       {/* ======================================================== */}
       {toasts.length > 0 && (
-        <div className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 flex flex-col gap-2 pointer-events-none">
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[99999] flex flex-col items-center gap-2 max-w-[92vw] sm:max-w-md w-full pointer-events-none">
           {toasts.map((toast) => (
             <div
               key={toast.id}
-              className="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl bg-neutral-900 text-white dark:bg-white dark:text-black shadow-xl border border-neutral-800 dark:border-neutral-200 text-xs font-semibold animate-slide-up max-w-sm"
+              className="pointer-events-auto w-full flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-neutral-900/95 dark:bg-[#1c1c20]/95 backdrop-blur-md text-white shadow-2xl border border-neutral-800 dark:border-neutral-700/80 text-xs animate-slide-up transition-all"
             >
-              {toast.type === 'success' && <CheckCircle2 size={16} />}
-              {toast.type === 'warning' && <AlertTriangle size={16} />}
-              {toast.type === 'error' && <AlertCircle size={16} />}
-              {(!toast.type || toast.type === 'info') && <Info size={16} />}
-              <span className="flex-1">{toast.message}</span>
+              <div className="shrink-0 mt-0.5">
+                {toast.type === 'success' && (
+                  <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <CheckCircle2 size={16} />
+                  </div>
+                )}
+                {toast.type === 'warning' && (
+                  <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                    <AlertTriangle size={16} />
+                  </div>
+                )}
+                {toast.type === 'error' && (
+                  <div className="w-6 h-6 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center">
+                    <AlertCircle size={16} />
+                  </div>
+                )}
+                {(!toast.type || toast.type === 'info') && (
+                  <div className="w-6 h-6 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                    <Info size={16} />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0 pr-1">
+                {toast.title && (
+                  <div className="font-bold text-xs text-white leading-tight mb-0.5">
+                    {toast.title}
+                  </div>
+                )}
+                <div className="text-[11px] sm:text-xs text-neutral-300 leading-relaxed break-words">
+                  {toast.message}
+                </div>
+              </div>
+
               <button
                 type="button"
                 onClick={() => removeToast(toast.id)}
-                className="p-1 rounded-lg hover:bg-white/20 dark:hover:bg-black/20 transition-colors"
+                className="shrink-0 p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors"
+                aria-label="Close Notification"
               >
-                <X size={12} />
+                <X size={14} />
               </button>
             </div>
           ))}
