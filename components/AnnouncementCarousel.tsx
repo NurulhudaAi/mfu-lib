@@ -421,22 +421,33 @@ export default function AnnouncementCarousel({
 
     showConfirm({
       type: 'warning',
-      title: 'ยืนยันการลบประกาศ',
-      message: `คุณต้องการลบประกาศ "${ann.title}" ใช่หรือไม่?`,
-      confirmText: 'ยืนยันลบ',
-      cancelText: 'ยกเลิก',
+      title: locale === 'th' ? 'ยืนยันการลบประกาศ' : 'Confirm Deletion',
+      message:
+        locale === 'th'
+          ? `คุณต้องการลบประกาศ "${ann.title}" ใช่หรือไม่?`
+          : `Are you sure you want to delete "${ann.title_en || ann.title}"?`,
+      confirmText: locale === 'th' ? 'ยืนยันลบ' : 'Delete',
+      cancelText: locale === 'th' ? 'ยกเลิก' : 'Cancel',
       onConfirm: async () => {
         try {
           const res = await fetch(`/api/admin/announcements/${ann.id}`, { method: 'DELETE' })
           const data = await res.json()
-          if (!res.ok || data.error) throw new Error(data.error || 'เกิดข้อผิดพลาดในการลบ')
+          if (!res.ok || data.error) throw new Error(data.error || 'Failed to delete announcement')
 
           setSlidesList((prev) => prev.filter((item) => item.id !== ann.id))
           setCurrentIndex(0)
-          showAlert({ type: 'success', title: 'ลบประกาศแล้ว', message: 'ประกาศถูกลบออกจากระบบเรียบร้อย' })
+          showAlert({
+            type: 'success',
+            title: locale === 'th' ? 'ลบประกาศแล้ว' : 'Announcement Deleted',
+            message: locale === 'th' ? 'ประกาศถูกลบออกจากระบบเรียบร้อย' : 'Announcement has been deleted.',
+          })
           router.refresh()
         } catch (err: any) {
-          showAlert({ type: 'error', title: 'ไม่สามารถลบได้', message: err.message || 'เกิดข้อผิดพลาด' })
+          showAlert({
+            type: 'error',
+            title: locale === 'th' ? 'ไม่สามารถลบได้' : 'Delete Failed',
+            message: err.message || (locale === 'th' ? 'เกิดข้อผิดพลาดในการลบ' : 'Error deleting announcement'),
+          })
         }
       },
     })
@@ -616,10 +627,10 @@ export default function AnnouncementCarousel({
                       openCreateModal()
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-neutral-900 hover:bg-neutral-100 text-xs font-bold shadow-xs transition-all active:scale-95"
-                    title="สร้างประกาศใหม่"
+                    title={locale === 'th' ? 'สร้างประกาศใหม่' : 'New Announcement'}
                   >
                     <Plus size={13} className="stroke-[3]" />
-                    <span className="inline">เพิ่มประกาศ</span>
+                    <span className="inline">{locale === 'th' ? 'เพิ่มประกาศ' : 'Add Announcement'}</span>
                   </button>
 
                   <button
@@ -629,7 +640,7 @@ export default function AnnouncementCarousel({
                       openEditModal(current)
                     }}
                     className="p-1.5 rounded-xl hover:bg-white/20 text-white/90 hover:text-white text-xs transition-colors"
-                    title="แก้ไขประกาศนี้"
+                    title={locale === 'th' ? 'แก้ไขประกาศนี้' : 'Edit announcement'}
                   >
                     <Edit3 size={13} />
                   </button>
@@ -642,7 +653,7 @@ export default function AnnouncementCarousel({
                         handleDeleteAnnouncement(current)
                       }}
                       className="p-1.5 rounded-xl hover:bg-red-500/30 text-white/80 hover:text-red-300 text-xs transition-colors"
-                      title="ลบประกาศนี้"
+                      title={locale === 'th' ? 'ลบประกาศนี้' : 'Delete announcement'}
                     >
                       <Trash2 size={13} />
                     </button>
@@ -951,7 +962,7 @@ export default function AnnouncementCarousel({
                       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <label className="px-3 py-1.5 rounded-xl bg-white text-black text-xs font-bold cursor-pointer hover:bg-neutral-100 transition-colors shadow-sm inline-flex items-center gap-1.5">
                           <Upload size={13} />
-                          <span>เปลี่ยนรูป</span>
+                          <span>{locale === 'th' ? 'เปลี่ยนรูป' : 'Change'}</span>
                           <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp,image/gif"
@@ -964,13 +975,13 @@ export default function AnnouncementCarousel({
                           onClick={() => setFormImageUrl('')}
                           className="px-3 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-colors shadow-sm cursor-pointer"
                         >
-                          ลบรูป
+                          {locale === 'th' ? 'ลบรูป' : 'Remove'}
                         </button>
                       </div>
                       {uploadingImage && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white gap-2">
                           <Loader2 size={18} className="animate-spin" />
-                          <span className="text-xs font-medium">กำลังอัปโหลด...</span>
+                          <span className="text-xs font-medium">{locale === 'th' ? 'กำลังอัปโหลด...' : 'Uploading...'}</span>
                         </div>
                       )}
                     </div>
@@ -986,37 +997,41 @@ export default function AnnouncementCarousel({
                         <Upload size={18} />
                       </div>
                       <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                        {uploadingImage ? 'กำลังอัปโหลดรูปภาพ...' : 'คลิกเพื่อเลือกรูปภาพจากเครื่อง'}
+                        {uploadingImage
+                          ? (locale === 'th' ? 'กำลังอัปโหลดรูปภาพ...' : 'Uploading image...')
+                          : (locale === 'th' ? 'คลิกเพื่อเลือกรูปภาพจากเครื่อง' : 'Click to upload image')}
                       </p>
                       <p className="text-[11px] text-neutral-400 mt-0.5">
-                        รองรับ JPG, PNG, WebP (สูงสุด 10 MB)
+                        {locale === 'th' ? 'รองรับ JPG, PNG, WebP (สูงสุด 10 MB)' : 'JPG, PNG, WebP (Max 10MB)'}
                       </p>
                     </label>
                   )}
 
                   {/* Preset Image Options */}
                   <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                    <span className="text-[11px] text-neutral-400 mr-1">หรือเลือกภาพสำเร็จรูป:</span>
+                    <span className="text-[11px] text-neutral-400 mr-1">
+                      {locale === 'th' ? 'หรือเลือกภาพสำเร็จรูป:' : 'Or choose preset:'}
+                    </span>
                     <button
                       type="button"
                       onClick={() => setFormImageUrl(DEFAULT_PRESET_IMAGES[0])}
                       className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
                     >
-                      หอสมุด
+                      {locale === 'th' ? 'หอสมุด' : 'Library'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setFormImageUrl(DEFAULT_PRESET_IMAGES[1])}
                       className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
                     >
-                      ชั้นหนังสือ
+                      {locale === 'th' ? 'ชั้นหนังสือ' : 'Bookshelf'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setFormImageUrl(DEFAULT_PRESET_IMAGES[2])}
                       className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
                     >
-                      มินิมอล
+                      {locale === 'th' ? 'มินิมอล' : 'Minimal'}
                     </button>
                   </div>
                 </div>
@@ -1024,14 +1039,14 @@ export default function AnnouncementCarousel({
                 {/* Body TH */}
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                    เนื้อหาประกาศ (ภาษาไทย) *
+                    {locale === 'th' ? 'เนื้อหาประกาศ (ภาษาไทย) *' : 'Content (Thai) *'}
                   </label>
                   <textarea
                     required
                     rows={3}
                     value={formBody}
                     onChange={(e) => setFormBody(e.target.value)}
-                    placeholder="เขียนข้อความประชาสัมพันธ์ที่ต้องการ..."
+                    placeholder={locale === 'th' ? 'เขียนข้อความประชาสัมพันธ์ที่ต้องการ...' : 'Write announcement content...'}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
                   />
                 </div>
@@ -1039,13 +1054,13 @@ export default function AnnouncementCarousel({
                 {/* Body EN */}
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                    เนื้อหาประกาศ (English - ไม่บังคับ)
+                    {locale === 'th' ? 'เนื้อหาประกาศ (English - ไม่บังคับ)' : 'Content (English - Optional)'}
                   </label>
                   <textarea
                     rows={3}
                     value={formBodyEn}
                     onChange={(e) => setFormBodyEn(e.target.value)}
-                    placeholder="Optional announcement content in English..."
+                    placeholder={locale === 'th' ? 'ระบุเนื้อหาภาษาอังกฤษ (ถ้ามี)...' : 'Optional announcement content in English...'}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs sm:text-sm text-neutral-900 dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors"
                   />
                 </div>
@@ -1053,8 +1068,12 @@ export default function AnnouncementCarousel({
                 {/* Active Toggle Switch */}
                 <div className="flex items-center justify-between pt-1">
                   <div>
-                    <p className="text-xs font-semibold text-neutral-900 dark:text-white">สถานะการแสดงผล</p>
-                    <p className="text-[11px] text-neutral-400">เปิดให้สมาชิกทุกคนมองเห็นบนหน้าแรก</p>
+                    <p className="text-xs font-semibold text-neutral-900 dark:text-white">
+                      {locale === 'th' ? 'สถานะการแสดงผล' : 'Visibility Status'}
+                    </p>
+                    <p className="text-[11px] text-neutral-400">
+                      {locale === 'th' ? 'เปิดให้สมาชิกทุกคนมองเห็นบนหน้าแรก' : 'Visible to all members on home page'}
+                    </p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input

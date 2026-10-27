@@ -369,7 +369,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                 type="button"
                 onClick={() => setSearchQuery('')}
                 className="p-0.5 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
-                title="ลบคำค้นหา"
+                title={locale === 'th' ? 'ลบคำค้นหา' : 'Clear search'}
               >
                 <X size={12} />
               </button>
@@ -384,7 +384,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                 type="button"
                 onClick={() => setSelectedCategory('all')}
                 className="p-0.5 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
-                title="ลบหมวดหมู่"
+                title={locale === 'th' ? 'ลบหมวดหมู่' : 'Clear category'}
               >
                 <X size={12} />
               </button>
@@ -1210,11 +1210,11 @@ function BorrowCard({
               className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 transition-all shadow-xs active:scale-[0.98]"
             >
               <Camera size={13} />
-              <span>ดูรูปหลักฐาน</span>
+              <span>{locale === 'th' ? 'ดูรูปหลักฐาน' : 'View Proof'}</span>
             </button>
           ) : borrow.status === 'returned' && (
             <span className="text-[11px] text-neutral-400 font-medium px-2 py-1">
-              ไม่มีรูปหลักฐาน
+              {locale === 'th' ? 'ไม่มีรูปหลักฐาน' : 'No photo proof'}
             </span>
           )}
         </div>
