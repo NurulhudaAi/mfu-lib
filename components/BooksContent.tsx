@@ -741,7 +741,7 @@ export default function BooksContent({
                 type="button"
                 onClick={handleClearSearch}
                 className="p-0.5 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
-                title="ลบคำค้นหา"
+                title={locale === 'th' ? 'ลบคำค้นหา' : 'Clear search'}
               >
                 <X size={12} />
               </button>
@@ -756,7 +756,7 @@ export default function BooksContent({
                 type="button"
                 onClick={handleClearCategory}
                 className="p-0.5 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
-                title="ลบหมวดหมู่"
+                title={locale === 'th' ? 'ลบหมวดหมู่' : 'Clear category'}
               >
                 <X size={12} />
               </button>
@@ -775,7 +775,7 @@ export default function BooksContent({
                 type="button"
                 onClick={() => handleSetStatusFilter('all')}
                 className="p-0.5 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
-                title="ล้างสถานะ"
+                title={locale === 'th' ? 'ล้างสถานะ' : 'Clear status'}
               >
                 <X size={12} />
               </button>
