@@ -657,10 +657,10 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
             </div>
 
             {/* Modal Scrollable Body */}
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
               {/* Book Summary Card */}
-              <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-neutral-50 dark:bg-[#18181b] border border-neutral-200 dark:border-neutral-800">
-                <div className="w-13 h-18 sm:w-14 sm:h-20 bg-neutral-200 dark:bg-neutral-800 rounded-xl overflow-hidden shrink-0 border border-neutral-200 dark:border-neutral-700 shadow-xs">
+              <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl bg-neutral-50 dark:bg-[#18181b] border border-neutral-200 dark:border-neutral-800">
+                <div className="w-12 h-16 sm:w-14 sm:h-20 bg-neutral-200 dark:bg-neutral-800 rounded-xl overflow-hidden shrink-0 border border-neutral-200 dark:border-neutral-700 shadow-xs aspect-[3/4]">
                   {returnBorrow.books?.cover_url ? (
                     <img
                       src={returnBorrow.books.cover_url}
@@ -682,7 +682,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                       {returnBorrow.books.author}
                     </p>
                   )}
-                  <div className="flex items-center gap-2 mt-2 flex-wrap text-xs">
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap text-xs">
                     {returnBorrow.books?.category && (
                       <span className="text-[10px] px-2 py-0.5 rounded-md bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium">
                         {returnBorrow.books.category}
@@ -696,7 +696,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
               </div>
 
               {/* Upload Proof Area (Drag & Drop + Mobile Camera) */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-1">
                     <span>{locale === 'th' ? 'รูปถ่ายหลักฐานการคืน' : 'Return Proof Photo'}</span>
@@ -709,7 +709,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
 
                 {returnPreview ? (
                   <div className="relative rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-950 flex flex-col items-center justify-center group shadow-xs">
-                    <div className="w-full p-2 bg-neutral-900/80 backdrop-blur-sm border-b border-neutral-800 flex items-center justify-between text-xs text-neutral-300 px-3 z-10">
+                    <div className="w-full p-2 bg-neutral-900/90 backdrop-blur-sm border-b border-neutral-800 flex items-center justify-between text-xs text-neutral-300 px-3 z-10">
                       <div className="flex items-center gap-1.5 truncate">
                         <ImageIcon size={13} className="text-neutral-400 shrink-0" />
                         <span className="truncate text-[11px] font-medium">
@@ -728,6 +728,7 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                           <input
                             type="file"
                             accept="image/*"
+                            capture="environment"
                             onChange={handlePhotoChange}
                             className="hidden"
                           />
@@ -747,11 +748,11 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                       </div>
                     </div>
 
-                    <div className="w-full max-h-72 sm:max-h-80 flex items-center justify-center p-3">
+                    <div className="w-full max-h-48 sm:max-h-56 flex items-center justify-center p-2.5 bg-neutral-950">
                       <img
                         src={returnPreview}
                         alt="Proof preview"
-                        className="max-h-64 sm:max-h-72 w-auto max-w-full object-contain rounded-lg shadow-md"
+                        className="max-h-44 sm:max-h-52 w-auto max-w-full object-contain rounded-lg shadow-sm"
                       />
                     </div>
                   </div>
@@ -964,15 +965,15 @@ export default function MyBorrowsContent({ borrows, queues, userId }: Props) {
                 </div>
               </div>
 
-              {/* Main Proof Image Container (Flexible height, no awkward cropping) */}
+              {/* Main Proof Image Container (Responsive, compact, no layout blowup) */}
               <div className="relative rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-950 flex flex-col items-center justify-center shadow-xs">
                 {proofBorrow.proof_signed_url ? (
                   <>
-                    <div className="w-full flex items-center justify-center p-3 sm:p-4 min-h-[260px] max-h-[420px]">
+                    <div className="w-full flex items-center justify-center p-2.5 sm:p-3 max-h-[260px] sm:max-h-[320px]">
                       <img
                         src={proofBorrow.proof_signed_url}
                         alt="Proof"
-                        className="max-h-[380px] w-auto max-w-full object-contain rounded-xl select-none"
+                        className="max-h-[240px] sm:max-h-[300px] w-auto max-w-full object-contain rounded-xl select-none"
                       />
                     </div>
                     <div className="w-full p-2.5 bg-neutral-900/90 border-t border-neutral-800 flex items-center justify-between text-xs text-neutral-300 px-4">

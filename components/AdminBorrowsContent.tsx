@@ -693,11 +693,11 @@ export default function AdminBorrowsContent({ borrows, queues }: Props) {
               <div className="relative rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-950 flex flex-col items-center justify-center shadow-xs">
                 {proofModal.proof_signed_url ? (
                   <>
-                    <div className="w-full flex items-center justify-center p-3 sm:p-4 min-h-[260px] max-h-[420px]">
+                    <div className="w-full flex items-center justify-center p-2.5 sm:p-3 max-h-[260px] sm:max-h-[320px]">
                       <img
                         src={proofModal.proof_signed_url}
                         alt="Proof"
-                        className="max-h-[380px] w-auto max-w-full object-contain rounded-xl select-none"
+                        className="max-h-[240px] sm:max-h-[300px] w-auto max-w-full object-contain rounded-xl select-none"
                       />
                     </div>
                     <div className="w-full p-2.5 bg-neutral-900/90 border-t border-neutral-800 flex items-center justify-between text-xs text-neutral-300 px-4">
