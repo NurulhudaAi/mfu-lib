@@ -193,15 +193,19 @@ export default function BookDetailContent({
 
     setIsSearchingGoogle(true)
     try {
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleaned}`)
-      if (!res.ok) throw new Error(locale === 'th' ? 'เกิดข้อผิดพลาดในการเชื่อมต่อ Google Books API' : 'Error connecting to Google Books API')
+      const res = await fetch('/api/lookup-book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: cleaned, type: 'isbn' }),
+      })
+      if (!res.ok) throw new Error(locale === 'th' ? 'เกิดข้อผิดพลาดในการดึงข้อมูลหนังสือ' : 'Error retrieving book data')
       const data = await res.json()
-      fillFromGoogleBooks(data, 'ISBN')
+      fillFromGoogleBooks(data, data.source || 'ISBN')
     } catch (err: any) {
       showAlert({
         type: 'error',
         title: locale === 'th' ? 'ดึงข้อมูลไม่สำเร็จ' : 'Fetch Failed',
-        message: err.message || (locale === 'th' ? 'ไม่สามารถดึงข้อมูลจาก Google Books ได้ในขณะนี้' : 'Unable to retrieve data from Google Books at this time.'),
+        message: err.message || (locale === 'th' ? 'ไม่สามารถดึงข้อมูลหนังสือได้ในขณะนี้' : 'Unable to retrieve data at this time.'),
       })
     } finally {
       setIsSearchingGoogle(false)
@@ -212,17 +216,19 @@ export default function BookDetailContent({
     if (!titleToLookup.trim()) return
     setIsSearchingGoogle(true)
     try {
-      const res = await fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(titleToLookup)}&maxResults=1`
-      )
-      if (!res.ok) throw new Error(locale === 'th' ? 'เกิดข้อผิดพลาดในการเชื่อมต่อ Google Books API' : 'Error connecting to Google Books API')
+      const res = await fetch('/api/lookup-book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: titleToLookup.trim(), type: 'title' }),
+      })
+      if (!res.ok) throw new Error(locale === 'th' ? 'เกิดข้อผิดพลาดในการดึงข้อมูลหนังสือ' : 'Error retrieving book data')
       const data = await res.json()
-      fillFromGoogleBooks(data, 'ชื่อหนังสือ')
+      fillFromGoogleBooks(data, data.source || (locale === 'th' ? 'ชื่อหนังสือ' : 'Title'))
     } catch (err: any) {
       showAlert({
         type: 'error',
         title: locale === 'th' ? 'ดึงข้อมูลไม่สำเร็จ' : 'Fetch Failed',
-        message: err.message || (locale === 'th' ? 'ไม่สามารถดึงข้อมูลจาก Google Books ได้' : 'Unable to retrieve data from Google Books.'),
+        message: err.message || (locale === 'th' ? 'ไม่สามารถดึงข้อมูลหนังสือได้' : 'Unable to retrieve data.'),
       })
     } finally {
       setIsSearchingGoogle(false)
